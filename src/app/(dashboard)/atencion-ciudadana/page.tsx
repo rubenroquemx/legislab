@@ -3,7 +3,13 @@
 
 
 
-import { getWhatsAppConversacionesAction, sendWhatsAppMessageAction } from '@/app/actions/whatsapp';
+
+import { 
+  getWhatsAppConversacionesAction, 
+  sendWhatsAppMessageAction,
+  getWhatsAppStatus,
+  getWhatsAppInstanceInfo
+} from '@/app/actions/whatsapp';
 import { createGestion } from '@/app/actions/gestiones';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -96,6 +102,7 @@ export default function AtencionCiudadanaPage() {
   const [nuevoMensaje, setNuevoMensaje] = useState('');
   const [esNotaInterna, setEsNotaInterna] = useState(false);
   const [isWhatsappConnected, setIsWhatsappConnected] = useState(false);
+  const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
   const [alertaAccion, setAlertaAccion] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -114,12 +121,38 @@ export default function AtencionCiudadanaPage() {
   const [formPrioridad, setFormPrioridad] = useState('Media');
   const [guardandoGestion, setGuardandoGestion] = useState(false);
 
-  // Cargar conversaciones reales al iniciar
+  // Cargar conversaciones reales y estado de WhatsApp al iniciar
   useEffect(() => {
-    const saved = localStorage.getItem('legislab_whatsapp_connected');
-    if (saved !== null) {
-      setIsWhatsappConnected(saved === 'true');
+    // Cargar notas guardadas en localStorage
+    const savedNotas = localStorage.getItem('legislab_notas_internas');
+    if (savedNotas) {
+      try {
+        setNotasRapidas(JSON.parse(savedNotas));
+      } catch (e) {
+        console.warn('Error parsing notas:', e);
+      }
     }
+
+    async function checkConnection() {
+      try {
+        const statusRes = await getWhatsAppStatus('Legislab');
+        if (statusRes.success && statusRes.isConnected) {
+          setIsWhatsappConnected(true);
+          localStorage.setItem('legislab_whatsapp_connected', 'true');
+          const infoRes = await getWhatsAppInstanceInfo('Legislab');
+          if (infoRes.success && infoRes.data?.phone) {
+            setConnectedPhone(infoRes.data.phone);
+          }
+        } else {
+          setIsWhatsappConnected(false);
+          localStorage.setItem('legislab_whatsapp_connected', 'false');
+          setConnectedPhone(null);
+        }
+      } catch (e) {
+        console.warn('Error verificando WhatsApp status:', e);
+      }
+    }
+    checkConnection();
 
     async function loadLiveConversations() {
       try {
@@ -127,8 +160,6 @@ export default function AtencionCiudadanaPage() {
         const res = await getWhatsAppConversacionesAction();
         if (res.success && res.data && res.data.length > 0) {
           setConversaciones(res.data as any);
-          setIsWhatsappConnected(true);
-          localStorage.setItem('legislab_whatsapp_connected', 'true');
           if (res.data[0]) setSelectedConvId(res.data[0].id);
         }
       } catch (err) {
@@ -235,9 +266,15 @@ export default function AtencionCiudadanaPage() {
       hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setNotasRapidas(prev => [newNote, ...prev]);
+    const updated = [newNote, ...notasRapidas];
+    setNotasRapidas(updated);
+    try {
+      localStorage.setItem('legislab_notas_internas', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Error saving notas to localStorage:', e);
+    }
     setNuevaNotaTexto('');
-    setAlertaAccion('✓ Nota rápida registrada');
+    setAlertaAccion('✓ Nota rápida registrada y guardada');
     setTimeout(() => setAlertaAccion(null), 3000);
   };
 
@@ -269,6 +306,26 @@ export default function AtencionCiudadanaPage() {
         }
         return c;
       }));
+
+      // Guardar también en respaldo local
+      try {
+        const savedGestiones = localStorage.getItem('legislab_gestiones_offline') || '[]';
+        const list = JSON.parse(savedGestiones);
+        list.unshift({
+          id: `ges-${Date.now()}`,
+          folio: nuevoFolio,
+          asunto: formAsunto,
+          solicitante: formSolicitante || activeConv.ciudadanoNombre,
+          telefono: formTelefono || activeConv.ciudadanoTelefono,
+          colonia: formColonia,
+          categoria: formCategoria,
+          prioridad: formPrioridad,
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('legislab_gestiones_offline', JSON.stringify(list));
+      } catch (e) {
+        console.warn('Error saving gestion to localStorage:', e);
+      }
 
       setShowModalGestion(false);
       setAlertaAccion(`🎉 ¡Gestión creada con éxito! Folio: ${nuevoFolio}`);
@@ -302,7 +359,7 @@ export default function AtencionCiudadanaPage() {
             "h-2 w-2 rounded-full",
             isWhatsappConnected ? "bg-emerald-500 animate-pulse" : "bg-red-500"
           )}></span>
-          <span>{isWhatsappConnected ? "WhatsApp Conectado (+52 993 111 2233)" : "WhatsApp Desconectado"}</span>
+          <span>{isWhatsappConnected ? (connectedPhone ? `WhatsApp Conectado (${connectedPhone})` : "WhatsApp Conectado") : "WhatsApp Desconectado"}</span>
         </div>
 
         <Link
@@ -728,10 +785,10 @@ export default function AtencionCiudadanaPage() {
                 <span>Abrir en WhatsApp</span>
               </a>
 
-              {/* Botón 3: Llamar */}
+              {/* Botón 3: Llamar (Solo versión móvil) */}
               <a
                 href={`tel:${activeConv.ciudadanoTelefono.replace(/\D/g, '')}`}
-                className="w-full py-2 px-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 font-bold rounded-xl text-xs shadow-2xs flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2 px-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 font-bold rounded-xl text-xs shadow-2xs flex sm:hidden items-center justify-center gap-2 transition-colors"
               >
                 <Phone className="h-4 w-4 text-zinc-600" />
                 <span>Llamar</span>

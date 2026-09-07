@@ -5,6 +5,7 @@
 
 
 
+
 import { 
   getWhatsAppStatus, 
   generateWhatsAppQR, 
@@ -244,18 +245,13 @@ function ConfiguracionContent() {
             setChatCount(infoRes.data.chatCount);
           }
         } else {
-          const saved = localStorage.getItem('legislab_whatsapp_connected');
-          if (saved === 'true') {
-            setWhatsappConectado(true);
-            const infoRes = await getWhatsAppInstanceInfo(instanceName);
-            if (infoRes.success && infoRes.data) {
-              setConnectedPhone(infoRes.data.phone);
-              setProfileName(infoRes.data.profileName);
-              setMessageCount(infoRes.data.messageCount);
-              setContactCount(infoRes.data.contactCount);
-              setChatCount(infoRes.data.chatCount);
-            }
-          }
+          setWhatsappConectado(false);
+          localStorage.setItem('legislab_whatsapp_connected', 'false');
+          setConnectedPhone(null);
+          setProfileName(null);
+          setMessageCount(0);
+          setContactCount(0);
+          setChatCount(0);
         }
       } catch (err) {
         console.warn('Error verificando estado de WhatsApp:', err);
@@ -537,7 +533,7 @@ function ConfiguracionContent() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-gray-900">WhatsApp Web Gateway — Conector QR y Atención Ciudadana</h2>
+                    <h2 className="text-base font-bold text-gray-900">WhatsApp</h2>
                     <span className={cn(
                       "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border",
                       whatsappConectado
@@ -626,19 +622,6 @@ function ConfiguracionContent() {
                     <span className="text-[10px] text-gray-500 font-semibold block">Estado de Conexión</span>
                     <span className="font-bold text-emerald-600 mt-0.5 block">En línea (Open)</span>
                   </div>
-                </div>
-
-                <div className="pt-2 flex items-center justify-between text-xs">
-                  <span className="text-gray-500 text-[11px]">
-                    Para cambiar de número de teléfono o desconectar, presiona el botón superior.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleWhatsapp(false)}
-                    className="text-xs font-bold text-red-600 hover:underline"
-                  >
-                    Simular Desconexión (Probar Alertas en Grupos y Chat)
-                  </button>
                 </div>
               </div>
             ) : (
