@@ -39,12 +39,55 @@ export const gestionEstatusEnum = pgEnum('gestion_estatus', [
 export const offices = pgTable('offices', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(), // Ej: "Despacho Dip. Ruben Roque"
-  titularName: text('titular_name').notNull(), // Ej: "Ruben Roque"
+  slug: text('slug'), // Ej: "dip-ruben-roque"
+  titularName: text('titular_name').notNull(), // Usuario Principal (Diputado)
+  titularEmail: text('titular_email').notNull().default(''), // Correo del usuario principal / contacto de pago
+  titularPhone: text('titular_phone'), // Teléfono del usuario principal
   legislature: text('legislature').notNull().default('LXVI Legislatura'),
   district: text('district').notNull(), // Ej: "Distrito 04 Federal"
   state: text('state').notNull().default('Tabasco'),
   party: text('party'),
   logoUrl: text('logo_url'),
+  status: text('status').notNull().default('active'), // 'active' | 'trial' | 'suspended' | 'cancelled'
+  plan: text('plan').notNull().default('starter'), // 'starter' | 'professional' | 'parliamentary' | 'enterprise'
+  whatsappInstanceName: text('whatsapp_instance_name'),
+  whatsappPhone: text('whatsapp_phone'),
+  maxUsers: integer('max_users').notNull().default(3), // Starter: 1 principal + 2 extras = 3
+  
+  // Promociones y Descuentos del Superadmin
+  trialEndsAt: timestamp('trial_ends_at', { mode: 'date' }),
+  subscriptionEndsAt: timestamp('subscription_ends_at', { mode: 'date' }),
+  discountPercent: integer('discount_percent').default(0), // 0 a 100%
+  promoNotes: text('promo_notes'), // Ej: "Convenio 2026 - 3 meses de cortesía"
+  
+  // Módulos Habilitados
+  enabledModules: text('enabled_modules').default(
+    JSON.stringify([
+      'atencion_ciudadana',
+      'grupos',
+      'gestiones',
+      'territorio',
+      'redactor_ia',
+      'agenda',
+      'directorio',
+      'tareas',
+      'marco_juridico',
+      'medios'
+    ])
+  ),
+
+  // Google Drive Propio del Despacho
+  googleDriveFolderId: text('google_drive_folder_id'),
+  googleDriveFolderUrl: text('google_drive_folder_url'),
+  googleDriveClientId: text('google_drive_client_id'),
+  googleDriveClientSecret: text('google_drive_client_secret'),
+
+  // Stripe Billing
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  stripePriceId: text('stripe_price_id'),
+  billingEmail: text('billing_email'),
+
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
 });
@@ -287,6 +330,33 @@ export const iaGenerations = pgTable('ia_generations', {
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
+// -------------------------------------------------------------
+// SAAS PLATFORM CONFIG & AUDIT
+// -------------------------------------------------------------
+export const systemSettings = pgTable('system_settings', {
+  id: text('id').primaryKey().default('global'),
+  platformName: text('platform_name').notNull().default('LegisLab SaaS'),
+  evolutionApiUrl: text('evolution_api_url').default('https://evoapi.rubenroque.com.mx'),
+  evolutionApiKey: text('evolution_api_key').default('429683C4C977415CAAFCCE10F7D57E11'),
+  maintenanceMode: boolean('maintenance_mode').default(false).notNull(),
+  globalAnnouncement: text('global_announcement'),
+  announcementType: text('announcement_type').default('info'), // 'info' | 'warning' | 'alert'
+  allowNewRegistrations: boolean('allow_new_registrations').default(true).notNull(),
+  defaultTrialDays: integer('default_trial_days').default(14).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  officeId: uuid('office_id').references(() => offices.id, { onDelete: 'set null' }),
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  action: text('action').notNull(), // 'office.created', 'whatsapp.connected', 'user.invited', etc.
+  description: text('description').notNull(),
+  ipAddress: text('ip_address'),
+  metadata: text('metadata'), // JSON serialized extra data
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
 // Tipos Inferidos
 export type Office = typeof offices.$inferSelect;
 export type NewOffice = typeof offices.$inferInsert;
@@ -310,3 +380,7 @@ export type Iniciativa = typeof iniciativas.$inferSelect;
 export type NewIniciativa = typeof iniciativas.$inferInsert;
 export type IaGeneration = typeof iaGenerations.$inferSelect;
 export type NewIaGeneration = typeof iaGenerations.$inferInsert;
+export type SystemSettings = typeof systemSettings.$inferSelect;
+export type NewSystemSettings = typeof systemSettings.$inferInsert;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type NewAuditLog = typeof auditLogs.$inferInsert;

@@ -22,9 +22,12 @@ import {
   HardDrive,
   MessageSquareText,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+import { useState, useEffect } from 'react';
 
 interface NavItem {
   name: string;
@@ -32,6 +35,7 @@ interface NavItem {
   icon: any;
   badge?: string;
   isNew?: boolean;
+  moduleKey?: string;
 }
 
 interface NavSection {
@@ -43,28 +47,28 @@ const navSections: NavSection[] = [
   {
     sectionTitle: 'Administración',
     items: [
-      { name: 'Agenda', href: '/agenda', icon: Calendar },
-      { name: 'Directorio', href: '/directorio', icon: Contact },
-      { name: 'Grupos', href: '/grupos', icon: UsersRound },
-      { name: 'Atención ciudadana', href: '/atencion-ciudadana', icon: MessageSquareText, badge: '4', isNew: true },
-      { name: 'Gestiones', href: '/gestiones', icon: FolderKanban, badge: '12' },
-      { name: 'Tareas', href: '/tareas', icon: CheckSquare, badge: '6' },
-      { name: 'Gestión territorial', href: '/territorio', icon: Compass },
+      { name: 'Agenda', href: '/agenda', icon: Calendar, moduleKey: 'agenda' },
+      { name: 'Directorio', href: '/directorio', icon: Contact, moduleKey: 'directorio' },
+      { name: 'Grupos', href: '/grupos', icon: UsersRound, moduleKey: 'grupos' },
+      { name: 'Atención ciudadana', href: '/atencion-ciudadana', icon: MessageSquareText, badge: '4', isNew: true, moduleKey: 'atencion_ciudadana' },
+      { name: 'Gestiones', href: '/gestiones', icon: FolderKanban, badge: '12', moduleKey: 'gestiones' },
+      { name: 'Tareas', href: '/tareas', icon: CheckSquare, badge: '6', moduleKey: 'tareas' },
+      { name: 'Gestión territorial', href: '/territorio', icon: Compass, moduleKey: 'territorio' },
     ],
   },
   {
     sectionTitle: 'Trabajo legislativo',
     items: [
-      { name: 'Iniciativas', href: '/iniciativas', icon: FileText },
-      { name: 'Discursos', href: '/discursos', icon: Mic },
-      { name: 'Boletines', href: '/boletines', icon: Newspaper },
-      { name: 'Marco Jurídico', href: '/marco-juridico', icon: Scale },
+      { name: 'Iniciativas', href: '/iniciativas', icon: FileText, moduleKey: 'redactor_ia' },
+      { name: 'Discursos', href: '/discursos', icon: Mic, moduleKey: 'redactor_ia' },
+      { name: 'Boletines', href: '/boletines', icon: Newspaper, moduleKey: 'redactor_ia' },
+      { name: 'Marco Jurídico', href: '/marco-juridico', icon: Scale, moduleKey: 'marco_juridico' },
     ],
   },
   {
     sectionTitle: 'Medios',
     items: [
-      { name: 'Monitoreo', href: '/medios', icon: Radio },
+      { name: 'Monitoreo', href: '/medios', icon: Radio, moduleKey: 'medios' },
     ],
   },
   {
@@ -91,8 +95,25 @@ export function Sidebar({
   onCloseMobile 
 }: SidebarProps) {
   const pathname = usePathname();
+  const [enabledModules, setEnabledModules] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('legislab_enabled_modules');
+    if (saved) {
+      try {
+        setEnabledModules(JSON.parse(saved));
+      } catch (e) {
+        console.warn('Error parsing enabled modules:', e);
+      }
+    }
+  }, []);
 
   const isDashboardActive = pathname === '/dashboard';
+
+  const visibleSections = navSections.map(sec => ({
+    ...sec,
+    items: sec.items.filter(item => !item.moduleKey || !enabledModules || enabledModules.includes(item.moduleKey))
+  })).filter(sec => sec.items.length > 0);
 
   const renderContent = (isMobile: boolean) => {
     const isCol = !isMobile && collapsed;
@@ -172,7 +193,7 @@ export function Sidebar({
           </div>
 
           {/* Secciones del Menú */}
-          {navSections.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.sectionTitle} className="space-y-1">
               {!isCol ? (
                 <h4 className="px-2.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
@@ -250,6 +271,18 @@ export function Sidebar({
               <PanelLeftOpen className="h-4 w-4" />
             </button>
           )}
+
+          <Link
+            href="/admin"
+            title={isCol ? "Consola SaaS Superadmin" : undefined}
+            className={cn(
+              "flex items-center gap-2 rounded-lg text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/80 transition-colors",
+              isCol ? "justify-center p-2.5 w-full" : "px-2.5 py-1.5"
+            )}
+          >
+            <ShieldCheck className="h-4 w-4 shrink-0 text-indigo-500" />
+            {!isCol && <span>Consola SaaS Admin</span>}
+          </Link>
 
           <Link
             href="/"
