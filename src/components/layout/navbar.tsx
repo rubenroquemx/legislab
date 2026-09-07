@@ -3,24 +3,21 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Bell, 
   Search, 
-  Plus, 
   Menu, 
-  Check, 
-  AlertCircle, 
-  Sparkles, 
+  PanelLeft,
   MessageSquare, 
   FolderKanban, 
   Calendar, 
   Cake,
-  ExternalLink,
-  Smartphone,
-  CheckCheck
+  Smartphone
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface NavbarProps {
   onOpenMobileMenu?: () => void;
+  onToggleSidebarCollapse?: () => void;
+  isSidebarCollapsed?: boolean;
 }
 
 interface NotificationItem {
@@ -72,7 +69,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   }
 ];
 
-export function Navbar({ onOpenMobileMenu }: NavbarProps) {
+export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCollapsed }: NavbarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [permissionState, setPermissionState] = useState<NotificationPermission>('default');
@@ -135,8 +132,8 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
 
   return (
     <header className="h-14 bg-white/80 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
-      {/* Left: Mobile Toggle & Quick Search */}
-      <div className="flex items-center gap-3 max-w-md w-full">
+      {/* Left: Desktop Sidebar Collapse Toggle + Mobile Toggle & Quick Search */}
+      <div className="flex items-center gap-2 sm:gap-3 max-w-md w-full">
         <button
           type="button"
           onClick={onOpenMobileMenu}
@@ -145,6 +142,17 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
         >
           <Menu className="h-4 w-4" />
         </button>
+
+        {onToggleSidebarCollapse && (
+          <button
+            type="button"
+            onClick={onToggleSidebarCollapse}
+            className="hidden lg:flex p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
+            title={isSidebarCollapsed ? "Expandir barra lateral" : "Colapsar barra lateral"}
+          >
+            <PanelLeft className="h-4 w-4" />
+          </button>
+        )}
 
         <div className="relative w-full hidden sm:block">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
@@ -160,16 +168,9 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
         </div>
       </div>
 
-      {/* Right: Quick Action, Notifications & User */}
+      {/* Right: Notifications & User (Redactar button removed) */}
       <div className="flex items-center gap-2 sm:gap-3 relative">
-        <Link
-          href="/redactor"
-          className="hidden md:inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-xs transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>Redactar</span>
-        </Link>
-
+        
         {/* NOTIFICATIONS BELL BUTTON */}
         <div className="relative" ref={popoverRef}>
           <button 
