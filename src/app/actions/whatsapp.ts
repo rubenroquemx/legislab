@@ -7,14 +7,17 @@ import {
   logoutInstance,
   sendTextMessage,
   fetchAllGroups,
+  fetchAllChats,
   formatPhoneForWhatsApp,
+  type WhatsAppGroup,
+  type WhatsAppChat,
 } from '@/lib/evolution-api';
 import { db } from '@/db';
 import { gruposContactos, grupoMiembros, atencionMensajes } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { getFirstOfficeId } from './gestiones';
 
-const DEFAULT_INSTANCE_NAME = process.env.WHATSAPP_INSTANCE_NAME || 'legislab-despacho';
+const DEFAULT_INSTANCE_NAME = process.env.WHATSAPP_INSTANCE_NAME || 'Legislab';
 
 /**
  * Checks connection state with Evolution API
@@ -55,10 +58,8 @@ export async function getWhatsAppStatus(instanceName = DEFAULT_INSTANCE_NAME) {
  */
 export async function generateWhatsAppQR(instanceName = DEFAULT_INSTANCE_NAME) {
   try {
-    // 1. Try to connect to existing instance
     let connectRes = await connectInstance(instanceName);
 
-    // 2. If instance does not exist (404/not found), create it first
     if (!connectRes.success && (connectRes.status === 404 || connectRes.error?.toLowerCase().includes('not found') || connectRes.error?.toLowerCase().includes('não encontrada'))) {
       const createRes = await createInstance(instanceName);
       if (!createRes.success) {
@@ -67,7 +68,6 @@ export async function generateWhatsAppQR(instanceName = DEFAULT_INSTANCE_NAME) {
           error: createRes.error || 'Error al crear la instancia en Evolution API',
         };
       }
-      // Retry connect after creating
       connectRes = await connectInstance(instanceName);
     }
 
@@ -139,7 +139,7 @@ export async function sendWhatsAppMessageAction(params: {
 }
 
 /**
- * Sincroniza en vivo los grupos reales de WhatsApp desde Evolution API hacia la BD
+ * Consulta y sincroniza en vivo los grupos de WhatsApp desde Evolution API
  */
 export async function syncWhatsAppGroups(instanceName = DEFAULT_INSTANCE_NAME) {
   try {
@@ -148,82 +148,187 @@ export async function syncWhatsAppGroups(instanceName = DEFAULT_INSTANCE_NAME) {
       return {
         success: false,
         error: res.error || 'No se pudieron consultar los grupos en Evolution API. Verifica que WhatsApp esté conectado.',
+        data: [],
       };
     }
 
     const groups = res.data;
     const officeId = await getFirstOfficeId();
-    let importedGroupsCount = 0;
-    let importedMembersCount = 0;
+    const mappedGroups = [];
 
-    for (const g of groups) {
-      if (!g.id || !g.subject) continue;
+    for (let i = 0; i < groups.length; i++) {
+      const g = groups[i];
+      const gId = g.id || g.jid || g.JID || `grp-${i}`;
+      const gName = g.subject || g.name || `Grupo WhatsApp ${i + 1}`;
+      const participants = g.participants || [];
 
-      // Check if group already exists in database
-      const existing = await db
-        .select()
-        .from(gruposContactos)
-        .where(eq(gruposContactos.nombre, g.subject))
-        .limit(1);
+      // Save / update in database if possible
+      try {
+        const existing = await db
+          .select()
+          .from(gruposContactos)
+          .where(eq(gruposContactos.nombre, gName))
+          .limit(1);
 
-      let grupoId: string;
-
-      if (existing.length > 0) {
-        grupoId = existing[0].id;
-      } else {
-        const [newGroup] = await db
-          .insert(gruposContactos)
-          .values({
+        if (existing.length === 0) {
+          await db.insert(gruposContactos).values({
             officeId,
-            nombre: g.subject,
+            nombre: gName,
             categoria: 'Comunitario',
             color: 'emerald',
-            whatsappLink: `https://chat.whatsapp.com/${g.id.split('@')[0]}`,
-          })
-          .returning();
-        grupoId = newGroup.id;
-        importedGroupsCount++;
-      }
-
-      // Sync members if provided
-      if (g.participants && g.participants.length > 0) {
-        for (const p of g.participants) {
-          const rawPhone = p.id.split('@')[0];
-          const cleanPhone = formatPhoneForWhatsApp(rawPhone);
-
-          // Avoid duplicate members in same group
-          const memberExists = await db
-            .select()
-            .from(grupoMiembros)
-            .where(eq(grupoMiembros.telefono, cleanPhone))
-            .limit(1);
-
-          if (memberExists.length === 0) {
-            await db.insert(grupoMiembros).values({
-              grupoId,
-              nombre: `Contacto +${cleanPhone}`,
-              cargo: p.admin ? 'Administrador del Grupo' : 'Integrante',
-              telefono: `+${cleanPhone}`,
-              municipio: 'Centro',
-            });
-            importedMembersCount++;
-          }
+            whatsappLink: `https://chat.whatsapp.com/${gId.split('@')[0]}`,
+          });
         }
+      } catch (dbErr) {
+        console.warn('DB group sync cache skipped:', dbErr);
       }
+
+      mappedGroups.push({
+        id: gId,
+        nombre: gName,
+        descripcion: g.desc || `Grupo sincronizado desde WhatsApp (${participants.length || g.size || 1} participantes)`,
+        categoria: 'Comunitario' as const,
+        color: 'emerald' as const,
+        whatsappLink: `https://chat.whatsapp.com/${gId.split('@')[0]}`,
+        totalMiembros: participants.length || g.size || 1,
+        ultimaActividad: 'Sincronizado en vivo',
+        creadoEnWhatsapp: true,
+        miembros: participants.slice(0, 20).map((p, pIdx) => {
+          const rawPhone = (p.id || p.jid || '').split('@')[0] || `993${pIdx}00000`;
+          return {
+            id: `m-${pIdx}`,
+            nombre: `Participante +${rawPhone}`,
+            cargo: p.admin ? 'Administrador' : 'Integrante',
+            telefono: `+${rawPhone}`,
+            municipio: 'Centro',
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          };
+        }),
+      });
     }
 
     return {
       success: true,
-      totalGrupos: groups.length,
-      importedGroupsCount,
-      importedMembersCount,
-      message: `¡Sincronización exitosa! ${groups.length} grupos detectados en WhatsApp.`,
+      totalGrupos: mappedGroups.length,
+      data: mappedGroups,
+      message: `¡Sincronización exitosa! Se cargaron ${mappedGroups.length} grupos desde WhatsApp.`,
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return {
       success: false,
       error: `Error durante la sincronización: ${msg}`,
+      data: [],
+    };
+  }
+}
+
+/**
+ * Consulta las conversaciones reales para Atención Ciudadana
+ */
+export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INSTANCE_NAME) {
+  try {
+    const officeId = await getFirstOfficeId();
+
+    // 1. Check database first
+    let dbMsgs: any[] = [];
+    try {
+      dbMsgs = await db
+        .select()
+        .from(atencionMensajes)
+        .where(eq(atencionMensajes.officeId, officeId))
+        .orderBy(desc(atencionMensajes.createdAt));
+    } catch (e) {
+      console.warn('DB atencion mensajes read:', e);
+    }
+
+    // 2. Query Evolution API for recent chats
+    const chatsRes = await fetchAllChats(instanceName);
+    const chats = chatsRes.success && chatsRes.data ? chatsRes.data : [];
+
+    const mappedConversaciones = [];
+
+    // Map DB messages
+    if (dbMsgs.length > 0) {
+      for (const m of dbMsgs) {
+        mappedConversaciones.push({
+          id: m.id,
+          ciudadanoNombre: m.ciudadanoNombre,
+          ciudadanoTelefono: m.ciudadanoTelefono,
+          ciudadanoAvatar: m.ciudadanoFoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          municipio: 'Centro',
+          colonia: m.colonia || 'Centro',
+          ultimoMensaje: m.ultimoMensaje,
+          ultimaHora: m.horaUltimoMensaje || 'Reciente',
+          noLeidos: m.sinLeer ? 1 : 0,
+          categoria: 'Gestión Médica' as const,
+          estado: 'sin_asignar' as const,
+          asignadoA: null,
+          mensajes: [
+            {
+              id: `msg-${m.id}`,
+              autor: 'ciudadano' as const,
+              nombreAutor: m.ciudadanoNombre,
+              texto: m.ultimoMensaje,
+              hora: m.horaUltimoMensaje || 'Hoy',
+              fecha: 'Hoy',
+            },
+          ],
+        });
+      }
+    }
+
+    // Map Evolution API direct chats
+    if (chats.length > 0) {
+      for (const c of chats) {
+        const jid = c.id || c.jid || '';
+        if (jid.endsWith('@g.us')) continue; // skip group broadcasts in citizen inbox
+
+        const phone = jid.split('@')[0];
+        const name = c.pushName || c.name || `Ciudadano +${phone}`;
+        const lastMsgText = c.lastMessage?.message ? Object.values(c.lastMessage.message)[0] : 'Conversación iniciada';
+        const textStr = typeof lastMsgText === 'string' ? lastMsgText : 'Mensaje recibido';
+
+        // Check if not already mapped from DB
+        if (!mappedConversaciones.some(m => m.ciudadanoTelefono.includes(phone))) {
+          mappedConversaciones.push({
+            id: `chat-${phone}`,
+            ciudadanoNombre: name,
+            ciudadanoTelefono: `+${phone}`,
+            ciudadanoAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            municipio: 'Centro',
+            colonia: 'WhatsApp Directo',
+            ultimoMensaje: textStr,
+            ultimaHora: 'Reciente',
+            noLeidos: c.unreadCount || 0,
+            categoria: 'Gestión Médica' as const,
+            estado: 'sin_asignar' as const,
+            asignadoA: null,
+            mensajes: [
+              {
+                id: `msg-${phone}`,
+                autor: 'ciudadano' as const,
+                nombreAutor: name,
+                texto: textStr,
+                hora: 'Hoy',
+                fecha: 'Hoy',
+              },
+            ],
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: mappedConversaciones,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      success: false,
+      error: msg,
+      data: [],
     };
   }
 }

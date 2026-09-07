@@ -1,7 +1,6 @@
 'use client';
 
-import { sendWhatsAppMessageAction } from '@/app/actions/whatsapp';
-
+import { getWhatsAppConversacionesAction, sendWhatsAppMessageAction } from '@/app/actions/whatsapp';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -161,12 +160,25 @@ export default function AtencionCiudadanaPage() {
   const [isWhatsappConnected, setIsWhatsappConnected] = useState(true);
   const [alertaAccion, setAlertaAccion] = useState<string | null>(null);
 
-  // Leer estado de conexión de WhatsApp desde localStorage
+  // Cargar conversaciones reales al iniciar
   useEffect(() => {
     const saved = localStorage.getItem('legislab_whatsapp_connected');
     if (saved !== null) {
       setIsWhatsappConnected(saved === 'true');
     }
+
+    async function loadLiveConversations() {
+      try {
+        const res = await getWhatsAppConversacionesAction();
+        if (res.success && res.data && res.data.length > 0) {
+          setConversaciones(res.data as any);
+          if (res.data[0]) setSelectedConvId(res.data[0].id);
+        }
+      } catch (err) {
+        console.warn('Error loading live conversations:', err);
+      }
+    }
+    loadLiveConversations();
   }, []);
 
   const activeConv = conversaciones.find(c => c.id === selectedConvId) || conversaciones[0];

@@ -34,8 +34,11 @@ export interface SendMessageResult {
 }
 
 export interface WhatsAppGroup {
-  id: string;
-  subject: string;
+  id?: string;
+  jid?: string;
+  JID?: string;
+  subject?: string;
+  name?: string;
   subjectOwner?: string;
   subjectTime?: number;
   size?: number;
@@ -43,9 +46,23 @@ export interface WhatsAppGroup {
   owner?: string;
   desc?: string;
   participants?: Array<{
-    id: string;
+    id?: string;
+    jid?: string;
     admin?: string | null;
   }>;
+}
+
+export interface WhatsAppChat {
+  id?: string;
+  jid?: string;
+  name?: string;
+  pushName?: string;
+  unreadCount?: number;
+  lastMessage?: {
+    key?: { remoteJid?: string; fromMe?: boolean };
+    message?: Record<string, unknown>;
+    messageTimestamp?: number | string;
+  };
 }
 
 function getEvolutionConfig(): EvolutionConfig {
@@ -119,16 +136,10 @@ async function evolutionFetch<T>(
 // INSTANCE MANAGEMENT
 // ---------------------------------------------------------------------------
 
-/**
- * Lists all instances on the Evolution API server
- */
 export async function fetchInstances() {
   return evolutionFetch<Array<{ instance: { instanceName: string; status: string } }>>('/instance/fetchInstances');
 }
 
-/**
- * Creates a new instance for a Titular / Despacho
- */
 export async function createInstance(
   instanceName: string,
   webhookUrl?: string
@@ -164,25 +175,16 @@ export async function createInstance(
   );
 }
 
-/**
- * Connects an instance and retrieves the QR Code base64 string
- */
 export async function connectInstance(instanceName: string) {
   return evolutionFetch<QrResponse>(`/instance/connect/${encodeURIComponent(instanceName)}`);
 }
 
-/**
- * Gets the current connection status of an instance (open, connecting, close)
- */
 export async function getConnectionState(instanceName: string) {
   return evolutionFetch<InstanceConnectionState>(
     `/instance/connectionState/${encodeURIComponent(instanceName)}`
   );
 }
 
-/**
- * Logs out / disconnects an active instance
- */
 export async function logoutInstance(instanceName: string) {
   return evolutionFetch<{ status: string }>(
     `/instance/logout/${encodeURIComponent(instanceName)}`,
@@ -190,9 +192,6 @@ export async function logoutInstance(instanceName: string) {
   );
 }
 
-/**
- * Deletes an instance completely
- */
 export async function deleteInstance(instanceName: string) {
   return evolutionFetch<{ status: string }>(
     `/instance/delete/${encodeURIComponent(instanceName)}`,
@@ -204,9 +203,6 @@ export async function deleteInstance(instanceName: string) {
 // MESSAGING & CHAT
 // ---------------------------------------------------------------------------
 
-/**
- * Clean phone number to E.164 without '+' or spaces for WhatsApp
- */
 export function formatPhoneForWhatsApp(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.length === 10) {
@@ -215,9 +211,6 @@ export function formatPhoneForWhatsApp(phone: string): string {
   return digits;
 }
 
-/**
- * Sends a plain text WhatsApp message to a citizen or contact
- */
 export async function sendTextMessage(
   instanceName: string,
   phoneNumber: string,
@@ -243,26 +236,40 @@ export async function sendTextMessage(
   );
 }
 
+export async function fetchAllChats(instanceName: string) {
+  const res = await evolutionFetch<WhatsAppChat[] | { chats?: WhatsAppChat[] }>(
+    `/chat/findChats/${encodeURIComponent(instanceName)}`
+  );
+  if (res.success && res.data) {
+    if (Array.isArray(res.data)) return { success: true, data: res.data };
+    if (Array.isArray((res.data as { chats?: WhatsAppChat[] }).chats)) {
+      return { success: true, data: (res.data as { chats: WhatsAppChat[] }).chats };
+    }
+  }
+  return res as { success: boolean; data?: WhatsAppChat[]; error?: string };
+}
+
 // ---------------------------------------------------------------------------
 // GROUPS MANAGEMENT
 // ---------------------------------------------------------------------------
 
-/**
- * Fetches all WhatsApp groups that the connected instance is part of
- */
 export async function fetchAllGroups(instanceName: string, getParticipants = true) {
-  return evolutionFetch<WhatsAppGroup[]>(
+  const res = await evolutionFetch<WhatsAppGroup[] | { groups?: WhatsAppGroup[] }>(
     `/group/fetchAllGroups/${encodeURIComponent(instanceName)}?getParticipants=${getParticipants}`
   );
+  if (res.success && res.data) {
+    if (Array.isArray(res.data)) return { success: true, data: res.data };
+    if (Array.isArray((res.data as { groups?: WhatsAppGroup[] }).groups)) {
+      return { success: true, data: (res.data as { groups: WhatsAppGroup[] }).groups };
+    }
+  }
+  return res as { success: boolean; data?: WhatsAppGroup[]; error?: string };
 }
 
 // ---------------------------------------------------------------------------
 // WEBHOOK CONFIGURATION
 // ---------------------------------------------------------------------------
 
-/**
- * Updates the webhook destination URL for an instance
- */
 export async function setInstanceWebhook(
   instanceName: string,
   webhookUrl: string
