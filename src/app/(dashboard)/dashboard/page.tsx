@@ -17,6 +17,8 @@ import {
   Cake,
   Activity,
   Flame,
+  Gift,
+  Sparkles
 } from 'lucide-react';
 
 interface EventoAgenda {
@@ -906,89 +908,91 @@ export default function DashboardPage() {
 
 
       {/* =========================================================================
-          3. MAIN GRID: 2/3 AGENDA DEL DÍA (Left) + 1/3 TAREAS Y CUMPLEAÑOS (Right)
+          3. SECCIÓN INFERIOR EN 3 COLUMNAS:
+             - Columna 1: Agenda del día
+             - Columna 2: Mis Tareas
+             - Columna 3: Cumpleaños del día (Con color festivo/distintivo)
          ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
         {/* =========================================================================
-            COLUMNA 2/3: AGENDA DEL DÍA
+            COLUMNA 1: AGENDA DEL DÍA
            ========================================================================= */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-2xs space-y-5 transition-colors">
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 sm:p-6 shadow-2xs space-y-4 transition-colors">
           {/* Header de la Agenda */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-100">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100">
+            <div className="flex items-center gap-2.5">
               <div className="h-9 w-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
                 <CalendarIcon className="h-4.5 w-4.5" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-zinc-900">Agenda del día</h2>
-                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Google Calendar Live
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-500">Horarios, comisiones, sedes y compartir por WhatsApp</p>
+                <h2 className="text-base font-bold text-zinc-900">Agenda del día</h2>
+                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.2 rounded-full inline-flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Google Calendar Live
+                </span>
               </div>
             </div>
 
             {/* Controles de Fecha */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center bg-zinc-100 p-1 rounded-xl text-xs font-medium">
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center bg-zinc-100 p-0.5 rounded-xl text-xs font-medium">
                 <button
                   onClick={() => setFechaSeleccionada('2026-09-03')}
-                  className={`px-3 py-1 rounded-lg transition-all ${
+                  className={`px-2.5 py-1 rounded-lg transition-all ${
                     fechaSeleccionada === '2026-09-03' ? 'bg-white text-zinc-900 shadow-2xs font-bold' : 'text-zinc-500'
                   }`}
                 >
-                  Hoy (3 Sep)
+                  Hoy
                 </button>
                 <button
                   onClick={() => setFechaSeleccionada('2026-09-04')}
-                  className={`px-3 py-1 rounded-lg transition-all ${
+                  className={`px-2.5 py-1 rounded-lg transition-all ${
                     fechaSeleccionada === '2026-09-04' ? 'bg-white text-zinc-900 shadow-2xs font-bold' : 'text-zinc-500'
                   }`}
                 >
-                  Mañana (4 Sep)
+                  Mañana
                 </button>
               </div>
 
               <button
                 onClick={handleCompartirWhatsappDia}
                 disabled={eventosDelDia.length === 0}
-                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 disabled:text-zinc-400 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-2xs transition-all"
+                className="p-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 disabled:text-zinc-400 text-white rounded-lg shadow-2xs transition-all"
                 title="Compartir agenda del día por WhatsApp"
               >
                 <MessageCircle className="h-3.5 w-3.5" />
-                <span>Compartir</span>
               </button>
             </div>
           </div>
 
           {/* Timeline / Lista de Eventos de la Agenda */}
-          <div className="space-y-3">
+          <div className="space-y-2.5 max-h-[440px] overflow-y-auto pr-1">
             {eventosDelDia.length > 0 ? (
               eventosDelDia.map((ev) => (
                 <div
                   key={ev.id}
-                  className="p-4 rounded-2xl border border-zinc-200/70 bg-zinc-50/50 hover:bg-white hover:border-zinc-300 hover:shadow-xs transition-all space-y-2.5 group relative"
+                  className="p-3.5 rounded-2xl border border-zinc-200/70 bg-zinc-50/50 hover:bg-white hover:border-zinc-300 hover:shadow-2xs transition-all space-y-2 group relative"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-blue-600"></span>
-                      <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-zinc-200">
-                        {ev.tipo}
-                      </span>
-                      <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                        ⏰ {ev.horaInicio} - {ev.horaFin}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-zinc-200">
+                      {ev.tipo}
+                    </span>
+                    <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                      ⏰ {ev.horaInicio} - {ev.horaFin}
+                    </span>
+                  </div>
 
+                  <h3 className="text-xs font-bold text-zinc-900 group-hover:text-blue-600 transition-colors leading-snug">
+                    {ev.titulo}
+                  </h3>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
                     <a
                       href={ev.lugarUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600 hover:text-blue-600 bg-white border border-zinc-200 px-2.5 py-1 rounded-lg transition-colors truncate max-w-xs"
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600 hover:text-blue-600 bg-white border border-zinc-200 px-2 py-0.5 rounded-md transition-colors truncate max-w-[200px]"
                     >
                       <MapPin className="h-3 w-3 shrink-0 text-red-500" />
                       <span className="truncate">{ev.lugarNombre}</span>
@@ -996,12 +1000,8 @@ export default function DashboardPage() {
                     </a>
                   </div>
 
-                  <h3 className="text-sm font-bold text-zinc-900 group-hover:text-blue-600 transition-colors leading-snug">
-                    {ev.titulo}
-                  </h3>
-
                   {ev.notas && (
-                    <p className="text-xs text-zinc-600 bg-white p-2.5 rounded-xl border border-zinc-200/70 leading-relaxed">
+                    <p className="text-[11px] text-zinc-500 bg-white p-2 rounded-xl border border-zinc-200/70 leading-relaxed">
                       {ev.notas}
                     </p>
                   )}
@@ -1009,8 +1009,8 @@ export default function DashboardPage() {
               ))
             ) : (
               <div className="p-8 text-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 space-y-2">
-                <CalendarIcon className="h-7 w-7 text-zinc-300 mx-auto" />
-                <p className="text-xs font-semibold text-zinc-600">No hay eventos programados para esta fecha.</p>
+                <CalendarIcon className="h-6 w-6 text-zinc-300 mx-auto" />
+                <p className="text-xs font-semibold text-zinc-600">No hay eventos programados.</p>
               </div>
             )}
           </div>
@@ -1022,254 +1022,263 @@ export default function DashboardPage() {
               className="inline-flex items-center gap-1 text-zinc-900 font-semibold hover:text-blue-600"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>+ Agregar Evento a la Agenda</span>
+              <span>+ Agregar Evento</span>
             </button>
           </div>
         </div>
 
+
         {/* =========================================================================
-            COLUMNA 1/3: MIS TAREAS + CUMPLEAÑOS DEL DÍA ABAJO
+            COLUMNA 2: MIS TAREAS ASIGNADAS
            ========================================================================= */}
-        <div className="space-y-6">
-          
-          {/* MIS TAREAS ASIGNADAS */}
-          <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-2xs space-y-5 transition-colors">
-            {/* Header de Mis Tareas con perfil de usuario activo */}
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-                  <CheckSquare className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h2 className="text-base font-bold text-zinc-900">Mis Tareas</h2>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 mt-0.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={USUARIO_ACTIVO.foto} alt={USUARIO_ACTIVO.nombre} className="h-4 w-4 rounded-full object-cover" />
-                    <span className="font-semibold text-zinc-700">{USUARIO_ACTIVO.nombre}</span>
-                  </div>
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 sm:p-6 shadow-2xs space-y-4 transition-colors">
+          {/* Header de Mis Tareas con perfil de usuario activo */}
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                <CheckSquare className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-zinc-900">Mis Tareas</h2>
+                <div className="flex items-center gap-1 text-[11px] text-zinc-500">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={USUARIO_ACTIVO.foto} alt={USUARIO_ACTIVO.nombre} className="h-3.5 w-3.5 rounded-full object-cover" />
+                  <span className="font-semibold text-zinc-700 truncate">{USUARIO_ACTIVO.nombre}</span>
                 </div>
               </div>
-
-              <button
-                onClick={() => setIsModalTareaOpen(true)}
-                className="p-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
-                title="Nueva Tarea Personal"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
             </div>
 
-            {/* Filtro Exclusivo: NUEVAS y EN PROCESO */}
-            <div className="flex items-center justify-between gap-1.5 p-1 bg-zinc-100 rounded-xl text-xs font-medium">
-              <button
-                onClick={() => setFiltroEstatusTarea('NUEVAS')}
-                className={`flex-1 py-1.5 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 ${
-                  filtroEstatusTarea === 'NUEVAS' 
-                    ? 'bg-white text-zinc-900 shadow-2xs font-bold' 
-                    : 'text-zinc-500 hover:text-zinc-800'
-                }`}
-              >
-                <span>Nuevas</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  filtroEstatusTarea === 'NUEVAS' ? 'bg-amber-100 text-amber-800' : 'bg-zinc-200 text-zinc-600'
-                }`}>
-                  {misTareasNuevas.length}
-                </span>
-              </button>
-
-              <button
-                onClick={() => setFiltroEstatusTarea('EN_PROCESO')}
-                className={`flex-1 py-1.5 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 ${
-                  filtroEstatusTarea === 'EN_PROCESO' 
-                    ? 'bg-white text-zinc-900 shadow-2xs font-bold' 
-                    : 'text-zinc-500 hover:text-zinc-800'
-                }`}
-              >
-                <span>En Proceso</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  filtroEstatusTarea === 'EN_PROCESO' ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-200 text-zinc-600'
-                }`}>
-                  {misTareasEnProceso.length}
-                </span>
-              </button>
-            </div>
-
-            {/* Lista de Tareas Asignadas al Usuario Activo */}
-            <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-              {tareasAMostrar.length > 0 ? (
-                tareasAMostrar.map((tarea) => {
-                  return (
-                    <div
-                      key={tarea.id}
-                      className="p-3.5 rounded-2xl border border-zinc-200/70 bg-white hover:border-zinc-300 hover:shadow-2xs transition-all space-y-2.5 group"
-                    >
-                      <div className="flex items-start gap-2.5">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleCompletarTarea(tarea.id)}
-                          className="mt-0.5 text-zinc-300 hover:text-emerald-600 transition-colors shrink-0"
-                          title="Marcar como completada"
-                        >
-                          <Circle className="h-4 w-4" />
-                        </button>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                              tarea.prioridad === 'Alta' ? 'bg-red-50 text-red-700 border border-red-100' :
-                              tarea.prioridad === 'Media' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                              'bg-zinc-100 text-zinc-600 border border-zinc-200'
-                            }`}>
-                              {tarea.prioridad}
-                            </span>
-
-                            <span className="text-[10px] font-mono text-zinc-400">
-                              ⏰ {tarea.horaLimite}
-                            </span>
-                          </div>
-
-                          <h4 className="text-xs font-bold mt-1 text-zinc-900 leading-tight">
-                            {tarea.titulo}
-                          </h4>
-
-                          {tarea.descripcion && (
-                            <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
-                              {tarea.descripcion}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Footer de la Tarea */}
-                      <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px]">
-                        <span className="bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md font-medium">
-                          📁 {tarea.moduloRelacionado}
-                        </span>
-
-                        <div className="flex items-center gap-1.5">
-                          {tarea.estatus === 'Pendiente' ? (
-                            <button
-                              onClick={() => handleCambiarEstatusTarea(tarea.id, 'En Proceso')}
-                              className="text-blue-600 font-semibold hover:underline"
-                            >
-                              Iniciar ➔
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleToggleCompletarTarea(tarea.id)}
-                              className="text-emerald-600 font-semibold hover:underline"
-                            >
-                              ✓ Concluir
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handleEliminarTarea(tarea.id)}
-                            className="p-1 text-zinc-300 hover:text-red-500 rounded opacity-0 group-hover:opacity-100 transition-all"
-                            title="Eliminar tarea"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="p-8 text-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 space-y-2">
-                  <CheckSquare className="h-6 w-6 text-zinc-300 mx-auto" />
-                  <p className="text-xs font-semibold text-zinc-600">
-                    No tienes tareas {filtroEstatusTarea === 'NUEVAS' ? 'nuevas' : 'en proceso'} asignadas.
-                  </p>
-                  <p className="text-[10px] text-zinc-400">¡Tu bandeja de pendientes está al día!</p>
-                </div>
-              )}
-            </div>
-
-            {/* Footer de Tareas */}
-            <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
-              <button
-                onClick={() => setIsModalTareaOpen(true)}
-                className="text-zinc-900 font-semibold hover:text-blue-600"
-              >
-                + Asignar Tarea
-              </button>
-              <Link
-                href="/tareas"
-                className="text-zinc-900 font-semibold hover:text-blue-600 flex items-center gap-1"
-              >
-                <span>Ver Tablero Completo</span>
-                <ArrowUpRight className="h-3 w-3" />
-              </Link>
-            </div>
+            <button
+              onClick={() => setIsModalTareaOpen(true)}
+              className="p-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
+              title="Nueva Tarea Personal"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
           </div>
 
-
-          {/* CUMPLEAÑOS DEL DÍA (ABRICADO ABAJO DE TAREAS) */}
-          <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-2xs space-y-3.5">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-                  <Cake className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-zinc-900">Cumpleaños del día</h3>
-                  <p className="text-[11px] text-zinc-500">Contactos del Directorio Institucional</p>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
-                {CUMPLEANEROS_DEL_DIA.length} Hoy
+          {/* Filtro Exclusivo: NUEVAS y EN PROCESO */}
+          <div className="flex items-center justify-between gap-1 p-1 bg-zinc-100 rounded-xl text-xs font-medium">
+            <button
+              onClick={() => setFiltroEstatusTarea('NUEVAS')}
+              className={`flex-1 py-1 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
+                filtroEstatusTarea === 'NUEVAS' 
+                  ? 'bg-white text-zinc-900 shadow-2xs font-bold' 
+                  : 'text-zinc-500 hover:text-zinc-800'
+              }`}
+            >
+              <span>Nuevas</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                filtroEstatusTarea === 'NUEVAS' ? 'bg-amber-100 text-amber-800' : 'bg-zinc-200 text-zinc-600'
+              }`}>
+                {misTareasNuevas.length}
               </span>
-            </div>
+            </button>
 
-            <div className="space-y-2">
-              {CUMPLEANEROS_DEL_DIA.map((cump) => (
-                <div
-                  key={cump.id}
-                  className="p-3 bg-zinc-50/80 rounded-xl border border-zinc-200/70 flex items-center justify-between gap-3 hover:bg-white hover:border-zinc-300 hover:shadow-2xs transition-all"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={cump.foto}
-                      alt={cump.nombre}
-                      className="h-9 w-9 rounded-full object-cover border border-zinc-200 shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-zinc-900 truncate leading-tight">{cump.nombre}</p>
-                      <p className="text-[11px] text-zinc-500 truncate">{cump.cargo} • {cump.organizacion}</p>
-                    </div>
-                  </div>
-
-                  <a
-                    href={`https://api.whatsapp.com/send?phone=52${cump.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Estimado(a) ${cump.nombre}, le envío una cordial felicitación con motivo de su cumpleaños. ¡Que pase un excelente día! Atte: Dip. Ruben Roque.`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0"
-                    title="Felicitar por WhatsApp"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Felicitar</span>
-                  </a>
-                </div>
-              ))}
-            </div>
-
-            <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
-              <span className="text-[11px] text-zinc-400">Notificaciones automáticas matutinas</span>
-              <Link
-                href="/directorio"
-                className="text-xs font-semibold text-zinc-900 hover:text-blue-600 flex items-center gap-1"
-              >
-                <span>Ver Directorio</span>
-                <ArrowUpRight className="h-3 w-3" />
-              </Link>
-            </div>
+            <button
+              onClick={() => setFiltroEstatusTarea('EN_PROCESO')}
+              className={`flex-1 py-1 rounded-lg text-center transition-all flex items-center justify-center gap-1 ${
+                filtroEstatusTarea === 'EN_PROCESO' 
+                  ? 'bg-white text-zinc-900 shadow-2xs font-bold' 
+                  : 'text-zinc-500 hover:text-zinc-800'
+              }`}
+            >
+              <span>En Proceso</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                filtroEstatusTarea === 'EN_PROCESO' ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-200 text-zinc-600'
+              }`}>
+                {misTareasEnProceso.length}
+              </span>
+            </button>
           </div>
 
+          {/* Lista de Tareas Asignadas al Usuario Activo */}
+          <div className="space-y-2.5 max-h-[440px] overflow-y-auto pr-1">
+            {tareasAMostrar.length > 0 ? (
+              tareasAMostrar.map((tarea) => {
+                return (
+                  <div
+                    key={tarea.id}
+                    className="p-3.5 rounded-2xl border border-zinc-200/70 bg-white hover:border-zinc-300 hover:shadow-2xs transition-all space-y-2 group"
+                  >
+                    <div className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCompletarTarea(tarea.id)}
+                        className="mt-0.5 text-zinc-300 hover:text-emerald-600 transition-colors shrink-0"
+                        title="Marcar como completada"
+                      >
+                        <Circle className="h-4 w-4" />
+                      </button>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                            tarea.prioridad === 'Alta' ? 'bg-red-50 text-red-700 border border-red-100' :
+                            tarea.prioridad === 'Media' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                            'bg-zinc-100 text-zinc-600 border border-zinc-200'
+                          }`}>
+                            {tarea.prioridad}
+                          </span>
+
+                          <span className="text-[10px] font-mono text-zinc-400">
+                            ⏰ {tarea.horaLimite}
+                          </span>
+                        </div>
+
+                        <h4 className="text-xs font-bold mt-1 text-zinc-900 leading-tight">
+                          {tarea.titulo}
+                        </h4>
+
+                        {tarea.descripcion && (
+                          <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
+                            {tarea.descripcion}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Footer de la Tarea */}
+                    <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px]">
+                      <span className="bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md font-medium">
+                        📁 {tarea.moduloRelacionado}
+                      </span>
+
+                      <div className="flex items-center gap-1.5">
+                        {tarea.estatus === 'Pendiente' ? (
+                          <button
+                            onClick={() => handleCambiarEstatusTarea(tarea.id, 'En Proceso')}
+                            className="text-blue-600 font-semibold hover:underline"
+                          >
+                            Iniciar ➔
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleToggleCompletarTarea(tarea.id)}
+                            className="text-emerald-600 font-semibold hover:underline"
+                          >
+                            ✓ Concluir
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => handleEliminarTarea(tarea.id)}
+                          className="p-1 text-zinc-300 hover:text-red-500 rounded opacity-0 group-hover:opacity-100 transition-all"
+                          title="Eliminar tarea"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-8 text-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 space-y-2">
+                <CheckSquare className="h-6 w-6 text-zinc-300 mx-auto" />
+                <p className="text-xs font-semibold text-zinc-600">
+                  No tienes tareas {filtroEstatusTarea === 'NUEVAS' ? 'nuevas' : 'en proceso'}.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer de Tareas */}
+          <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
+            <button
+              onClick={() => setIsModalTareaOpen(true)}
+              className="text-zinc-900 font-semibold hover:text-blue-600"
+            >
+              + Asignar Tarea
+            </button>
+            <Link
+              href="/tareas"
+              className="text-zinc-900 font-semibold hover:text-blue-600 flex items-center gap-1"
+            >
+              <span>Ver Tablero</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </div>
         </div>
+
+
+        {/* =========================================================================
+            COLUMNA 3: CUMPLEAÑOS DEL DÍA (COLOR DISTINTIVO CÁLIDO / AMBER-ROSE)
+           ========================================================================= */}
+        <div className="bg-gradient-to-b from-amber-500/10 via-orange-500/5 to-white rounded-2xl border border-amber-300/80 p-5 sm:p-6 shadow-2xs space-y-4 transition-colors relative overflow-hidden">
+          
+          {/* Subtle decorative background glow */}
+          <div className="absolute -top-10 -right-10 w-28 h-28 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
+
+          {/* Header de Cumpleaños con estilo festivo */}
+          <div className="flex items-center justify-between pb-3 border-b border-amber-200/60 relative">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-amber-500 text-white shadow-sm shadow-amber-500/30 flex items-center justify-center">
+                <Cake className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-base font-bold text-zinc-900">Cumpleaños del día</h2>
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                </div>
+                <p className="text-[11px] text-amber-800 font-medium">Directorio de Relaciones Públicas</p>
+              </div>
+            </div>
+
+            <span className="text-[11px] font-bold bg-amber-500 text-white px-2.5 py-0.5 rounded-full shadow-2xs">
+              {CUMPLEANEROS_DEL_DIA.length} Hoy
+            </span>
+          </div>
+
+          {/* Lista de Cumpleañeros con tarjeta distinguida */}
+          <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1 relative">
+            {CUMPLEANEROS_DEL_DIA.map((cump) => (
+              <div
+                key={cump.id}
+                className="p-3.5 bg-white rounded-2xl border border-amber-200/80 shadow-2xs hover:border-amber-400 hover:shadow-xs transition-all space-y-3"
+              >
+                <div className="flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={cump.foto}
+                    alt={cump.nombre}
+                    className="h-11 w-11 rounded-full object-cover border-2 border-amber-400 shrink-0 shadow-2xs"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-zinc-900 truncate">{cump.nombre}</p>
+                    <p className="text-[11px] text-amber-900 font-semibold truncate">{cump.cargo}</p>
+                    <p className="text-[10px] text-zinc-500 truncate">{cump.organizacion}</p>
+                  </div>
+                </div>
+
+                {/* Botón WhatsApp de Felicitación con texto personalizado */}
+                <a
+                  href={`https://api.whatsapp.com/send?phone=52${cump.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Estimado(a) ${cump.nombre}, le envío una cordial y afectuosa felicitación con motivo de su cumpleaños. ¡Que pase un excelente día lleno de éxitos y bendiciones! Atte: Dip. Ruben Roque.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-2xs transition-all"
+                  title="Enviar felicitación institucional por WhatsApp"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <span>Felicitar por WhatsApp</span>
+                </a>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer de Cumpleaños */}
+          <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between text-xs text-amber-900">
+            <span className="text-[11px] text-zinc-500 font-medium">Recordatorios activos</span>
+            <Link
+              href="/directorio"
+              className="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1"
+            >
+              <span>Ver Directorio</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+
       </div>
 
       {/* MODAL 1: NUEVA TAREA */}
