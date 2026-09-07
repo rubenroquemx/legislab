@@ -182,15 +182,18 @@ export default function AtencionCiudadanaPage() {
     return matchSearch;
   });
 
-  const handleEnviarMensaje = (e: React.FormEvent) => {
+  const handleEnviarMensaje = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoMensaje.trim() || !activeConv) return;
+
+    const texto = nuevoMensaje;
+    const destinatario = activeConv.ciudadanoTelefono;
 
     const msg: MensajeChat = {
       id: `msg-${Date.now()}`,
       autor: esNotaInterna ? 'nota_interna' : 'agente',
       nombreAutor: esNotaInterna ? 'Dip. Ruben Roque (Nota Interna)' : 'Dip. Ruben Roque',
-      texto: nuevoMensaje,
+      texto: texto,
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       fecha: 'Hoy',
       leido: true
@@ -200,7 +203,7 @@ export default function AtencionCiudadanaPage() {
       if (c.id === activeConv.id) {
         return {
           ...c,
-          ultimoMensaje: esNotaInterna ? `[Nota]: ${nuevoMensaje}` : nuevoMensaje,
+          ultimoMensaje: esNotaInterna ? `[Nota]: ${texto}` : texto,
           ultimaHora: 'Ahora',
           mensajes: [...c.mensajes, msg]
         };
@@ -209,6 +212,18 @@ export default function AtencionCiudadanaPage() {
     }));
 
     setNuevoMensaje('');
+
+    if (!esNotaInterna && destinatario) {
+      try {
+        await sendWhatsAppMessageAction({
+          to: destinatario,
+          text: texto
+        });
+      } catch (err) {
+        console.warn('Error enviando mensaje WhatsApp:', err);
+      }
+    }
+
     setEsNotaInterna(false);
   };
 
