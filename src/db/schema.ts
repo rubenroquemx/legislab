@@ -5,6 +5,7 @@ import {
   uuid,
   primaryKey,
   integer,
+  boolean,
   pgEnum,
 } from 'drizzle-orm/pg-core';
 import type { AdapterAccount } from 'next-auth/adapters';
@@ -32,24 +33,6 @@ export const gestionEstatusEnum = pgEnum('gestion_estatus', [
   'Urgente',
 ]);
 
-export const gestionPrioridadEnum = pgEnum('gestion_prioridad', [
-  'Baja',
-  'Media',
-  'Alta',
-  'Urgente',
-]);
-
-export const iniciativaEstadoEnum = pgEnum('iniciativa_estado', [
-  'Borrador',
-  'Revisión Técnica',
-  'Lista para Presentar',
-  'Presentada en Pleno',
-  'En Comisión',
-  'Dictaminada',
-  'Aprobada',
-  'Desechada',
-]);
-
 // -------------------------------------------------------------
 // TENANT: DESPACHOS / OFFICES
 // -------------------------------------------------------------
@@ -59,7 +42,7 @@ export const offices = pgTable('offices', {
   titularName: text('titular_name').notNull(), // Ej: "Ruben Roque"
   legislature: text('legislature').notNull().default('LXVI Legislatura'),
   district: text('district').notNull(), // Ej: "Distrito 04 Federal"
-  state: text('state').notNull().default('Nacional'),
+  state: text('state').notNull().default('Tabasco'),
   party: text('party'),
   logoUrl: text('logo_url'),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
@@ -77,6 +60,7 @@ export const users = pgTable('users', {
   email: text('email').unique().notNull(),
   emailVerified: timestamp('emailVerified', { mode: 'date' }),
   image: text('image'),
+  cargo: text('cargo').default('Asesor Legislativo'),
   officeId: uuid('office_id').references(() => offices.id, { onDelete: 'cascade' }),
   role: text('role').notNull().default('asesor_a'),
   phone: text('phone'),
@@ -130,7 +114,7 @@ export const verificationTokens = pgTable(
 );
 
 // -------------------------------------------------------------
-// GESTIONES CIUDADANAS (Distrito)
+// GESTIONES CIUDADANAS
 // -------------------------------------------------------------
 export const gestiones = pgTable('gestiones', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -141,6 +125,7 @@ export const gestiones = pgTable('gestiones', {
   asunto: text('asunto').notNull(),
   solicitante: text('solicitante').notNull(),
   colonia: text('colonia').notNull(),
+  municipio: text('municipio').default('Centro'),
   telefono: text('telefono'),
   email: text('email'),
   categoria: text('categoria').default('General'),
@@ -151,6 +136,117 @@ export const gestiones = pgTable('gestiones', {
   responsableId: text('responsable_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+// -------------------------------------------------------------
+// TAREAS DEL EQUIPO & PERSONALES
+// -------------------------------------------------------------
+export const tareas = pgTable('tareas', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  officeId: uuid('office_id')
+    .notNull()
+    .references(() => offices.id, { onDelete: 'cascade' }),
+  titulo: text('titulo').notNull(),
+  descripcion: text('descripcion'),
+  usuarioId: text('usuario_id').references(() => users.id, { onDelete: 'set null' }),
+  usuarioNombre: text('usuario_nombre').notNull(),
+  usuarioCargo: text('usuario_cargo'),
+  usuarioFoto: text('usuario_foto'),
+  usuarioWhatsapp: text('usuario_whatsapp'),
+  prioridad: text('prioridad').default('Media').notNull(), // 'Alta' | 'Media' | 'Baja'
+  estatus: text('estatus').default('Pendiente').notNull(), // 'Pendiente' | 'En Proceso' | 'Completada'
+  fechaLimite: text('fecha_limite').notNull(), // YYYY-MM-DD
+  horaLimite: text('hora_limite').notNull(), // HH:MM
+  moduloRelacionado: text('modulo_relacionado').default('Gestiones'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+// -------------------------------------------------------------
+// AGENDA PARLAMENTARIA Y EVENTOS
+// -------------------------------------------------------------
+export const agendaEventos = pgTable('agenda_eventos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  officeId: uuid('office_id')
+    .notNull()
+    .references(() => offices.id, { onDelete: 'cascade' }),
+  titulo: text('titulo').notNull(),
+  tipo: text('tipo').default('Comisión').notNull(),
+  fecha: text('fecha').notNull(), // YYYY-MM-DD
+  horaInicio: text('hora_inicio').notNull(), // HH:MM
+  horaFin: text('hora_fin').notNull(), // HH:MM
+  lugarNombre: text('lugar_nombre').notNull(),
+  lugarUrl: text('lugar_url'),
+  color: text('color').default('#0284c7'),
+  notas: text('notas'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+// -------------------------------------------------------------
+// DIRECTORIO INSTITUCIONAL & CUMPLEAÑOS
+// -------------------------------------------------------------
+export const directorioContactos = pgTable('directorio_contactos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  officeId: uuid('office_id')
+    .notNull()
+    .references(() => offices.id, { onDelete: 'cascade' }),
+  nombre: text('nombre').notNull(),
+  cargo: text('cargo').notNull(),
+  organizacion: text('organizacion').notNull(),
+  categoria: text('categoria').default('Gabinete Estatal'),
+  telefono: text('telefono').notNull(),
+  email: text('email'),
+  foto: text('foto'),
+  fechaNacimiento: text('fecha_nacimiento'), // '03 de Septiembre' o MM-DD
+  direccion: text('direccion'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+// -------------------------------------------------------------
+// GRUPOS Y REDES DE CONTACTOS
+// -------------------------------------------------------------
+export const gruposContactos = pgTable('grupos_contactos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  officeId: uuid('office_id')
+    .notNull()
+    .references(() => offices.id, { onDelete: 'cascade' }),
+  nombre: text('nombre').notNull(),
+  categoria: text('categoria').notNull(), // 'Líderes Seccionales' | 'Comunitario' | 'Medios'
+  color: text('color').default('blue'),
+  whatsappLink: text('whatsapp_link'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+export const grupoMiembros = pgTable('grupo_miembros', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  grupoId: uuid('grupo_id')
+    .notNull()
+    .references(() => gruposContactos.id, { onDelete: 'cascade' }),
+  nombre: text('nombre').notNull(),
+  cargo: text('cargo').notNull(),
+  telefono: text('telefono').notNull(),
+  municipio: text('municipio').default('Centro'),
+  foto: text('foto'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+// -------------------------------------------------------------
+// ATENCIÓN CIUDADANA / WHATSAPP BANDEJA
+// -------------------------------------------------------------
+export const atencionMensajes = pgTable('atencion_mensajes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  officeId: uuid('office_id')
+    .notNull()
+    .references(() => offices.id, { onDelete: 'cascade' }),
+  ciudadanoNombre: text('ciudadano_nombre').notNull(),
+  ciudadanoTelefono: text('ciudadano_telefono').notNull(),
+  ciudadanoFoto: text('ciudadano_foto'),
+  ultimoMensaje: text('ultimo_mensaje').notNull(),
+  horaUltimoMensaje: text('hora_ultimo_mensaje').notNull(),
+  colonia: text('colonia').default('Tamulté'),
+  estatus: text('estatus').default('Pendiente').notNull(), // 'Pendiente' | 'Canalizado' | 'Resuelto'
+  sinLeer: boolean('sin_leer').default(true),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
 // -------------------------------------------------------------
@@ -191,12 +287,25 @@ export const iaGenerations = pgTable('ia_generations', {
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
+// Tipos Inferidos
 export type Office = typeof offices.$inferSelect;
 export type NewOffice = typeof offices.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Gestion = typeof gestiones.$inferSelect;
 export type NewGestion = typeof gestiones.$inferInsert;
+export type Tarea = typeof tareas.$inferSelect;
+export type NewTarea = typeof tareas.$inferInsert;
+export type AgendaEvento = typeof agendaEventos.$inferSelect;
+export type NewAgendaEvento = typeof agendaEventos.$inferInsert;
+export type DirectorioContacto = typeof directorioContactos.$inferSelect;
+export type NewDirectorioContacto = typeof directorioContactos.$inferInsert;
+export type GrupoContacto = typeof gruposContactos.$inferSelect;
+export type NewGrupoContacto = typeof gruposContactos.$inferInsert;
+export type GrupoMiembro = typeof grupoMiembros.$inferSelect;
+export type NewGrupoMiembro = typeof grupoMiembros.$inferInsert;
+export type AtencionMensaje = typeof atencionMensajes.$inferSelect;
+export type NewAtencionMensaje = typeof atencionMensajes.$inferInsert;
 export type Iniciativa = typeof iniciativas.$inferSelect;
 export type NewIniciativa = typeof iniciativas.$inferInsert;
 export type IaGeneration = typeof iaGenerations.$inferSelect;
