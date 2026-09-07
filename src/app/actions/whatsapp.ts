@@ -65,6 +65,7 @@ export async function getWhatsAppInstanceInfo(instanceName = DEFAULT_INSTANCE_NA
       const instances = res.data as any[];
       const inst = instances.find((i: any) => (i.name || i.instance?.instanceName) === instanceName);
       if (inst) {
+        const isConnected = inst.connectionStatus === 'open';
         const ownerJid = inst.ownerJid || '';
         const phone = ownerJid.split('@')[0] || '';
         // Format phone: 5219932200146 -> +52 (993) 220-0146
@@ -83,6 +84,7 @@ export async function getWhatsAppInstanceInfo(instanceName = DEFAULT_INSTANCE_NA
           data: {
             instanceName: inst.name || instanceName,
             connectionStatus: inst.connectionStatus || 'close',
+            isConnected,
             phone: formattedPhone,
             rawPhone: phone,
             profileName: inst.profileName || 'Sin nombre',
@@ -150,12 +152,14 @@ export async function disconnectWhatsApp(instanceName = DEFAULT_INSTANCE_NAME) {
     const res = await logoutInstance(instanceName);
     return {
       success: res.success,
+      isConnected: false,
       error: res.error,
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return {
       success: false,
+      isConnected: false,
       error: msg,
     };
   }
@@ -191,10 +195,23 @@ export async function sendWhatsAppMessageAction(params: {
  */
 export async function syncWhatsAppGroups(instanceName = DEFAULT_INSTANCE_NAME) {
   try {
+    // 1. Check connection status before fetching groups
+    const stateRes = await getConnectionState(instanceName);
+    const isOpen = stateRes.success && stateRes.data?.instance?.state === 'open';
+    if (!isOpen) {
+      return {
+        success: false,
+        isConnected: false,
+        error: 'WhatsApp no está conectado.',
+        data: [],
+      };
+    }
+
     const res = await fetchAllGroups(instanceName, true);
     if (!res.success || !res.data) {
       return {
         success: false,
+        isConnected: false,
         error: res.error || 'No se pudieron consultar los grupos en Evolution API. Verifica que WhatsApp esté conectado.',
         data: [],
       };
@@ -202,7 +219,7 @@ export async function syncWhatsAppGroups(instanceName = DEFAULT_INSTANCE_NAME) {
 
     const groups = res.data;
     const officeId = await getFirstOfficeId();
-    const mappedGroups = [];
+    const mappedGroups: any[] = [];
 
     for (let i = 0; i < groups.length; i++) {
       const g = groups[i];
@@ -257,6 +274,7 @@ export async function syncWhatsAppGroups(instanceName = DEFAULT_INSTANCE_NAME) {
 
     return {
       success: true,
+      isConnected: true,
       totalGrupos: mappedGroups.length,
       data: mappedGroups,
       message: `¡Sincronización exitosa! Se cargaron ${mappedGroups.length} grupos desde WhatsApp.`,
@@ -265,6 +283,7 @@ export async function syncWhatsAppGroups(instanceName = DEFAULT_INSTANCE_NAME) {
     const msg = err instanceof Error ? err.message : String(err);
     return {
       success: false,
+      isConnected: false,
       error: `Error durante la sincronización: ${msg}`,
       data: [],
     };
@@ -276,18 +295,15 @@ export async function syncWhatsAppGroups(instanceName = DEFAULT_INSTANCE_NAME) {
  */
 export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INSTANCE_NAME) {
   try {
-    const officeId = await getFirstOfficeId();
-
-    // 1. Check database first
-    let dbMsgs: any[] = [];
-    try {
-      dbMsgs = await db
-        .select()
-        .from(atencionMensajes)
-        .where(eq(atencionMensajes.officeId, officeId))
-        .orderBy(desc(atencionMensajes.createdAt));
-    } catch (e) {
-      console.warn('DB atencion mensajes read:', e);
+    // 1. Check connection status before returning live chats
+    const stateRes = await getConnectionState(instanceName);
+    const isOpen = stateRes.success && stateRes.data?.instance?.state === 'open';
+    if (!isOpen) {
+      return {
+        success: true,
+        isConnected: false,
+        data: [],
+      };
     }
 
     // 2. Query Evolution API for recent chats & contacts in parallel
@@ -317,38 +333,7 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
       }
     }
 
-    const mappedConversaciones = [];
-
-    // Map DB messages
-    if (dbMsgs.length > 0) {
-      for (const m of dbMsgs) {
-        const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.ciudadanoNombre)}&background=2563eb&color=fff&bold=true`;
-        mappedConversaciones.push({
-          id: m.id,
-          ciudadanoNombre: m.ciudadanoNombre,
-          ciudadanoTelefono: m.ciudadanoTelefono,
-          ciudadanoAvatar: m.ciudadanoFoto || fallbackAvatar,
-          municipio: 'Centro',
-          colonia: m.colonia || 'Centro',
-          ultimoMensaje: m.ultimoMensaje,
-          ultimaHora: m.horaUltimoMensaje || 'Reciente',
-          noLeidos: m.sinLeer ? 1 : 0,
-          categoria: 'Gestión Médica' as const,
-          estado: 'sin_asignar' as const,
-          asignadoA: null,
-          mensajes: [
-            {
-              id: `msg-${m.id}`,
-              autor: 'ciudadano' as const,
-              nombreAutor: m.ciudadanoNombre,
-              texto: m.ultimoMensaje,
-              hora: m.horaUltimoMensaje || 'Hoy',
-              fecha: 'Hoy',
-            },
-          ],
-        });
-      }
-    }
+    const mappedConversaciones: any[] = [];
 
     // Map Evolution API direct chats
     if (chats.length > 0) {
@@ -446,7 +431,7 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
           } catch { timeStr = 'Reciente'; }
         }
 
-        // Check if not already mapped from DB
+        // Check if not already mapped
         if (!mappedConversaciones.some(m => m.ciudadanoTelefono.includes(phone))) {
           mappedConversaciones.push({
             id: `chat-${phone}`,
@@ -479,12 +464,14 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
 
     return {
       success: true,
+      isConnected: true,
       data: mappedConversaciones,
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return {
       success: false,
+      isConnected: false,
       error: msg,
       data: [],
     };

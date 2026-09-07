@@ -1,11 +1,5 @@
 'use client';
 
-
-
-
-
-
-
 import { 
   getWhatsAppStatus, 
   generateWhatsAppQR, 
@@ -312,10 +306,20 @@ function ConfiguracionContent() {
         setQrBase64(null);
         setQrCodeString(null);
         setPollingActive(false);
+        setConnectedPhone(null);
+        setProfileName(null);
+        setMessageCount(0);
+        setContactCount(0);
+        setChatCount(0);
         localStorage.setItem('legislab_whatsapp_connected', 'false');
         setWhatsappFeedback('⚠️ WhatsApp desconectado.');
       } catch (err: unknown) {
         setWhatsappConectado(false);
+        setConnectedPhone(null);
+        setProfileName(null);
+        setMessageCount(0);
+        setContactCount(0);
+        setChatCount(0);
         localStorage.setItem('legislab_whatsapp_connected', 'false');
       } finally {
         setGenerandoQR(false);

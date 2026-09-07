@@ -1,9 +1,5 @@
 'use client';
 
-
-
-
-
 import { syncWhatsAppGroups } from '@/app/actions/whatsapp';
 
 import { useState, useEffect } from 'react';
@@ -96,14 +92,22 @@ export default function GruposPage() {
       try {
         setIsLoading(true);
         const res = await syncWhatsAppGroups();
-        if (res.success && res.data && res.data.length > 0) {
+        if (res.success && res.isConnected !== false && res.data && res.data.length > 0) {
           setGrupos(res.data as ContactGroup[]);
           setIsWhatsappConnected(true);
           localStorage.setItem('legislab_whatsapp_connected', 'true');
           if (res.data[0]) setSelectedGroup(res.data[0] as ContactGroup);
+        } else {
+          setGrupos([]);
+          setSelectedGroup(null);
+          setIsWhatsappConnected(false);
+          localStorage.setItem('legislab_whatsapp_connected', 'false');
         }
       } catch (err) {
         console.warn('Error loading live groups:', err);
+        setGrupos([]);
+        setSelectedGroup(null);
+        setIsWhatsappConnected(false);
       } finally {
         setIsLoading(false);
       }

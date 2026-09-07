@@ -1,10 +1,5 @@
 'use client';
 
-
-
-
-
-
 import { 
   getWhatsAppConversacionesAction, 
   sendWhatsAppMessageAction,
@@ -135,8 +130,9 @@ export default function AtencionCiudadanaPage() {
       }
     }
 
-    async function checkConnection() {
+    async function checkAndLoad() {
       try {
+        setIsLoading(true);
         const statusRes = await getWhatsAppStatus('Legislab');
         if (statusRes.success && statusRes.isConnected) {
           setIsWhatsappConnected(true);
@@ -145,32 +141,31 @@ export default function AtencionCiudadanaPage() {
           if (infoRes.success && infoRes.data?.phone) {
             setConnectedPhone(infoRes.data.phone);
           }
+          const res = await getWhatsAppConversacionesAction();
+          if (res.success && res.isConnected !== false && res.data && res.data.length > 0) {
+            setConversaciones(res.data as any);
+            if (res.data[0]) setSelectedConvId(res.data[0].id);
+          } else {
+            setConversaciones([]);
+            setSelectedConvId('');
+          }
         } else {
           setIsWhatsappConnected(false);
           localStorage.setItem('legislab_whatsapp_connected', 'false');
           setConnectedPhone(null);
-        }
-      } catch (e) {
-        console.warn('Error verificando WhatsApp status:', e);
-      }
-    }
-    checkConnection();
-
-    async function loadLiveConversations() {
-      try {
-        setIsLoading(true);
-        const res = await getWhatsAppConversacionesAction();
-        if (res.success && res.data && res.data.length > 0) {
-          setConversaciones(res.data as any);
-          if (res.data[0]) setSelectedConvId(res.data[0].id);
+          setConversaciones([]);
+          setSelectedConvId('');
         }
       } catch (err) {
         console.warn('Error loading live conversations:', err);
+        setIsWhatsappConnected(false);
+        setConversaciones([]);
+        setSelectedConvId('');
       } finally {
         setIsLoading(false);
       }
     }
-    loadLiveConversations();
+    checkAndLoad();
   }, []);
 
   const activeConv = (selectedConvId ? conversaciones.find(c => c.id === selectedConvId) : null) || conversaciones[0] || null;
