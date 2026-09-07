@@ -204,14 +204,23 @@ export async function deleteInstance(instanceName: string) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// MESSAGING & CHAT
-// ---------------------------------------------------------------------------
+export interface WhatsAppContact {
+  id?: string;
+  remoteJid?: string;
+  pushName?: string;
+  profilePicUrl?: string;
+  isGroup?: boolean;
+  isSaved?: boolean;
+  type?: string;
+}
 
 export function formatPhoneForWhatsApp(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.length === 10) {
-    return `52${digits}`;
+    return `521${digits}`;
+  }
+  if (digits.length === 12 && digits.startsWith('52')) {
+    return `521${digits.substring(2)}`;
   }
   return digits;
 }
@@ -225,11 +234,6 @@ export async function sendTextMessage(
   const payload = {
     number: formattedNumber,
     text,
-    options: {
-      delay: 1200,
-      presence: 'composing',
-      linkPreview: true,
-    },
   };
 
   return evolutionFetch<SendMessageResult>(
@@ -239,6 +243,23 @@ export async function sendTextMessage(
       body: JSON.stringify(payload),
     }
   );
+}
+
+export async function fetchAllContacts(instanceName: string) {
+  const res = await evolutionFetch<WhatsAppContact[] | { contacts?: WhatsAppContact[] }>(
+    `/chat/findContacts/${encodeURIComponent(instanceName)}`,
+    {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }
+  );
+  if (res.success && res.data) {
+    if (Array.isArray(res.data)) return { success: true, data: res.data };
+    if (Array.isArray((res.data as { contacts?: WhatsAppContact[] }).contacts)) {
+      return { success: true, data: (res.data as { contacts: WhatsAppContact[] }).contacts };
+    }
+  }
+  return res as { success: boolean; data?: WhatsAppContact[]; error?: string };
 }
 
 export async function fetchAllChats(instanceName: string) {

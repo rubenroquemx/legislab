@@ -8,6 +8,7 @@ import {
   sendTextMessage,
   fetchAllGroups,
   fetchAllChats,
+  fetchAllContacts,
   fetchInstances,
   formatPhoneForWhatsApp,
   type WhatsAppGroup,
@@ -289,20 +290,44 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
       console.warn('DB atencion mensajes read:', e);
     }
 
-    // 2. Query Evolution API for recent chats
-    const chatsRes = await fetchAllChats(instanceName);
+    // 2. Query Evolution API for recent chats & contacts in parallel
+    const [chatsRes, contactsRes] = await Promise.all([
+      fetchAllChats(instanceName),
+      fetchAllContacts(instanceName),
+    ]);
+
     const chats = chatsRes.success && chatsRes.data ? chatsRes.data : [];
+    const contacts = contactsRes.success && contactsRes.data ? contactsRes.data : [];
+
+    // Build contacts lookup dictionary
+    const contactsMap = new Map<string, { pushName?: string; profilePicUrl?: string }>();
+    for (const ct of contacts) {
+      const cJid = ct.remoteJid || ct.id || '';
+      if (!cJid || cJid.endsWith('@g.us')) continue;
+      const cPhone = cJid.split('@')[0];
+      const info = {
+        pushName: ct.pushName && ct.pushName !== 'Você' && ct.pushName !== 'You' ? ct.pushName : undefined,
+        profilePicUrl: ct.profilePicUrl || undefined,
+      };
+      contactsMap.set(cJid, info);
+      contactsMap.set(cPhone, info);
+      if (cPhone.startsWith('521') && cPhone.length === 13) {
+        contactsMap.set(`52${cPhone.substring(3)}`, info);
+        contactsMap.set(cPhone.substring(3), info);
+      }
+    }
 
     const mappedConversaciones = [];
 
     // Map DB messages
     if (dbMsgs.length > 0) {
       for (const m of dbMsgs) {
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.ciudadanoNombre)}&background=2563eb&color=fff&bold=true`;
         mappedConversaciones.push({
           id: m.id,
           ciudadanoNombre: m.ciudadanoNombre,
           ciudadanoTelefono: m.ciudadanoTelefono,
-          ciudadanoAvatar: m.ciudadanoFoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          ciudadanoAvatar: m.ciudadanoFoto || fallbackAvatar,
           municipio: 'Centro',
           colonia: m.colonia || 'Centro',
           ultimoMensaje: m.ultimoMensaje,
@@ -333,25 +358,73 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
         if (!jid.includes('@s.whatsapp.net') && !jid.includes('@lid')) continue; // only personal chats
 
         const phone = jid.split('@')[0];
-        const name = c.pushName || c.lastMessage?.pushName || c.name || `Ciudadano +${phone}`;
+        const contactInfo = contactsMap.get(jid) || contactsMap.get(phone);
+
+        let name = contactInfo?.pushName || '';
+        if (!name && c.pushName && c.pushName !== 'Você' && c.pushName !== 'You') {
+          name = c.pushName;
+        }
+        if (!name && c.lastMessage?.pushName && c.lastMessage.pushName !== 'Você' && c.lastMessage.pushName !== 'You') {
+          name = c.lastMessage.pushName;
+        }
+        if (!name && c.name && c.name !== 'Você') {
+          name = c.name;
+        }
+
+        // Format phone nicely for display if name is still missing
+        let displayPhone = phone;
+        if (phone.startsWith('521') && phone.length === 13) {
+          const area = phone.substring(3, 6);
+          const p1 = phone.substring(6, 9);
+          const p2 = phone.substring(9, 13);
+          displayPhone = `+52 (${area}) ${p1}-${p2}`;
+        } else if (phone.startsWith('52') && phone.length === 12) {
+          const area = phone.substring(2, 5);
+          const p1 = phone.substring(5, 8);
+          const p2 = phone.substring(8, 12);
+          displayPhone = `+52 (${area}) ${p1}-${p2}`;
+        } else {
+          displayPhone = `+${phone}`;
+        }
+
+        if (!name) {
+          name = displayPhone;
+        }
+
+        // Avatar
+        const avatarUrl = contactInfo?.profilePicUrl || c.profilePicUrl || 
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(name.replace(/[^a-zA-Z0-9 ]/g, ''))}&background=2563eb&color=fff&bold=true`;
         
-        // Extract last message text from the actual API format
+        // Extract last message text cleanly
         let textStr = 'Conversación iniciada';
         if (c.lastMessage?.message) {
           const msgObj = c.lastMessage.message;
-          const conversation = msgObj.conversation || msgObj.extendedTextMessage;
-          if (typeof conversation === 'string') {
-            textStr = conversation;
-          } else if (conversation && typeof conversation === 'object' && 'text' in (conversation as Record<string, unknown>)) {
-            textStr = String((conversation as Record<string, unknown>).text);
+          if (typeof msgObj.conversation === 'string' && msgObj.conversation.trim()) {
+            textStr = msgObj.conversation;
+          } else if (msgObj.extendedTextMessage && typeof msgObj.extendedTextMessage === 'object' && 'text' in (msgObj.extendedTextMessage as Record<string, unknown>)) {
+            textStr = String((msgObj.extendedTextMessage as Record<string, unknown>).text);
+          } else if (msgObj.imageMessage) {
+            textStr = '📷 Imagen recibida';
+          } else if (msgObj.audioMessage) {
+            textStr = '🎤 Nota de voz / Audio';
+          } else if (msgObj.videoMessage) {
+            textStr = '🎥 Video recibido';
+          } else if (msgObj.documentMessage) {
+            textStr = '📄 Documento adjunto';
+          } else if (msgObj.stickerMessage) {
+            textStr = '🏷️ Sticker';
+          } else if (msgObj.contactMessage || msgObj.contactsArrayMessage) {
+            textStr = '👤 Contacto compartido';
+          } else if (msgObj.locationMessage) {
+            textStr = '📍 Ubicación compartida';
           } else {
-            // Try to get any text from message types
             const firstVal = Object.values(msgObj)[0];
-            if (typeof firstVal === 'string') textStr = firstVal;
-            else if (firstVal && typeof firstVal === 'object' && 'caption' in (firstVal as Record<string, unknown>)) {
+            if (typeof firstVal === 'string' && !firstVal.startsWith('[')) {
+              textStr = firstVal;
+            } else if (firstVal && typeof firstVal === 'object' && 'caption' in (firstVal as Record<string, unknown>)) {
               textStr = String((firstVal as Record<string, unknown>).caption) || 'Mensaje multimedia';
             } else {
-              textStr = c.lastMessage.messageType ? `[${c.lastMessage.messageType}]` : 'Mensaje recibido';
+              textStr = 'Mensaje recibido';
             }
           }
         }
@@ -378,8 +451,8 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
           mappedConversaciones.push({
             id: `chat-${phone}`,
             ciudadanoNombre: name,
-            ciudadanoTelefono: `+${phone}`,
-            ciudadanoAvatar: c.profilePicUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            ciudadanoTelefono: displayPhone,
+            ciudadanoAvatar: avatarUrl,
             municipio: 'Centro',
             colonia: 'WhatsApp Directo',
             ultimoMensaje: textStr,

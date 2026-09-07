@@ -1,7 +1,10 @@
 'use client';
 
 
+
+
 import { getWhatsAppConversacionesAction, sendWhatsAppMessageAction } from '@/app/actions/whatsapp';
+import { createGestion } from '@/app/actions/gestiones';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -30,9 +33,19 @@ import {
   User,
   MoreVertical,
   SlidersHorizontal,
-  FileText
+  FileText,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface NotaInternaItem {
+  id: string;
+  convId: string;
+  autor: string;
+  texto: string;
+  fecha: string;
+  hora: string;
+}
 
 interface MensajeChat {
   id: string;
@@ -86,6 +99,21 @@ export default function AtencionCiudadanaPage() {
   const [alertaAccion, setAlertaAccion] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Notas Rápidas Internas
+  const [notasRapidas, setNotasRapidas] = useState<NotaInternaItem[]>([]);
+  const [nuevaNotaTexto, setNuevaNotaTexto] = useState('');
+
+  // Modal Nueva Gestión
+  const [showModalGestion, setShowModalGestion] = useState(false);
+  const [formAsunto, setFormAsunto] = useState('');
+  const [formSolicitante, setFormSolicitante] = useState('');
+  const [formTelefono, setFormTelefono] = useState('');
+  const [formColonia, setFormColonia] = useState('');
+  const [formMunicipio, setFormMunicipio] = useState('Centro');
+  const [formCategoria, setFormCategoria] = useState('Gestión Médica');
+  const [formPrioridad, setFormPrioridad] = useState('Media');
+  const [guardandoGestion, setGuardandoGestion] = useState(false);
+
   // Cargar conversaciones reales al iniciar
   useEffect(() => {
     const saved = localStorage.getItem('legislab_whatsapp_connected');
@@ -137,7 +165,7 @@ export default function AtencionCiudadanaPage() {
       autor: esNotaInterna ? 'nota_interna' : 'agente',
       nombreAutor: esNotaInterna ? 'Dip. Ruben Roque (Nota Interna)' : 'Dip. Ruben Roque',
       texto: texto,
-      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
       fecha: 'Hoy',
       leido: true
     };
@@ -158,12 +186,20 @@ export default function AtencionCiudadanaPage() {
 
     if (!esNotaInterna && destinatario) {
       try {
-        await sendWhatsAppMessageAction({
+        const res = await sendWhatsAppMessageAction({
           to: destinatario,
           text: texto
         });
+        if (res.success) {
+          setAlertaAccion('✓ Mensaje enviado a WhatsApp');
+          setTimeout(() => setAlertaAccion(null), 3000);
+        } else {
+          setAlertaAccion('⚠️ WhatsApp: ' + (res.error || 'No se pudo enviar'));
+          setTimeout(() => setAlertaAccion(null), 5000);
+        }
       } catch (err) {
         console.warn('Error enviando mensaje WhatsApp:', err);
+        setAlertaAccion('⚠️ Error enviando a WhatsApp');
       }
     }
 
@@ -186,22 +222,65 @@ export default function AtencionCiudadanaPage() {
     setTimeout(() => setAlertaAccion(null), 3000);
   };
 
-  const handleConvertirEnGestion = () => {
-    if (!activeConv) return;
-    const nuevoFolio = `GES-2026-${Math.floor(100 + Math.random() * 900)}`;
-    setConversaciones(prev => prev.map(c => {
-      if (c.id === activeConv.id) {
-        return {
-          ...c,
-          folioGestion: nuevoFolio,
-          estado: 'convertido_gestion'
-        };
-      }
-      return c;
-    }));
-    setAlertaAccion(`🎉 ¡Gestión creada exitosamente con Folio ${nuevoFolio}! Carpeta de Google Drive generada.`);
-    setTimeout(() => setAlertaAccion(null), 4000);
+  const handleAgregarNotaRapida = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevaNotaTexto.trim() || !activeConv) return;
+
+    const newNote: NotaInternaItem = {
+      id: `nota-${Date.now()}`,
+      convId: activeConv.id,
+      autor: 'Dip. Ruben Roque',
+      texto: nuevaNotaTexto.trim(),
+      fecha: new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
+      hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setNotasRapidas(prev => [newNote, ...prev]);
+    setNuevaNotaTexto('');
+    setAlertaAccion('✓ Nota rápida registrada');
+    setTimeout(() => setAlertaAccion(null), 3000);
   };
+
+  const handleCrearGestionDesdeModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeConv) return;
+    setGuardandoGestion(true);
+    try {
+      const res = await createGestion({
+        asunto: formAsunto || 'Gestión canalizada desde Atención Ciudadana',
+        solicitante: formSolicitante || activeConv.ciudadanoNombre,
+        colonia: formColonia || 'Centro',
+        telefono: formTelefono || activeConv.ciudadanoTelefono,
+        categoria: formCategoria,
+        prioridad: formPrioridad,
+      });
+
+      const nuevoFolio = res.success && res.data && res.data.folio 
+        ? res.data.folio 
+        : `GES-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      setConversaciones(prev => prev.map(c => {
+        if (c.id === activeConv.id) {
+          return {
+            ...c,
+            folioGestion: nuevoFolio,
+            estado: 'convertido_gestion'
+          };
+        }
+        return c;
+      }));
+
+      setShowModalGestion(false);
+      setAlertaAccion(`🎉 ¡Gestión creada con éxito! Folio: ${nuevoFolio}`);
+      setTimeout(() => setAlertaAccion(null), 4000);
+    } catch (err) {
+      setAlertaAccion('⚠️ Error creando gestión: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setGuardandoGestion(false);
+    }
+  };
+
+  const currentNotas = activeConv ? notasRapidas.filter(n => n.convId === activeConv.id) : [];
 
   const plantillasRapidas = [
     'Hola, con gusto le atiende el equipo del Dip. Ruben Roque. ¿Nos podría compartir su nombre completo y colonia?',
@@ -572,28 +651,37 @@ export default function AtencionCiudadanaPage() {
           </div>
         )}
 
-        {/* COLUMNA 3: EXPEDIENTE CIUDADANO Y GESTIÓN DIRECTA (3 Cols) */}
+        {/* COLUMNA 3: EXPEDIENTE CIUDADANO & NOTAS RÁPIDAS (3 Cols) */}
         {activeConv ? (
-          <div className="lg:col-span-3 bg-white rounded-2xl border border-zinc-200 shadow-2xs p-4.5 space-y-4 flex flex-col overflow-y-auto">
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                Expediente Ciudadano
+          <div className="lg:col-span-3 bg-white rounded-2xl border border-zinc-200 shadow-2xs p-3.5 space-y-3.5 flex flex-col overflow-y-auto">
+            {/* Encabezado Expediente */}
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600">
+                Expediente
               </h3>
-              <div className="mt-3 text-center space-y-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={activeConv.ciudadanoAvatar}
-                  alt={activeConv.ciudadanoNombre}
-                  className="h-16 w-16 rounded-full object-cover border-2 border-white shadow-sm mx-auto"
-                />
-                <div>
-                  <h4 className="text-sm font-bold text-zinc-900">{activeConv.ciudadanoNombre}</h4>
-                  <p className="text-xs text-zinc-500">{activeConv.colonia}, {activeConv.municipio}</p>
-                </div>
+              {activeConv.folioGestion && (
+                <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  {activeConv.folioGestion}
+                </span>
+              )}
+            </div>
+
+            {/* Perfil del Ciudadano */}
+            <div className="text-center space-y-2 py-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={activeConv.ciudadanoAvatar}
+                alt={activeConv.ciudadanoNombre}
+                className="h-16 w-16 rounded-full object-cover border-2 border-white shadow-sm mx-auto"
+              />
+              <div>
+                <h4 className="text-sm font-bold text-zinc-900">{activeConv.ciudadanoNombre}</h4>
+                <p className="text-xs text-zinc-500">{activeConv.colonia}, {activeConv.municipio}</p>
               </div>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-zinc-100 text-xs text-gray-600">
+            {/* Ficha Rápida */}
+            <div className="space-y-1.5 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100 text-xs text-zinc-600">
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">Teléfono:</span>
                 <span className="font-bold text-zinc-800">{activeConv.ciudadanoTelefono}</span>
@@ -608,64 +696,96 @@ export default function AtencionCiudadanaPage() {
               </div>
             </div>
 
-            {/* Botón Convertir en Gestión */}
-            <div className="pt-2 border-t border-zinc-100 space-y-2">
-              <h4 className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
-                <FolderKanban className="h-4 w-4 text-blue-600" />
-                Gestión Legislativa / Social
-              </h4>
+            {/* 3 BOTONES DE ACCIÓN */}
+            <div className="space-y-2 pt-1">
+              {/* Botón 1: Generar gestión */}
+              <button
+                type="button"
+                onClick={() => {
+                  setFormSolicitante(activeConv.ciudadanoNombre);
+                  setFormTelefono(activeConv.ciudadanoTelefono);
+                  setFormColonia(activeConv.colonia || 'Centro');
+                  setFormMunicipio(activeConv.municipio || 'Centro');
+                  setFormAsunto(activeConv.ultimoMensaje && activeConv.ultimoMensaje !== 'Conversación iniciada' ? activeConv.ultimoMensaje : '');
+                  setFormCategoria(activeConv.categoria || 'Gestión Médica');
+                  setFormPrioridad('Media');
+                  setShowModalGestion(true);
+                }}
+                className="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-xs flex items-center justify-center gap-2 transition-colors"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>Generar gestión</span>
+              </button>
 
-              {activeConv.folioGestion ? (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between font-bold text-emerald-800">
-                    <span>Folio Asignado:</span>
-                    <span className="font-mono text-xs">{activeConv.folioGestion}</span>
-                  </div>
-                  <p className="text-[11px] text-emerald-700">Carpeta creada en Google Drive con ID de gestión.</p>
-                  <Link
-                    href={`/gestiones?folio=${activeConv.folioGestion}`}
-                    className="text-xs font-bold text-emerald-800 hover:underline flex items-center gap-1 pt-1"
-                  >
-                    <span>Ver Expediente en Gestiones</span>
-                    <ArrowUpRight className="h-3 w-3" />
-                  </Link>
-                </div>
-              ) : (
-                <button
-                  onClick={handleConvertirEnGestion}
-                  className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span>Generar Gestión (Crear Folio)</span>
-                </button>
-              )}
-            </div>
-
-            {/* Enlaces Rápidos */}
-            <div className="pt-2 border-t border-zinc-100 space-y-1.5 text-xs">
+              {/* Botón 2: Abrir en WhatsApp */}
               <a
                 href={`https://wa.me/52${activeConv.ciudadanoTelefono.replace(/\D/g, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between p-2 rounded-xl bg-green-50 text-green-700 hover:bg-green-100 font-semibold transition-colors"
+                className="w-full py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold rounded-xl text-xs shadow-2xs flex items-center justify-center gap-2 transition-colors"
               >
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  <span>Abrir en WhatsApp Web</span>
-                </div>
-                <ExternalLink className="h-3 w-3" />
+                <MessageCircle className="h-4 w-4 text-emerald-600" />
+                <span>Abrir en WhatsApp</span>
               </a>
 
+              {/* Botón 3: Llamar */}
               <a
-                href={`tel:${activeConv.ciudadanoTelefono}`}
-                className="flex items-center justify-between p-2 rounded-xl bg-zinc-50 text-zinc-700 hover:bg-zinc-100 font-semibold transition-colors"
+                href={`tel:${activeConv.ciudadanoTelefono.replace(/\D/g, '')}`}
+                className="w-full py-2 px-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 font-bold rounded-xl text-xs shadow-2xs flex items-center justify-center gap-2 transition-colors"
               >
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  <span>Llamar al Ciudadano</span>
-                </div>
-                <ExternalLink className="h-3 w-3" />
+                <Phone className="h-4 w-4 text-zinc-600" />
+                <span>Llamar</span>
               </a>
+            </div>
+
+            {/* SECCIÓN NOTA RÁPIDA (COMUNICACIÓN INTERNA DEL EQUIPO) */}
+            <div className="pt-3 border-t border-zinc-100 space-y-2 flex-1 flex flex-col">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Nota rápida</span>
+                </h4>
+                <span className="text-[10px] text-zinc-400 font-medium">Uso interno</span>
+              </div>
+
+              {/* Stream de globos de notas */}
+              <div className="flex-1 min-h-[120px] max-h-[220px] overflow-y-auto space-y-2 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100 text-xs">
+                {currentNotas.length === 0 ? (
+                  <div className="text-center py-6 space-y-1">
+                    <p className="text-[11px] text-zinc-400">Sin notas internas aún.</p>
+                    <p className="text-[10px] text-zinc-400">Escribe abajo para registrar acuerdos del equipo.</p>
+                  </div>
+                ) : (
+                  currentNotas.map((nota) => (
+                    <div key={nota.id} className="p-2.5 rounded-xl bg-white border border-zinc-200 shadow-2xs space-y-1">
+                      <div className="flex items-center justify-between text-[10px] text-zinc-500 font-semibold">
+                        <span className="text-blue-600">{nota.autor}</span>
+                        <span>{nota.hora} • {nota.fecha}</span>
+                      </div>
+                      <p className="text-zinc-800 text-xs leading-relaxed">{nota.texto}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Input para agregar nota */}
+              <form onSubmit={handleAgregarNotaRapida} className="flex items-center gap-1.5 pt-1">
+                <input
+                  type="text"
+                  placeholder="Escribe una nota rápida..."
+                  value={nuevaNotaTexto}
+                  onChange={(e) => setNuevaNotaTexto(e.target.value)}
+                  className="flex-1 px-3 py-2 text-xs bg-white border border-zinc-200 rounded-xl focus:outline-none focus:border-blue-500 text-zinc-800 placeholder-zinc-400"
+                />
+                <button
+                  type="submit"
+                  disabled={!nuevaNotaTexto.trim()}
+                  className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-200 disabled:text-zinc-400 text-white rounded-xl shadow-xs transition-colors"
+                  title="Enviar nota"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              </form>
             </div>
           </div>
         ) : (
@@ -674,6 +794,137 @@ export default function AtencionCiudadanaPage() {
           </div>
         )}
       </div>
+
+      {/* =========================================================================
+          MODAL: GENERAR NUEVA GESTIÓN
+         ========================================================================= */}
+      {showModalGestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <FolderKanban className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Generar Nueva Gestión</h3>
+                  <p className="text-[11px] text-gray-500">Canalizar petición a la bandeja de Gestiones</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModalGestion(false)}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCrearGestionDesdeModal} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-gray-700 font-bold mb-1">Nombre del Solicitante</label>
+                <input
+                  type="text"
+                  required
+                  value={formSolicitante}
+                  onChange={(e) => setFormSolicitante(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-gray-700 font-bold mb-1">Teléfono</label>
+                  <input
+                    type="text"
+                    value={formTelefono}
+                    onChange={(e) => setFormTelefono(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-900 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-bold mb-1">Colonia / Localidad</label>
+                  <input
+                    type="text"
+                    value={formColonia}
+                    onChange={(e) => setFormColonia(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-gray-700 font-bold mb-1">Categoría</label>
+                  <select
+                    value={formCategoria}
+                    onChange={(e) => setFormCategoria(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-900 font-semibold"
+                  >
+                    <option value="Gestión Médica">Gestión Médica / Salud</option>
+                    <option value="Petición de Obra">Petición de Obra / Servicios</option>
+                    <option value="Asesoría Jurídica">Asesoría Jurídica</option>
+                    <option value="Apoyo Social">Apoyo Social / Bienestar</option>
+                    <option value="Audiencia con Diputado">Audiencia con Diputado</option>
+                    <option value="General">General / Otro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-bold mb-1">Prioridad</label>
+                  <select
+                    value={formPrioridad}
+                    onChange={(e) => setFormPrioridad(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-900 font-semibold"
+                  >
+                    <option value="Alta">Alta (Urgente)</option>
+                    <option value="Media">Media (Ordinaria)</option>
+                    <option value="Baja">Baja</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-bold mb-1">Asunto / Descripción de la Petición</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={formAsunto}
+                  onChange={(e) => setFormAsunto(e.target.value)}
+                  placeholder="Describe la solicitud o requerimiento ciudadano..."
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-900 resize-none leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowModalGestion(false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardandoGestion}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                >
+                  {guardandoGestion ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      <span>Creando Folio...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>Registrar y Crear Folio</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
