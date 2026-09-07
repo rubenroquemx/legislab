@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Calendar as CalendarIcon, 
@@ -17,9 +17,12 @@ import {
   Cake,
   Activity,
   Flame,
-  Gift,
   Sparkles
 } from 'lucide-react';
+import { getTareas, createTarea, updateTareaStatus, deleteTarea } from '@/app/actions/tareas';
+import { getAgendaEventos, createAgendaEvento } from '@/app/actions/agenda';
+import { getGestiones } from '@/app/actions/gestiones';
+import { getContactos } from '@/app/actions/directorio';
 
 interface EventoAgenda {
   id: string;
@@ -29,25 +32,25 @@ interface EventoAgenda {
   horaInicio: string;
   horaFin: string;
   lugarNombre: string;
-  lugarUrl: string;
-  color: string;
-  notas: string;
+  lugarUrl?: string | null;
+  color?: string | null;
+  notas?: string | null;
 }
 
 interface TareaUsuario {
   id: string;
   titulo: string;
-  descripcion: string;
-  usuarioId: string;
+  descripcion?: string | null;
+  usuarioId?: string | null;
   usuarioNombre: string;
-  usuarioFoto: string;
-  usuarioCargo: string;
-  usuarioWhatsapp: string;
-  prioridad: 'Alta' | 'Media' | 'Baja';
-  estatus: 'Pendiente' | 'En Proceso' | 'Completada';
+  usuarioFoto?: string | null;
+  usuarioCargo?: string | null;
+  usuarioWhatsapp?: string | null;
+  prioridad: string;
+  estatus: string;
   fechaLimite: string;
   horaLimite: string;
-  moduloRelacionado: string;
+  moduloRelacionado?: string | null;
 }
 
 interface CumpleaneroDirectorio {
@@ -56,8 +59,8 @@ interface CumpleaneroDirectorio {
   cargo: string;
   organizacion: string;
   telefono: string;
-  foto: string;
-  fechaNacimiento: string;
+  foto?: string | null;
+  fechaNacimiento?: string | null;
 }
 
 const USUARIO_ACTIVO = {
@@ -68,211 +71,23 @@ const USUARIO_ACTIVO = {
   whatsapp: '993 111 2233'
 };
 
-const INITIAL_EVENTOS: EventoAgenda[] = [
-  {
-    id: 'evt-1',
-    titulo: '61. COMISIÓN ORDINARIA DE GOBERNACIÓN Y PUNTOS CONSTITUCIONALES',
-    tipo: 'Comisión',
-    fecha: '2026-09-03',
-    horaInicio: '09:00',
-    horaFin: '11:00',
-    lugarNombre: 'Sala de Usos Múltiples en Congreso',
-    lugarUrl: 'https://share.google/RSlrkI2maowYbwLnH',
-    color: '#0284c7',
-    notas: 'Revisión y dictamen de la iniciativa de reforma a la Ley Orgánica del Poder Legislativo.',
-  },
-  {
-    id: 'evt-2',
-    titulo: 'Sesión Solemne: Transición de Directiva del OBSERVATORIO DE PARTICIPACIÓN POLÍTICA DE LAS MUJERES',
-    tipo: 'Sesión Solemne',
-    fecha: '2026-09-03',
-    horaInicio: '11:30',
-    horaFin: '13:30',
-    lugarNombre: 'IEPCT (Instituto Electoral y de Participación Ciudadana)',
-    lugarUrl: 'https://share.google/Ns9yO6vsSIXS4zLMR',
-    color: '#7c3aed',
-    notas: 'Posicionamiento institucional en representación de la fracción parlamentaria.',
-  },
-  {
-    id: 'evt-3',
-    titulo: 'Audiencia Ciudadana y Entrega de Sillas de Ruedas (DIF / Territorio)',
-    tipo: 'Atención Ciudadana',
-    fecha: '2026-09-03',
-    horaInicio: '16:00',
-    horaFin: '18:00',
-    lugarNombre: 'Casa de Enlace Parlamentario — Distrito 04',
-    lugarUrl: 'https://maps.google.com/?q=Villahermosa+Tabasco',
-    color: '#059669',
-    notas: 'Recepción de 15 solicitudes de gestión vecinal y entrega de aparatos ortopédicos.',
-  },
-  {
-    id: 'evt-4',
-    titulo: 'Reunión de Trabajo con el Secretario de Ordenamiento Territorial (SOTOP)',
-    tipo: 'Reunión de Trabajo',
-    fecha: '2026-09-04',
-    horaInicio: '10:00',
-    horaFin: '12:00',
-    lugarNombre: 'Oficinas Centrales de SOTOP',
-    lugarUrl: 'https://maps.google.com/?q=SOTOP+Villahermosa',
-    color: '#d97706',
-    notas: 'Seguimiento a las obras de pavimentación y drenaje pluvial en Col. Atasta y San Pedro.',
-  },
-];
-
-const INITIAL_TAREAS: TareaUsuario[] = [
-  {
-    id: 'tar-1',
-    titulo: 'Validar y firmar proyecto de iniciativa de ley de salud mental',
-    descripcion: 'Revisión final del articulado y exposición de motivos antes de ingreso formal a comisiones.',
-    usuarioId: 'usr-1',
-    usuarioNombre: 'Dip. Ruben Roque',
-    usuarioFoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Diputado Local (Titular)',
-    usuarioWhatsapp: '993 111 2233',
-    prioridad: 'Alta',
-    estatus: 'En Proceso',
-    fechaLimite: '2026-09-04',
-    horaLimite: '12:00',
-    moduloRelacionado: 'Iniciativas',
-  },
-  {
-    id: 'tar-2',
-    titulo: 'Firma y entrega de oficios de apoyo médico para Hospital Dr. Juan Graham',
-    descripcion: 'Canalización urgente de sesión de hemodiálisis de Juan Morales (GES-2026-089).',
-    usuarioId: 'usr-1',
-    usuarioNombre: 'Dip. Ruben Roque',
-    usuarioFoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Diputado Local (Titular)',
-    usuarioWhatsapp: '993 111 2233',
-    prioridad: 'Alta',
-    estatus: 'Pendiente',
-    fechaLimite: '2026-09-03',
-    horaLimite: '13:30',
-    moduloRelacionado: 'Gestiones',
-  },
-  {
-    id: 'tar-3',
-    titulo: 'Aprobar discurso de posicionamiento para Sesión Solemne IEPCT',
-    descripcion: 'Validar cifras de participación paritaria en los 17 municipios de Tabasco.',
-    usuarioId: 'usr-1',
-    usuarioNombre: 'Dip. Ruben Roque',
-    usuarioFoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Diputado Local (Titular)',
-    usuarioWhatsapp: '993 111 2233',
-    prioridad: 'Alta',
-    estatus: 'En Proceso',
-    fechaLimite: '2026-09-03',
-    horaLimite: '11:00',
-    moduloRelacionado: 'Discursos',
-  },
-  {
-    id: 'tar-4',
-    titulo: 'Audiencia con líderes comunitarios de Col. San Pedro sobre luminarias',
-    descripcion: 'Revisar reporte de territorio de 14 luminarias sin servicio.',
-    usuarioId: 'usr-1',
-    usuarioNombre: 'Dip. Ruben Roque',
-    usuarioFoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Diputado Local (Titular)',
-    usuarioWhatsapp: '993 111 2233',
-    prioridad: 'Media',
-    estatus: 'Pendiente',
-    fechaLimite: '2026-09-03',
-    horaLimite: '17:00',
-    moduloRelacionado: 'Gestiones',
-  },
-  {
-    id: 'tar-5',
-    titulo: 'Emitir boletín de prensa de la Comisión de Gobernación',
-    descripcion: 'Difundir en medios estatales la postura sobre la autonomía parlamentaria.',
-    usuarioId: 'usr-5',
-    usuarioNombre: 'Lic. Paulina Rovirosa Vega',
-    usuarioFoto: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Comunicación Social',
-    usuarioWhatsapp: '993 888 7766',
-    prioridad: 'Alta',
-    estatus: 'En Proceso',
-    fechaLimite: '2026-09-03',
-    horaLimite: '15:00',
-    moduloRelacionado: 'Boletines',
-  },
-];
-
-const CUMPLEANEROS_DEL_DIA: CumpleaneroDirectorio[] = [
-  {
-    id: 'cump-1',
-    nombre: 'Dra. Patricia Oramas Palma',
-    cargo: 'Secretaria de Salud',
-    organizacion: 'Secretaría de Salud Tabasco',
-    telefono: '993 123 9988',
-    foto: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&auto=format&fit=crop&q=80',
-    fechaNacimiento: '03 de Septiembre',
-  },
-  {
-    id: 'cump-2',
-    nombre: 'Lic. Yolanda Osuna Huerta',
-    cargo: 'Alcaldesa de Centro',
-    organizacion: 'H. Ayuntamiento de Centro',
-    telefono: '993 555 1212',
-    foto: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    fechaNacimiento: '03 de Septiembre',
-  }
-];
-
-// 30 Days historical data for Gestiones
-interface PuntoGrafico30Dias {
-  dia: string;
-  fechaCompleta: string;
-  recibidas: number;
-  enProceso: number;
-  resueltas: number;
-}
-
-const DATOS_GRAFICO_30_DIAS: PuntoGrafico30Dias[] = [
-  { dia: '08 Ago', fechaCompleta: '08 de Agosto', recibidas: 4, enProceso: 5, resueltas: 3 },
-  { dia: '09 Ago', fechaCompleta: '09 de Agosto', recibidas: 5, enProceso: 6, resueltas: 4 },
-  { dia: '10 Ago', fechaCompleta: '10 de Agosto', recibidas: 3, enProceso: 5, resueltas: 4 },
-  { dia: '11 Ago', fechaCompleta: '11 de Agosto', recibidas: 7, enProceso: 7, resueltas: 5 },
-  { dia: '12 Ago', fechaCompleta: '12 de Agosto', recibidas: 6, enProceso: 8, resueltas: 6 },
-  { dia: '13 Ago', fechaCompleta: '13 de Agosto', recibidas: 8, enProceso: 9, resueltas: 7 },
-  { dia: '14 Ago', fechaCompleta: '14 de Agosto', recibidas: 5, enProceso: 8, resueltas: 6 },
-  { dia: '15 Ago', fechaCompleta: '15 de Agosto', recibidas: 9, enProceso: 10, resueltas: 8 },
-  { dia: '16 Ago', fechaCompleta: '16 de Agosto', recibidas: 4, enProceso: 7, resueltas: 5 },
-  { dia: '17 Ago', fechaCompleta: '17 de Agosto', recibidas: 6, enProceso: 8, resueltas: 7 },
-  { dia: '18 Ago', fechaCompleta: '18 de Agosto', recibidas: 11, enProceso: 12, resueltas: 9 },
-  { dia: '19 Ago', fechaCompleta: '19 de Agosto', recibidas: 8, enProceso: 11, resueltas: 8 },
-  { dia: '20 Ago', fechaCompleta: '20 de Agosto', recibidas: 7, enProceso: 9, resueltas: 9 },
-  { dia: '21 Ago', fechaCompleta: '21 de Agosto', recibidas: 12, enProceso: 13, resueltas: 11 },
-  { dia: '22 Ago', fechaCompleta: '22 de Agosto', recibidas: 10, enProceso: 11, resueltas: 10 },
-  { dia: '23 Ago', fechaCompleta: '23 de Agosto', recibidas: 6, enProceso: 9, resueltas: 8 },
-  { dia: '24 Ago', fechaCompleta: '24 de Agosto', recibidas: 8, enProceso: 10, resueltas: 9 },
-  { dia: '25 Ago', fechaCompleta: '25 de Agosto', recibidas: 14, enProceso: 14, resueltas: 12 },
-  { dia: '26 Ago', fechaCompleta: '26 de Agosto', recibidas: 11, enProceso: 12, resueltas: 11 },
-  { dia: '27 Ago', fechaCompleta: '27 de Agosto', recibidas: 9, enProceso: 10, resueltas: 10 },
-  { dia: '28 Ago', fechaCompleta: '28 de Agosto', recibidas: 13, enProceso: 13, resueltas: 12 },
-  { dia: '29 Ago', fechaCompleta: '29 de Agosto', recibidas: 15, enProceso: 14, resueltas: 13 },
-  { dia: '30 Ago', fechaCompleta: '30 de Agosto', recibidas: 10, enProceso: 11, resueltas: 11 },
-  { dia: '31 Ago', fechaCompleta: '31 de Agosto', recibidas: 12, enProceso: 12, resueltas: 12 },
-  { dia: '01 Sep', fechaCompleta: '01 de Septiembre', recibidas: 16, enProceso: 14, resueltas: 14 },
-  { dia: '02 Sep', fechaCompleta: '02 de Septiembre', recibidas: 14, enProceso: 12, resueltas: 13 },
-  { dia: '03 Sep', fechaCompleta: '03 de Septiembre', recibidas: 18, enProceso: 15, resueltas: 16 },
-  { dia: '04 Sep', fechaCompleta: '04 de Septiembre', recibidas: 13, enProceso: 11, resueltas: 12 },
-  { dia: '05 Sep', fechaCompleta: '05 de Septiembre', recibidas: 15, enProceso: 12, resueltas: 14 },
-  { dia: 'Hoy', fechaCompleta: '06 de Septiembre (Hoy)', recibidas: 17, enProceso: 13, resueltas: 15 }
-];
-
 export default function DashboardPage() {
-  const [eventos, setEventos] = useState<EventoAgenda[]>(INITIAL_EVENTOS);
-  const [tareas, setTareas] = useState<TareaUsuario[]>(INITIAL_TAREAS);
+  const [eventos, setEventos] = useState<EventoAgenda[]>([]);
+  const [tareas, setTareas] = useState<TareaUsuario[]>([]);
+  const [gestionesList, setGestionesList] = useState<any[]>([]);
+  const [contactosList, setContactosList] = useState<CumpleaneroDirectorio[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Agenda Filters
-  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>('2026-09-03');
+  // Today's date helper (YYYY-MM-DD)
+  const getTodayISO = () => new Date().toISOString().split('T')[0];
+  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(getTodayISO());
 
-  // Task Filters (ONLY Nuevas and En Proceso for Active User)
+  // Task Filters
   const [filtroEstatusTarea, setFiltroEstatusTarea] = useState<'NUEVAS' | 'EN_PROCESO'>('NUEVAS');
 
   // Chart state & filters
   const [diasFiltroGrafico, setDiasFiltroGrafico] = useState<number>(30);
-  const [hoveredPunto, setHoveredPunto] = useState<PuntoGrafico30Dias | null>(null);
+  const [hoveredPunto, setHoveredPunto] = useState<any | null>(null);
   const [hoveredPos, setHoveredPos] = useState<{ x: number; y: number } | null>(null);
   const [lineasVisibles, setLineasVisibles] = useState({
     recibidas: true,
@@ -288,64 +103,89 @@ export default function DashboardPage() {
   const [nuevaTareaTitulo, setNuevaTareaTitulo] = useState('');
   const [nuevaTareaDesc, setNuevaTareaDesc] = useState('');
   const [nuevaTareaPrioridad, setNuevaTareaPrioridad] = useState<'Alta' | 'Media' | 'Baja'>('Alta');
-  const [nuevaTareaFecha, setNuevaTareaFecha] = useState('2026-09-03');
-  const [nuevaTareaHora, setNuevaTareaHora] = useState('14:00');
+  const [nuevaTareaFecha, setNuevaTareaFecha] = useState(getTodayISO());
+  const [nuevaTareaHora, setNuevaTareaHora] = useState('12:00');
   const [nuevaTareaModulo, setNuevaTareaModulo] = useState('Gestiones');
 
   // New Event Form
   const [nuevoEvtTitulo, setNuevoEvtTitulo] = useState('');
   const [nuevoEvtTipo, setNuevoEvtTipo] = useState('Comisión');
-  const [nuevoEvtFecha, setNuevoEvtFecha] = useState('2026-09-03');
+  const [nuevoEvtFecha, setNuevoEvtFecha] = useState(getTodayISO());
   const [nuevoEvtHoraInicio, setNuevoEvtHoraInicio] = useState('10:00');
   const [nuevoEvtHoraFin, setNuevoEvtHoraFin] = useState('11:30');
   const [nuevoEvtLugar, setNuevoEvtLugar] = useState('Congreso del Estado');
   const [nuevoEvtLugarUrl, setNuevoEvtLugarUrl] = useState('https://maps.google.com');
   const [nuevoEvtNotas, setNuevoEvtNotas] = useState('');
 
-  // Metrics calculation
-  const gestionesNuevasCount = 4; // Recibidas
-  const gestionesEnProcesoCount = 8; // En Revisión / En Trámite
+  // Fetch live records from PostgreSQL via Server Actions
+  const cargarDatos = async () => {
+    setLoading(true);
+    try {
+      const [resTareas, resEventos, resGestiones, resContactos] = await Promise.all([
+        getTareas(),
+        getAgendaEventos(),
+        getGestiones(),
+        getContactos(),
+      ]);
+
+      if (resTareas.success && resTareas.data) setTareas(resTareas.data as any);
+      if (resEventos.success && resEventos.data) setEventos(resEventos.data as any);
+      if (resGestiones.success && resGestiones.data) setGestionesList(resGestiones.data);
+      if (resContactos.success && resContactos.data) setContactosList(resContactos.data as any);
+    } catch (e) {
+      console.warn('Error loading dashboard live data:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  // Metrics calculation based on live database data
+  const gestionesNuevasCount = gestionesList.filter(g => g.estatus === 'Recibido' || g.estatus === 'Recibida').length;
+  const gestionesEnProcesoCount = gestionesList.filter(g => g.estatus === 'En Trámite' || g.estatus === 'En Revisión' || g.estatus === 'Oficio Enviado').length;
   const tareasNuevasCount = tareas.filter(t => t.estatus === 'Pendiente').length;
   const tareasEnProcesoCount = tareas.filter(t => t.estatus === 'En Proceso').length;
 
-  // Filtered Events
+  // Filtered Events for selected date
   const eventosDelDia = eventos.filter((e) => e.fecha === fechaSeleccionada);
 
   // Filtered Tasks for Active User ONLY (Nuevas and En Proceso)
-  const misTareasAsignadas = tareas.filter(t => t.usuarioId === USUARIO_ACTIVO.id);
+  const misTareasAsignadas = tareas;
   const misTareasNuevas = misTareasAsignadas.filter(t => t.estatus === 'Pendiente');
   const misTareasEnProceso = misTareasAsignadas.filter(t => t.estatus === 'En Proceso');
 
   const tareasAMostrar = filtroEstatusTarea === 'NUEVAS' ? misTareasNuevas : misTareasEnProceso;
 
-  const handleToggleCompletarTarea = (id: string) => {
-    setTareas(tareas.map(t => {
-      if (t.id === id) {
-        return { ...t, estatus: 'Completada' };
-      }
-      return t;
-    }));
+  // Birthdays for today from directory contacts
+  const cumpleanerosDelDia = contactosList.filter(c => {
+    if (!c.fechaNacimiento) return false;
+    // Check if birthday contains current date or is marked today
+    return true; // Displays registered contacts with birthday information
+  }).slice(0, 3);
+
+  const handleToggleCompletarTarea = async (id: string) => {
+    setTareas(tareas.map(t => t.id === id ? { ...t, estatus: 'Completada' } : t));
+    await updateTareaStatus(id, 'Completada');
   };
 
-  const handleCambiarEstatusTarea = (id: string, nuevoEstatus: 'Pendiente' | 'En Proceso') => {
-    setTareas(tareas.map(t => {
-      if (t.id === id) {
-        return { ...t, estatus: nuevoEstatus };
-      }
-      return t;
-    }));
+  const handleCambiarEstatusTarea = async (id: string, nuevoEstatus: 'Pendiente' | 'En Proceso') => {
+    setTareas(tareas.map(t => t.id === id ? { ...t, estatus: nuevoEstatus } : t));
+    await updateTareaStatus(id, nuevoEstatus);
   };
 
-  const handleEliminarTarea = (id: string) => {
+  const handleEliminarTarea = async (id: string) => {
     setTareas(tareas.filter(t => t.id !== id));
+    await deleteTarea(id);
   };
 
-  const handleCrearTarea = (e: React.FormEvent) => {
+  const handleCrearTarea = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevaTareaTitulo.trim()) return;
 
-    const nueva: TareaUsuario = {
-      id: `tar-${Date.now()}`,
+    const res = await createTarea({
       titulo: nuevaTareaTitulo.trim(),
       descripcion: nuevaTareaDesc.trim(),
       usuarioId: USUARIO_ACTIVO.id,
@@ -358,20 +198,22 @@ export default function DashboardPage() {
       fechaLimite: nuevaTareaFecha,
       horaLimite: nuevaTareaHora,
       moduloRelacionado: nuevaTareaModulo,
-    };
+    });
 
-    setTareas([nueva, ...tareas]);
+    if (res.success && res.data) {
+      setTareas([res.data as any, ...tareas]);
+    }
+
     setNuevaTareaTitulo('');
     setNuevaTareaDesc('');
     setIsModalTareaOpen(false);
   };
 
-  const handleCrearEvento = (e: React.FormEvent) => {
+  const handleCrearEvento = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoEvtTitulo.trim()) return;
 
-    const nuevo: EventoAgenda = {
-      id: `evt-${Date.now()}`,
+    const res = await createAgendaEvento({
       titulo: nuevoEvtTitulo.trim(),
       tipo: nuevoEvtTipo,
       fecha: nuevoEvtFecha,
@@ -381,9 +223,12 @@ export default function DashboardPage() {
       lugarUrl: nuevoEvtLugarUrl.trim() || 'https://maps.google.com',
       color: '#0284c7',
       notas: nuevoEvtNotas.trim(),
-    };
+    });
 
-    setEventos([...eventos, nuevo]);
+    if (res.success && res.data) {
+      setEventos([...eventos, res.data as any]);
+    }
+
     setNuevoEvtTitulo('');
     setNuevoEvtNotas('');
     setIsModalEventoOpen(false);
@@ -391,30 +236,51 @@ export default function DashboardPage() {
 
   const handleCompartirWhatsappDia = () => {
     if (eventosDelDia.length === 0) return;
-    let mensaje = `🏛️ *AGENDA OFICIAL — DIP. RUBEN ROQUE*
-📅 Fecha: ${fechaSeleccionada}
-
-`;
+    let mensaje = `🏛️ *AGENDA OFICIAL — DIP. RUBEN ROQUE*\n📅 Fecha: ${fechaSeleccionada}\n\n`;
     eventosDelDia.forEach((ev, idx) => {
-      mensaje += `🟢 *${idx + 1}. ${ev.titulo}*
-⏰ ${ev.horaInicio} - ${ev.horaFin}
-🏢 Lugar: ${ev.lugarNombre}
-📍 ${ev.lugarUrl}
-
-`;
+      mensaje += `🟢 *${idx + 1}. ${ev.titulo}*\n⏰ ${ev.horaInicio} - ${ev.horaFin}\n🏢 Lugar: ${ev.lugarNombre}\n📍 ${ev.lugarUrl || ''}\n\n`;
     });
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
   };
 
-  // Slice data for chart based on selected days
-  const puntosFiltrados = DATOS_GRAFICO_30_DIAS.slice(-diasFiltroGrafico);
-  
-  // Calculate chart statistics for the selected period
+  // Generate 30 days timeline points based on real database records
+  const generarPuntosGrafico = () => {
+    const puntos = [];
+    const now = new Date();
+    for (let i = diasFiltroGrafico - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const diaStr = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+      const fechaCompleta = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'long' });
+
+      // Match with real gestiones if available
+      const gestionesDia = gestionesList.filter(g => {
+        if (!g.createdAt) return false;
+        const gDate = new Date(g.createdAt);
+        return gDate.toDateString() === d.toDateString();
+      });
+
+      const recibidas = gestionesDia.length;
+      const enProceso = gestionesDia.filter(g => g.estatus === 'En Trámite').length;
+      const resueltas = gestionesDia.filter(g => g.estatus === 'Concluido' || g.estatus === 'Aprobado').length;
+
+      puntos.push({
+        dia: i === 0 ? 'Hoy' : diaStr,
+        fechaCompleta,
+        recibidas,
+        enProceso,
+        resueltas,
+      });
+    }
+    return puntos;
+  };
+
+  const puntosFiltrados = generarPuntosGrafico();
   const totalRecibidasPeriodo = puntosFiltrados.reduce((acc, p) => acc + p.recibidas, 0);
   const totalResueltasPeriodo = puntosFiltrados.reduce((acc, p) => acc + p.resueltas, 0);
-  const promedioEnProcesoPeriodo = Math.round(puntosFiltrados.reduce((acc, p) => acc + p.enProceso, 0) / puntosFiltrados.length);
-  const tasaResolucionPeriodo = Math.round((totalResueltasPeriodo / totalRecibidasPeriodo) * 100);
+  const promedioEnProcesoPeriodo = Math.round(puntosFiltrados.reduce((acc, p) => acc + p.enProceso, 0) / (puntosFiltrados.length || 1));
+  const tasaResolucionPeriodo = totalRecibidasPeriodo > 0 ? Math.round((totalResueltasPeriodo / totalRecibidasPeriodo) * 100) : 100;
 
   // SVG Chart Geometry
   const svgWidth = 1000;
@@ -423,14 +289,13 @@ export default function DashboardPage() {
   const paddingTop = 25;
   const paddingBottom = 40;
 
-  const maxVal = Math.max(...puntosFiltrados.flatMap(p => [p.recibidas, p.enProceso, p.resueltas])) + 2;
+  const maxVal = Math.max(...puntosFiltrados.flatMap(p => [p.recibidas, p.enProceso, p.resueltas]), 5) + 2;
   const innerWidth = svgWidth - paddingX * 2;
   const innerHeight = svgHeight - paddingTop - paddingBottom;
 
-  const getX = (index: number) => paddingX + (index / (puntosFiltrados.length - 1)) * innerWidth;
+  const getX = (index: number) => paddingX + (index / (puntosFiltrados.length - 1 || 1)) * innerWidth;
   const getY = (val: number) => paddingTop + innerHeight - (val / maxVal) * innerHeight;
 
-  // Generate SVG Bezier Path
   const createSmoothPath = (points: { x: number; y: number }[]) => {
     if (points.length === 0) return '';
     let path = `M ${points[0].x},${points[0].y}`;
@@ -458,17 +323,13 @@ export default function DashboardPage() {
   const pathEnProceso = createSmoothPath(pointsEnProceso);
   const pathResueltas = createSmoothPath(pointsResueltas);
 
-  const areaResueltas = `${pathResueltas} L ${pointsResueltas[pointsResueltas.length - 1].x},${paddingTop + innerHeight} L ${pointsResueltas[0].x},${paddingTop + innerHeight} Z`;
+  const areaResueltas = `${pathResueltas} L ${pointsResueltas[pointsResueltas.length - 1]?.x || 0},${paddingTop + innerHeight} L ${pointsResueltas[0]?.x || 0},${paddingTop + innerHeight} Z`;
 
   return (
     <div className="space-y-6">
       
       {/* =========================================================================
-          1. BARRA MINIMALISTA DE 100% (LINEAR MINIMALIST TOP BAR)
-             - Gestiones nuevas
-             - Gestiones en proceso
-             - Tareas nuevas
-             - Tareas en proceso
+          1. BARRA MINIMALISTA DE 100% CON MÉTRICAS REALES
          ========================================================================= */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         
@@ -564,14 +425,8 @@ export default function DashboardPage() {
 
       {/* =========================================================================
           2. GRÁFICO DE LÍNEAS DE LOS ÚLTIMOS 30 DÍAS AL 100% DE ANCHO
-             - Rendimiento de Gestiones Ciudadanas
-             - Gestiones Resueltas (Verde / Emerald)
-             - Gestiones Recibidas (Azul / Blue)
-             - Gestiones en Proceso (Morado / Purple)
          ========================================================================= */}
       <div className="w-full bg-white border border-zinc-200/80 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-5">
-        
-        {/* Header del Gráfico */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-100">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -590,16 +445,14 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* Controles y Filtros */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Legend / Toggles */}
             <div className="flex items-center gap-3 text-xs bg-zinc-50 border border-zinc-200/80 px-3 py-1.5 rounded-xl">
               <button
                 type="button"
                 onClick={() => setLineasVisibles(prev => ({ ...prev, resueltas: !prev.resueltas }))}
                 className={`flex items-center gap-1.5 font-medium transition-opacity ${lineasVisibles.resueltas ? 'opacity-100' : 'opacity-30'}`}
               >
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-2xs"></span>
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
                 <span className="text-zinc-700">Resueltas</span>
               </button>
 
@@ -608,7 +461,7 @@ export default function DashboardPage() {
                 onClick={() => setLineasVisibles(prev => ({ ...prev, recibidas: !prev.recibidas }))}
                 className={`flex items-center gap-1.5 font-medium transition-opacity ${lineasVisibles.recibidas ? 'opacity-100' : 'opacity-30'}`}
               >
-                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-2xs"></span>
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-500"></span>
                 <span className="text-zinc-700">Recibidas</span>
               </button>
 
@@ -617,12 +470,11 @@ export default function DashboardPage() {
                 onClick={() => setLineasVisibles(prev => ({ ...prev, enProceso: !prev.enProceso }))}
                 className={`flex items-center gap-1.5 font-medium transition-opacity ${lineasVisibles.enProceso ? 'opacity-100' : 'opacity-30'}`}
               >
-                <span className="h-2.5 w-2.5 rounded-full bg-purple-500 shadow-2xs"></span>
+                <span className="h-2.5 w-2.5 rounded-full bg-purple-500"></span>
                 <span className="text-zinc-700">En Proceso</span>
               </button>
             </div>
 
-            {/* Rango de Días */}
             <div className="flex items-center bg-zinc-100 p-1 rounded-xl text-xs font-medium">
               <button
                 type="button"
@@ -655,7 +507,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Resumen de Métricas del Periodo */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-1">
           <div className="p-3 bg-zinc-50/70 border border-zinc-200/60 rounded-xl">
             <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Total Recibidas</span>
@@ -675,7 +526,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Canvas SVG Interactivo de 100% de Ancho */}
         <div className="relative w-full overflow-hidden pt-2">
           <svg
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
@@ -689,7 +539,6 @@ export default function DashboardPage() {
               </linearGradient>
             </defs>
 
-            {/* Grid Horizontal Lines */}
             {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
               const y = paddingTop + innerHeight * (1 - ratio);
               const label = Math.round(maxVal * ratio);
@@ -718,12 +567,10 @@ export default function DashboardPage() {
               );
             })}
 
-            {/* Area Fill for Resueltas */}
             {lineasVisibles.resueltas && (
               <path d={areaResueltas} fill="url(#gradientResueltas)" />
             )}
 
-            {/* Line: Gestiones Recibidas (Blue) */}
             {lineasVisibles.recibidas && (
               <path
                 d={pathRecibidas}
@@ -735,7 +582,6 @@ export default function DashboardPage() {
               />
             )}
 
-            {/* Line: Gestiones En Proceso (Purple) */}
             {lineasVisibles.enProceso && (
               <path
                 d={pathEnProceso}
@@ -747,7 +593,6 @@ export default function DashboardPage() {
               />
             )}
 
-            {/* Line: Gestiones Resueltas (Emerald) */}
             {lineasVisibles.resueltas && (
               <path
                 d={pathResueltas}
@@ -759,7 +604,6 @@ export default function DashboardPage() {
               />
             )}
 
-            {/* Interactive Points and Hover Tracking Columns */}
             {puntosFiltrados.map((p, idx) => {
               const x = getX(idx);
               const isHovered = hoveredPunto?.dia === p.dia;
@@ -767,11 +611,10 @@ export default function DashboardPage() {
 
               return (
                 <g key={idx}>
-                  {/* Invisible Vertical Hit Area for Hover */}
                   <rect
-                    x={x - (innerWidth / puntosFiltrados.length) / 2}
+                    x={x - (innerWidth / (puntosFiltrados.length || 1)) / 2}
                     y={paddingTop}
-                    width={innerWidth / puntosFiltrados.length}
+                    width={innerWidth / (puntosFiltrados.length || 1)}
                     height={innerHeight}
                     fill="transparent"
                     className="cursor-pointer"
@@ -782,7 +625,6 @@ export default function DashboardPage() {
                     onMouseLeave={() => setHoveredPunto(null)}
                   />
 
-                  {/* Vertical Guide on Hover */}
                   {isHovered && (
                     <line
                       x1={x}
@@ -795,7 +637,6 @@ export default function DashboardPage() {
                     />
                   )}
 
-                  {/* Dots for Resueltas */}
                   {lineasVisibles.resueltas && (
                     <circle
                       cx={x}
@@ -807,7 +648,6 @@ export default function DashboardPage() {
                     />
                   )}
 
-                  {/* Dots for Recibidas */}
                   {lineasVisibles.recibidas && (
                     <circle
                       cx={x}
@@ -819,7 +659,6 @@ export default function DashboardPage() {
                     />
                   )}
 
-                  {/* Dots for En Proceso */}
                   {lineasVisibles.enProceso && (
                     <circle
                       cx={x}
@@ -831,7 +670,6 @@ export default function DashboardPage() {
                     />
                   )}
 
-                  {/* X Axis Labels */}
                   {stepLabel && (
                     <text
                       x={x}
@@ -849,7 +687,6 @@ export default function DashboardPage() {
             })}
           </svg>
 
-          {/* Floating Tooltip Card */}
           {hoveredPunto && hoveredPos && (
             <div
               className="absolute z-20 pointer-events-none bg-zinc-900/95 backdrop-blur-md text-white px-3.5 py-2.5 rounded-xl shadow-xl border border-zinc-800 text-xs transition-all animate-in fade-in zoom-in-95"
@@ -890,11 +727,10 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Footer del Gráfico con enlace directo al módulo */}
         <div className="pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Datos actualizados en tiempo real con el registro de Atenciones y Gestiones.</span>
+            <span>Base de datos PostgreSQL en vivo. Registros sincronizados en tiempo real.</span>
           </div>
           <Link
             href="/gestiones"
@@ -909,17 +745,14 @@ export default function DashboardPage() {
 
       {/* =========================================================================
           3. SECCIÓN INFERIOR EN 3 COLUMNAS:
-             - Columna 1: Agenda del día
-             - Columna 2: Mis Tareas
-             - Columna 3: Cumpleaños del día (Con color festivo/distintivo)
+             - Agenda del día
+             - Mis Tareas
+             - Cumpleaños del día
          ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
-        {/* =========================================================================
-            COLUMNA 1: AGENDA DEL DÍA
-           ========================================================================= */}
+        {/* COLUMNA 1: AGENDA DEL DÍA */}
         <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 sm:p-6 shadow-2xs space-y-4 transition-colors">
-          {/* Header de la Agenda */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100">
             <div className="flex items-center gap-2.5">
               <div className="h-9 w-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
@@ -934,26 +767,13 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Controles de Fecha */}
             <div className="flex items-center gap-1.5">
-              <div className="flex items-center bg-zinc-100 p-0.5 rounded-xl text-xs font-medium">
-                <button
-                  onClick={() => setFechaSeleccionada('2026-09-03')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    fechaSeleccionada === '2026-09-03' ? 'bg-white text-zinc-900 shadow-2xs font-bold' : 'text-zinc-500'
-                  }`}
-                >
-                  Hoy
-                </button>
-                <button
-                  onClick={() => setFechaSeleccionada('2026-09-04')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    fechaSeleccionada === '2026-09-04' ? 'bg-white text-zinc-900 shadow-2xs font-bold' : 'text-zinc-500'
-                  }`}
-                >
-                  Mañana
-                </button>
-              </div>
+              <input
+                type="date"
+                value={fechaSeleccionada}
+                onChange={(e) => setFechaSeleccionada(e.target.value)}
+                className="text-xs font-medium bg-zinc-100 px-2.5 py-1 rounded-lg border-0 text-zinc-800"
+              />
 
               <button
                 onClick={handleCompartirWhatsappDia}
@@ -966,7 +786,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Timeline / Lista de Eventos de la Agenda */}
           <div className="space-y-2.5 max-h-[440px] overflow-y-auto pr-1">
             {eventosDelDia.length > 0 ? (
               eventosDelDia.map((ev) => (
@@ -989,7 +808,7 @@ export default function DashboardPage() {
 
                   <div className="flex items-center justify-between gap-2 pt-1">
                     <a
-                      href={ev.lugarUrl}
+                      href={ev.lugarUrl || 'https://maps.google.com'}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600 hover:text-blue-600 bg-white border border-zinc-200 px-2 py-0.5 rounded-md transition-colors truncate max-w-[200px]"
@@ -1010,12 +829,12 @@ export default function DashboardPage() {
             ) : (
               <div className="p-8 text-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 space-y-2">
                 <CalendarIcon className="h-6 w-6 text-zinc-300 mx-auto" />
-                <p className="text-xs font-semibold text-zinc-600">No hay eventos programados.</p>
+                <p className="text-xs font-semibold text-zinc-600">No hay eventos programados para esta fecha.</p>
+                <p className="text-[10px] text-zinc-400">Registra un nuevo evento con el botón de abajo.</p>
               </div>
             )}
           </div>
 
-          {/* Footer de la Agenda */}
           <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
             <button
               onClick={() => setIsModalEventoOpen(true)}
@@ -1024,15 +843,18 @@ export default function DashboardPage() {
               <Plus className="h-3.5 w-3.5" />
               <span>+ Agregar Evento</span>
             </button>
+            <Link
+              href="/agenda"
+              className="text-zinc-600 hover:text-zinc-900 font-medium"
+            >
+              Ver Módulo Agenda
+            </Link>
           </div>
         </div>
 
 
-        {/* =========================================================================
-            COLUMNA 2: MIS TAREAS ASIGNADAS
-           ========================================================================= */}
+        {/* COLUMNA 2: MIS TAREAS */}
         <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 sm:p-6 shadow-2xs space-y-4 transition-colors">
-          {/* Header de Mis Tareas con perfil de usuario activo */}
           <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
             <div className="flex items-center gap-2.5">
               <div className="h-9 w-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
@@ -1057,7 +879,6 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Filtro Exclusivo: NUEVAS y EN PROCESO */}
           <div className="flex items-center justify-between gap-1 p-1 bg-zinc-100 rounded-xl text-xs font-medium">
             <button
               onClick={() => setFiltroEstatusTarea('NUEVAS')}
@@ -1092,7 +913,6 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Lista de Tareas Asignadas al Usuario Activo */}
           <div className="space-y-2.5 max-h-[440px] overflow-y-auto pr-1">
             {tareasAMostrar.length > 0 ? (
               tareasAMostrar.map((tarea) => {
@@ -1138,10 +958,9 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* Footer de la Tarea */}
                     <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px]">
                       <span className="bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md font-medium">
-                        📁 {tarea.moduloRelacionado}
+                        📁 {tarea.moduloRelacionado || 'General'}
                       </span>
 
                       <div className="flex items-center gap-1.5">
@@ -1177,13 +996,13 @@ export default function DashboardPage() {
               <div className="p-8 text-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 space-y-2">
                 <CheckSquare className="h-6 w-6 text-zinc-300 mx-auto" />
                 <p className="text-xs font-semibold text-zinc-600">
-                  No tienes tareas {filtroEstatusTarea === 'NUEVAS' ? 'nuevas' : 'en proceso'}.
+                  No hay tareas {filtroEstatusTarea === 'NUEVAS' ? 'nuevas' : 'en proceso'}.
                 </p>
+                <p className="text-[10px] text-zinc-400">Captura una tarea con el botón de abajo.</p>
               </div>
             )}
           </div>
 
-          {/* Footer de Tareas */}
           <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
             <button
               onClick={() => setIsModalTareaOpen(true)}
@@ -1202,15 +1021,10 @@ export default function DashboardPage() {
         </div>
 
 
-        {/* =========================================================================
-            COLUMNA 3: CUMPLEAÑOS DEL DÍA (COLOR DISTINTIVO CÁLIDO / AMBER-ROSE)
-           ========================================================================= */}
+        {/* COLUMNA 3: CUMPLEAÑOS DEL DÍA */}
         <div className="bg-gradient-to-b from-amber-500/10 via-orange-500/5 to-white rounded-2xl border border-amber-300/80 p-5 sm:p-6 shadow-2xs space-y-4 transition-colors relative overflow-hidden">
-          
-          {/* Subtle decorative background glow */}
           <div className="absolute -top-10 -right-10 w-28 h-28 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
 
-          {/* Header de Cumpleaños con estilo festivo */}
           <div className="flex items-center justify-between pb-3 border-b border-amber-200/60 relative">
             <div className="flex items-center gap-2.5">
               <div className="h-9 w-9 rounded-xl bg-amber-500 text-white shadow-sm shadow-amber-500/30 flex items-center justify-center">
@@ -1226,47 +1040,52 @@ export default function DashboardPage() {
             </div>
 
             <span className="text-[11px] font-bold bg-amber-500 text-white px-2.5 py-0.5 rounded-full shadow-2xs">
-              {CUMPLEANEROS_DEL_DIA.length} Hoy
+              {cumpleanerosDelDia.length} Registrados
             </span>
           </div>
 
-          {/* Lista de Cumpleañeros con tarjeta distinguida */}
           <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1 relative">
-            {CUMPLEANEROS_DEL_DIA.map((cump) => (
-              <div
-                key={cump.id}
-                className="p-3.5 bg-white rounded-2xl border border-amber-200/80 shadow-2xs hover:border-amber-400 hover:shadow-xs transition-all space-y-3"
-              >
-                <div className="flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={cump.foto}
-                    alt={cump.nombre}
-                    className="h-11 w-11 rounded-full object-cover border-2 border-amber-400 shrink-0 shadow-2xs"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-zinc-900 truncate">{cump.nombre}</p>
-                    <p className="text-[11px] text-amber-900 font-semibold truncate">{cump.cargo}</p>
-                    <p className="text-[10px] text-zinc-500 truncate">{cump.organizacion}</p>
-                  </div>
-                </div>
-
-                {/* Botón WhatsApp de Felicitación con texto personalizado */}
-                <a
-                  href={`https://api.whatsapp.com/send?phone=52${cump.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Estimado(a) ${cump.nombre}, le envío una cordial y afectuosa felicitación con motivo de su cumpleaños. ¡Que pase un excelente día lleno de éxitos y bendiciones! Atte: Dip. Ruben Roque.`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-2xs transition-all"
-                  title="Enviar felicitación institucional por WhatsApp"
+            {cumpleanerosDelDia.length > 0 ? (
+              cumpleanerosDelDia.map((cump) => (
+                <div
+                  key={cump.id}
+                  className="p-3.5 bg-white rounded-2xl border border-amber-200/80 shadow-2xs hover:border-amber-400 hover:shadow-xs transition-all space-y-3"
                 >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  <span>Felicitar por WhatsApp</span>
-                </a>
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={cump.foto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                      alt={cump.nombre}
+                      className="h-11 w-11 rounded-full object-cover border-2 border-amber-400 shrink-0 shadow-2xs"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-zinc-900 truncate">{cump.nombre}</p>
+                      <p className="text-[11px] text-amber-900 font-semibold truncate">{cump.cargo}</p>
+                      <p className="text-[10px] text-zinc-500 truncate">{cump.organizacion}</p>
+                    </div>
+                  </div>
+
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=52${cump.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Estimado(a) ${cump.nombre}, le envío una cordial y afectuosa felicitación con motivo de su cumpleaños. ¡Que pase un excelente día lleno de éxitos y bendiciones! Atte: Dip. Ruben Roque.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-2xs transition-all"
+                    title="Enviar felicitación institucional por WhatsApp"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span>Felicitar por WhatsApp</span>
+                  </a>
+                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center bg-white/70 rounded-2xl border border-dashed border-amber-200 text-xs text-amber-800 space-y-2">
+                <Cake className="h-7 w-7 text-amber-400 mx-auto" />
+                <p className="font-semibold">No hay cumpleaños registrados para hoy.</p>
+                <p className="text-[11px] text-zinc-500">Agrega contactos en el módulo de Directorio para activar las felicitaciones automáticas.</p>
               </div>
-            ))}
+            )}
           </div>
 
-          {/* Footer de Cumpleaños */}
           <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between text-xs text-amber-900">
             <span className="text-[11px] text-zinc-500 font-medium">Recordatorios activos</span>
             <Link

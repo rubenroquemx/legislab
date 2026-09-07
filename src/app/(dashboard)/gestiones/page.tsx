@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { getGestiones, createGestion } from '@/app/actions/gestiones';
 import { 
   FolderKanban, 
   Plus, 
@@ -153,179 +154,7 @@ const PLANTILLAS_PREDETERMINADAS: PlantillaOficio[] = [
   },
 ];
 
-const INITIAL_GESTIONES: GestionCiudadana[] = [
-  {
-    id: 'ges-1',
-    folio: 'GES-2026-089',
-    nombre: 'Juan Carlos Morales Hernández',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    telefono: '993 123 4567',
-    municipio: 'Centro (Villahermosa)',
-    curp: 'MOHJ820415HTBLRN09',
-    direccion: 'Calle Narciso Mendoza #104',
-    colonia: 'Col. Atasta de Serra',
-    seccionElectoral: '0284',
-    tipo: 'Salud',
-    descripcion: 'Solicitud de apoyo urgente para hemodiálisis y estudios de tomografía en el Hospital de Alta Especialidad Dr. Juan Graham.',
-    estatus: 'En Trámite con Dependencia',
-    prioridad: 'Alta',
-    dependenciaDestino: 'Secretaría de Salud del Estado',
-    fecha: '28 Ago 2026',
-    driveFolderUrl: 'https://drive.google.com/drive/folders/expediente-juan-morales-089',
-    documentos: [
-      { id: 'doc-1', nombre: 'INE_Frente_Reverso.pdf', tipo: 'Identificación INE', fecha: '28 Ago 2026', tamano: '1.2 MB', urlDrive: 'https://drive.google.com/file/ine_089' },
-      { id: 'doc-2', nombre: 'Comprobante_Domicilio_CFE.pdf', tipo: 'Comprobante Domicilio', fecha: '28 Ago 2026', tamano: '840 KB', urlDrive: 'https://drive.google.com/file/cfe_089' },
-      { id: 'doc-3', nombre: 'Dictamen_Medico_Nefrologia.pdf', tipo: 'Dictamen Clínico', fecha: '28 Ago 2026', tamano: '2.4 MB', urlDrive: 'https://drive.google.com/file/med_089' },
-    ],
-    oficios: [
-      {
-        id: 'ofi-1',
-        folioOficio: 'OFICIO No. LXVI-DIP-RR/2026/089',
-        tipoOficio: 'Canalización de Salud',
-        destinatario: 'Dra. Patricia Oramas Palma',
-        cargo: 'Secretaria de Salud del Estado de Tabasco',
-        dependencia: 'Secretaría de Salud del Estado',
-        fecha: '29 Ago 2026',
-        contenido: 'Por medio del presente me dirijo a Usted respetuosamente para hacer de su conocimiento la petición ciudadana del C. Juan Carlos Morales Hernández...',
-      }
-    ],
-    notas: [
-      {
-        id: 'not-1',
-        fecha: '28 Ago 2026',
-        hora: '09:15 AM',
-        autor: 'Recepción y Gestión',
-        texto: 'Se recibió al ciudadano en la Casa de Enlace. Presentó dictamen de nefrología y receta de hemodiálisis.',
-        esDiputado: false,
-      },
-      {
-        id: 'not-2',
-        fecha: '29 Ago 2026',
-        hora: '10:30 AM',
-        autor: 'Lic. Mariana Soto (Asesora)',
-        texto: 'Se radicó el oficio en la Oficialía de Partes de la Secretaría de Salud. Folio de recibido: SS-TAB-4921.',
-        esDiputado: false,
-      },
-      {
-        id: 'not-3',
-        fecha: '30 Ago 2026',
-        hora: '04:15 PM',
-        autor: 'Dip. Ruben Roque',
-        texto: 'Hablé personalmente con el Director del Hospital Juan Graham. Se programó la sesión de hemodiálisis prioritaria para el próximo lunes a primera hora.',
-        esDiputado: true,
-      }
-    ],
-  },
-  {
-    id: 'ges-2',
-    folio: 'GES-2026-088',
-    nombre: 'Laura Mendoza Gallegos (Comité Vecinal)',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    telefono: '993 987 6543',
-    municipio: 'Centro (Villahermosa)',
-    curp: 'MEGL780912MTBLRN04',
-    direccion: 'Av. Paseo de las Flores #302',
-    colonia: 'Col. San Pedro, Sección 2',
-    seccionElectoral: '0312',
-    tipo: 'Obras Públicas',
-    descripcion: 'Petición vecinal de desazolve del dren pluvial y reposición de 14 luminarias tipo LED en accesos principales para prevenir inundaciones.',
-    estatus: 'En Revisión',
-    prioridad: 'Media',
-    dependenciaDestino: 'SOTOP / Ayuntamiento de Centro',
-    fecha: '26 Ago 2026',
-    driveFolderUrl: 'https://drive.google.com/drive/folders/expediente-san-pedro-088',
-    documentos: [
-      { id: 'doc-4', nombre: 'Peticion_Firmas_Vecinales.pdf', tipo: 'Solicitud Vecinal', fecha: '26 Ago 2026', tamano: '3.1 MB', urlDrive: 'https://drive.google.com/file/firmas_088' },
-      { id: 'doc-5', nombre: 'Evidencia_Fotografica_Dren.pdf', tipo: 'Evidencia Fotográfica', fecha: '26 Ago 2026', tamano: '4.8 MB', urlDrive: 'https://drive.google.com/file/fotos_088' },
-    ],
-    oficios: [],
-    notas: [
-      {
-        id: 'not-4',
-        fecha: '26 Ago 2026',
-        hora: '11:00 AM',
-        autor: 'Lic. Roberto Garza (Secretario Técnico)',
-        texto: 'Se integró el expediente con las 45 firmas de los vecinos y fotografías del dren. Se elaborará oficio dirigido a SOTOP.',
-        esDiputado: false,
-      },
-      {
-        id: 'not-5',
-        fecha: '27 Ago 2026',
-        hora: '05:30 PM',
-        autor: 'Equipo de Territorio',
-        texto: 'Realizamos visita de campo en la Col. San Pedro. Se corroboraron las 14 luminarias sin servicio en el acceso 2.',
-        esDiputado: false,
-      }
-    ],
-  },
-  {
-    id: 'ges-3',
-    folio: 'GES-2026-087',
-    nombre: 'Prof. Héctor Domínguez Zurita',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    telefono: '993 555 4321',
-    municipio: 'Comalcalco',
-    curp: 'DOZH710320HTBLRN02',
-    direccion: 'Carretera Vecinal Km 4.5',
-    colonia: 'Ejido Guadalupe',
-    seccionElectoral: '0450',
-    tipo: 'Educación',
-    descripcion: 'Solicitud de 25 sillas con paleta y un proyector para el aula comunitaria de la Escuela Primaria Benito Juárez.',
-    estatus: 'Resuelta',
-    prioridad: 'Media',
-    dependenciaDestino: 'Secretaría de Educación',
-    fecha: '24 Ago 2026',
-    driveFolderUrl: 'https://drive.google.com/drive/folders/expediente-ejido-guadalupe-087',
-    documentos: [
-      { id: 'doc-6', nombre: 'Oficio_Director_Primaria.pdf', tipo: 'Solicitud Oficial', fecha: '24 Ago 2026', tamano: '1.1 MB', urlDrive: 'https://drive.google.com/file/primaria_087' },
-      { id: 'doc-7', nombre: 'Acta_Entrega_Mobiliario.pdf', tipo: 'Evidencia de Entrega', fecha: '30 Ago 2026', tamano: '1.9 MB', urlDrive: 'https://drive.google.com/file/entrega_087' },
-    ],
-    oficios: [],
-    notas: [
-      {
-        id: 'not-6',
-        fecha: '30 Ago 2026',
-        hora: '01:00 PM',
-        autor: 'Dip. Ruben Roque',
-        texto: 'Entrega de mobiliario completada con éxito en las instalaciones del plantel escolar. Profesores y padres de familia firmaron acta de conformidad.',
-        esDiputado: true,
-      }
-    ],
-  },
-  {
-    id: 'ges-4',
-    folio: 'GES-2026-086',
-    nombre: 'Doña Rosaura Vázquez Pérez',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    telefono: '993 444 8899',
-    municipio: 'Cárdenas',
-    curp: 'VAPR651105MTBLRN08',
-    direccion: 'Poblado C-29 s/n',
-    colonia: 'Plan de Chontalpa',
-    seccionElectoral: '0189',
-    tipo: 'Apoyo Económico',
-    descripcion: 'Solicitud de silla de ruedas y andadera ortopédica para adulto mayor con discapacidad motriz.',
-    estatus: 'Recibida',
-    prioridad: 'Alta',
-    dependenciaDestino: 'Sistema DIF Tabasco',
-    fecha: 'Hoy',
-    driveFolderUrl: 'https://drive.google.com/drive/folders/expediente-rosaura-086',
-    documentos: [
-      { id: 'doc-8', nombre: 'INE_Rosaura_Vazquez.pdf', tipo: 'Identificación INE', fecha: 'Hoy', tamano: '950 KB', urlDrive: 'https://drive.google.com/file/ine_086' },
-    ],
-    oficios: [],
-    notas: [
-      {
-        id: 'not-7',
-        fecha: 'Hoy',
-        hora: '10:00 AM',
-        autor: 'Lic. Mariana Soto (Asesora)',
-        texto: 'Se contactó a la familia de Doña Rosaura. Se programó visita domiciliaria para valorar el tipo de silla de ruedas requerida.',
-        esDiputado: false,
-      }
-    ],
-  },
-];
+const INITIAL_GESTIONES: GestionCiudadana[] = [];
 
 const TIPOS_GESTION_BASE = ['Salud', 'Educación', 'Obras Públicas', 'Apoyo Económico', 'Vivienda', 'Asesoría Legal', 'Deporte', 'Medio Ambiente'];
 
@@ -333,6 +162,45 @@ const ESTADOS_KANBAN: EstadoGestion[] = ['Recibida', 'En Revisión', 'En Trámit
 
 export default function GestionesPage() {
   const [gestiones, setGestiones] = useState<GestionCiudadana[]>(INITIAL_GESTIONES);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await getGestiones();
+        if (res.success && res.data && res.data.length > 0) {
+          const mapped: GestionCiudadana[] = res.data.map((d: any) => ({
+            id: d.id,
+            folio: d.folio,
+            nombre: d.solicitante,
+            avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+            telefono: d.telefono || '993 000 0000',
+            municipio: d.municipio || 'Centro',
+            curp: '',
+            direccion: '',
+            colonia: d.colonia || '',
+            seccionElectoral: '',
+            tipo: d.categoria || 'General',
+            descripcion: d.asunto || '',
+            estatus: (d.estatus as any) || 'En Trámite con Dependencia',
+            prioridad: (d.prioridad as any) || 'Media',
+            dependenciaDestino: d.dependenciaCanalizada || 'General',
+            fecha: d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Hoy',
+            driveFolderUrl: '',
+            documentos: [],
+            oficios: [],
+            notas: [],
+          }));
+          setGestiones(mapped);
+        }
+      } catch (err) {
+        console.warn('Error loading gestiones:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
   const [tiposGestion, setTiposGestion] = useState<string[]>(TIPOS_GESTION_BASE);
   const [plantillasOficios, setPlantillasOficios] = useState<PlantillaOficio[]>(PLANTILLAS_PREDETERMINADAS);
 

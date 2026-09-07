@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getAgendaEventos, createAgendaEvento, deleteAgendaEvento } from '@/app/actions/agenda';
 import { 
   Calendar as CalendarIcon, 
   Plus, 
@@ -93,68 +94,7 @@ const SEDES_PREDETERMINADAS: SedeFrecuente[] = [
   },
 ];
 
-const INITIAL_EVENTS: EventoLegislativo[] = [
-  {
-    id: 'ev-1',
-    titulo: '61. COMISIÓN ORDINARIA DE GOBERNACIÓN Y PUNTOS CONSTITUCIONALES',
-    fecha: '2026-09-02',
-    hora: '09:00 AM',
-    horaFin: '10:30 AM',
-    lugar: 'Sala de Usos Múltiples en Congreso',
-    ubicacionUrl: 'https://share.google/RSlrkI2maowYbwLnH',
-    tipo: 'Comisión',
-    descripcion: 'Dictaminación de reformas a la Ley Orgánica del Poder Legislativo y revisión de iniciativas pendientes.',
-    incluirEnCompartir: true,
-  },
-  {
-    id: 'ev-2',
-    titulo: 'Sesión Solemne que, con motivo de la transición de la directiva del OBSERVATORIO DE PARTICIPACIÓN POLÍTICA DE LAS MUJERES EN TABASCO',
-    fecha: '2026-09-02',
-    hora: '11:00 AM',
-    horaFin: '01:00 PM',
-    lugar: 'IEPCT (Instituto Electoral y de Participación Ciudadana)',
-    ubicacionUrl: 'https://share.google/Ns9yO6vsSIXS4zLMR',
-    tipo: 'Solemne',
-    descripcion: 'Toma de protesta de la nueva mesa directiva ciudadana y firma del convenio de colaboración.',
-    incluirEnCompartir: true,
-  },
-  {
-    id: 'ev-3',
-    titulo: 'Audiencia de Trabajo con Productores Plataneros y Cacaoteros',
-    fecha: '2026-09-02',
-    hora: '04:00 PM',
-    horaFin: '05:30 PM',
-    lugar: 'Casa de Enlace Legislativo (Av. 27 de Febrero 402)',
-    ubicacionUrl: 'https://maps.app.goo.gl/shareTabascoDistrito',
-    tipo: 'Distrito',
-    descripcion: 'Revisión de fondos de contingencia contra anegaciones y canalización ante la Secretaría de Desarrollo Agropecuario.',
-    incluirEnCompartir: true,
-  },
-  {
-    id: 'ev-4',
-    titulo: 'Sesión Ordinaria de Pleno - Primer Periodo Ordinario',
-    fecha: '2026-09-03',
-    hora: '10:00 AM',
-    horaFin: '02:30 PM',
-    lugar: 'Congreso del Estado (Recinto Oficial de Sesiones)',
-    ubicacionUrl: 'https://share.google/RSlrkI2maowYbwLnH',
-    tipo: 'Pleno',
-    descripcion: 'Presentación del paquete de iniciativas de modernización hídrica distrital.',
-    incluirEnCompartir: true,
-  },
-  {
-    id: 'ev-5',
-    titulo: 'Mesa Interinstitucional con Secretaría de Obras Públicas',
-    fecha: '2026-09-04',
-    hora: '12:00 PM',
-    horaFin: '02:00 PM',
-    lugar: 'SOTOP (Secretaría de Obras Públicas)',
-    ubicacionUrl: 'https://maps.google.com/?q=SOTOP+Villahermosa',
-    tipo: 'Institucional',
-    descripcion: 'Canalización de 12 gestiones ciudadanas de pavimentación y drenaje pluvial.',
-    incluirEnCompartir: true,
-  },
-];
+const INITIAL_EVENTS: EventoLegislativo[] = [];
 
 const HORAS_DEL_DIA = [
   '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
@@ -212,6 +152,35 @@ function getWeekDays(currentDateStr: string) {
 
 export default function AgendaPage() {
   const [eventos, setEventos] = useState<EventoLegislativo[]>(INITIAL_EVENTS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await getAgendaEventos();
+        if (res.success && res.data && res.data.length > 0) {
+          const mapped: EventoLegislativo[] = res.data.map((d: any) => ({
+            id: d.id,
+            titulo: d.titulo,
+            fecha: d.fecha,
+            hora: d.horaInicio,
+            horaFin: d.horaFin,
+            lugar: d.lugarNombre,
+            ubicacionUrl: d.lugarUrl || 'https://maps.google.com',
+            tipo: d.tipo || 'Comisión',
+            descripcion: d.notas || '',
+            incluirEnCompartir: true,
+          }));
+          setEventos(mapped);
+        }
+      } catch (err) {
+        console.warn('Error loading agenda:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
   const [sedesFrecuentes, setSedesFrecuentes] = useState<SedeFrecuente[]>(SEDES_PREDETERMINADAS);
   const [tiposEventos, setTiposEventos] = useState<string[]>(TIPOS_BASE);
   const [vista, setVista] = useState<'mes' | 'semana' | 'dia'>('dia');

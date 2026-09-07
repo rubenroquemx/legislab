@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { getTareas, createTarea, updateTareaStatus, deleteTarea } from '@/app/actions/tareas';
 import { 
   CheckSquare, 
   Kanban, 
@@ -72,166 +73,44 @@ const USUARIOS_EQUIPO = [
   { id: 'usr-6', nombre: 'L.A.E. Sofía Méndez Narváez', foto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80', cargo: 'Gestión Social', whatsapp: '993 999 4455' },
 ];
 
-const INITIAL_TAREAS: TareaDespacho[] = [
-  {
-    id: 'tar-1',
-    titulo: 'Redactar proyecto de iniciativa de ley de salud mental',
-    descripcion: 'Integrar derecho comparado con la ley federal y jurisprudencia de la SCJN.',
-    usuarioId: 'usr-2',
-    usuarioNombre: 'Lic. Mariana Soto Gómez',
-    usuarioFoto: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Asesora Jurídica',
-    usuarioWhatsapp: '993 456 7890',
-    prioridad: 'Alta',
-    estatus: 'En Proceso',
-    fechaLimite: '2026-09-04',
-    horaLimite: '14:00',
-    moduloRelacionado: 'Iniciativas',
-    fechaCreacion: '2026-09-01',
-    observaciones: [
-      {
-        id: 'obs-1',
-        fecha: '02 Sep 2026',
-        hora: '11:00 AM',
-        autor: 'Lic. Mariana Soto Gómez',
-        texto: 'Se concluyó la exposición de motivos y el cuadro comparativo de artículos.',
-        esDiputado: false,
-      },
-      {
-        id: 'obs-2',
-        fecha: '03 Sep 2026',
-        hora: '09:30 AM',
-        autor: 'Dip. Ruben Roque',
-        texto: 'Por favor enfocar el capítulo III en el presupuesto para centros comunitarios de salud mental.',
-        esDiputado: true,
-      }
-    ],
-  },
-  {
-    id: 'tar-2',
-    titulo: 'Radicar oficios de salud en Hospital Dr. Juan Graham',
-    descripcion: 'Entregar expediente y oficio No. 089 para sesión urgente de hemodiálisis de Juan Morales.',
-    usuarioId: 'usr-3',
-    usuarioNombre: 'Lic. Roberto Garza Priego',
-    usuarioFoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Secretario Técnico',
-    usuarioWhatsapp: '993 321 6549',
-    prioridad: 'Alta',
-    estatus: 'Pendiente',
-    fechaLimite: '2026-09-03',
-    horaLimite: '12:30',
-    moduloRelacionado: 'Gestiones',
-    fechaCreacion: '2026-09-02',
-    observaciones: [
-      {
-        id: 'obs-3',
-        fecha: '02 Sep 2026',
-        hora: '05:00 PM',
-        autor: 'Lic. Roberto Garza Priego',
-        texto: 'Oficio impreso y firmado por el Diputado. Mañana a primera hora se acude a la dirección médica.',
-        esDiputado: false,
-      }
-    ],
-  },
-  {
-    id: 'tar-3',
-    titulo: 'Verificación en campo de luminarias en Col. San Pedro',
-    descripcion: 'Revisar con el comité vecinal las 14 luminarias LED reportadas sin servicio.',
-    usuarioId: 'usr-4',
-    usuarioNombre: 'Ing. Carlos Alberto Morales',
-    usuarioFoto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Enlace Territorio',
-    usuarioWhatsapp: '993 789 1234',
-    prioridad: 'Media',
-    estatus: 'Pendiente',
-    fechaLimite: '2026-09-03',
-    horaLimite: '17:00',
-    moduloRelacionado: 'Gestiones',
-    fechaCreacion: '2026-09-02',
-    observaciones: [],
-  },
-  {
-    id: 'tar-4',
-    titulo: 'Emitir boletín de prensa de la Comisión de Gobernación',
-    descripcion: 'Difundir en medios estatales la postura sobre la autonomía parlamentaria y dictamen aprobado.',
-    usuarioId: 'usr-5',
-    usuarioNombre: 'Lic. Paulina Rovirosa Vega',
-    usuarioFoto: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Comunicación Social',
-    usuarioWhatsapp: '993 888 7766',
-    prioridad: 'Alta',
-    estatus: 'En Revisión',
-    fechaLimite: '2026-09-03',
-    horaLimite: '15:00',
-    moduloRelacionado: 'Boletines',
-    fechaCreacion: '2026-09-03',
-    observaciones: [
-      {
-        id: 'obs-4',
-        fecha: 'Hoy',
-        hora: '11:45 AM',
-        autor: 'Lic. Paulina Rovirosa Vega',
-        texto: 'Borrador del boletín listo con fotografías de la sesión de comisión.',
-        esDiputado: false,
-      }
-    ],
-  },
-  {
-    id: 'tar-5',
-    titulo: 'Organizar expediente y entrega de sillas de ruedas (DIF)',
-    descripcion: 'Tener listas las actas de entrega para la audiencia de las 4:00 PM en Casa de Enlace.',
-    usuarioId: 'usr-6',
-    usuarioNombre: 'L.A.E. Sofía Méndez Narváez',
-    usuarioFoto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Gestión Social',
-    usuarioWhatsapp: '993 999 4455',
-    prioridad: 'Media',
-    estatus: 'Completada',
-    fechaLimite: '2026-09-03',
-    horaLimite: '10:00',
-    moduloRelacionado: 'Gestiones',
-    fechaCreacion: '2026-09-01',
-    observaciones: [
-      {
-        id: 'obs-5',
-        fecha: 'Hoy',
-        hora: '10:05 AM',
-        autor: 'L.A.E. Sofía Méndez Narváez',
-        texto: 'Expedientes integrados con INE y comprobantes. Beneficiarios confirmados vía telefónica.',
-        esDiputado: false,
-      }
-    ],
-  },
-  {
-    id: 'tar-6',
-    titulo: 'Revisión final de discurso para Sesión Solemne IEPCT',
-    descripcion: 'Ajustar cifras de participación paritaria en los 17 municipios de Tabasco.',
-    usuarioId: 'usr-1',
-    usuarioNombre: 'Dip. Ruben Roque',
-    usuarioFoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    usuarioCargo: 'Diputado Local (Titular)',
-    usuarioWhatsapp: '993 111 2233',
-    prioridad: 'Alta',
-    estatus: 'Completada',
-    fechaLimite: '2026-09-03',
-    horaLimite: '08:30',
-    moduloRelacionado: 'Discursos',
-    fechaCreacion: '2026-09-02',
-    observaciones: [
-      {
-        id: 'obs-6',
-        fecha: 'Hoy',
-        hora: '08:15 AM',
-        autor: 'Dip. Ruben Roque',
-        texto: 'Discurso validado y listo para tribuna.',
-        esDiputado: true,
-      }
-    ],
-  },
-];
+const INITIAL_TAREAS: TareaDespacho[] = [];
 
 export default function TareasPage() {
   const [tareas, setTareas] = useState<TareaDespacho[]>(INITIAL_TAREAS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await getTareas();
+        if (res.success && res.data && res.data.length > 0) {
+          const mapped: TareaDespacho[] = res.data.map((d: any) => ({
+            id: d.id,
+            titulo: d.titulo,
+            descripcion: d.descripcion || '',
+            usuarioId: d.usuarioId || 'usr-1',
+            usuarioNombre: d.usuarioNombre || 'Dip. Ruben Roque',
+            usuarioFoto: d.usuarioFoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            usuarioCargo: d.usuarioCargo || 'Diputado Local (Titular)',
+            usuarioWhatsapp: d.usuarioWhatsapp || '993 111 2233',
+            prioridad: d.prioridad as any || 'Media',
+            estatus: d.estatus as any || 'Pendiente',
+            fechaLimite: d.fechaLimite,
+            horaLimite: d.horaLimite,
+            moduloRelacionado: d.moduloRelacionado || 'Gestiones',
+            fechaCreacion: d.createdAt ? new Date(d.createdAt).toISOString().split('T')[0] : '2026-09-03',
+            observaciones: [],
+          }));
+          setTareas(mapped);
+        }
+      } catch (err) {
+        console.warn('Error loading tareas:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
   const [vistaModo, setVistaModo] = useState<'kanban' | 'lista'>('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroUsuario, setFiltroUsuario] = useState('TODOS');
@@ -292,6 +171,7 @@ export default function TareasPage() {
 
   const handleCambiarEstado = (id: string, nuevoEstado: EstadoTarea) => {
     setTareas(tareas.map(t => t.id === id ? { ...t, estatus: nuevoEstado } : t));
+    updateTareaStatus(id, nuevoEstado);
     if (tareaChatSeleccionada && tareaChatSeleccionada.id === id) {
       setTareaChatSeleccionada({ ...tareaChatSeleccionada, estatus: nuevoEstado });
     }
@@ -394,6 +274,7 @@ export default function TareasPage() {
           }
         ],
       };
+      createTarea({ titulo: nueva.titulo, descripcion: nueva.descripcion, usuarioId: nueva.usuarioId, usuarioNombre: nueva.usuarioNombre, usuarioFoto: nueva.usuarioFoto, usuarioCargo: nueva.usuarioCargo, usuarioWhatsapp: nueva.usuarioWhatsapp, prioridad: nueva.prioridad as any, estatus: nueva.estatus as any, fechaLimite: nueva.fechaLimite, horaLimite: nueva.horaLimite, moduloRelacionado: nueva.moduloRelacionado }).then(res => { if (res.success && res.data) { nueva.id = res.data.id; } });
       setTareas([nueva, ...tareas]);
     }
 
@@ -402,6 +283,7 @@ export default function TareasPage() {
 
   const handleEliminarTarea = (id: string) => {
     setTareas(tareas.filter(t => t.id !== id));
+    deleteTarea(id);
     setModalDeleteId(null);
     if (tareaChatSeleccionada && tareaChatSeleccionada.id === id) {
       setTareaChatSeleccionada(null);

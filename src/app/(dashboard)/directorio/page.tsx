@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { getContactos, createContacto } from '@/app/actions/directorio';
 import Link from 'next/link';
 import { 
   Search, 
@@ -67,182 +68,44 @@ const TIPOS_CONTACTO_LIST = [
   'Empresarial',
 ];
 
-const INITIAL_CONTACTOS: ContactoDirectorio[] = [
-  {
-    id: 'con-1',
-    nombre: 'Dra. Patricia Oramas Palma',
-    telefono: '993 123 9988',
-    telefonoAlterno: '993 123 9900',
-    cargo: 'Secretaria de Salud y Directora IMSS-Bienestar',
-    organizacion: 'Secretaría de Salud del Estado de Tabasco',
-    correos: ['patricia.oramas@saludtabasco.gob.mx', 'despacho.salud@tabasco.gob.mx'],
-    domicilio: 'Paseo Tabasco #1504',
-    colonia: 'Col. Tabasco 2000',
-    municipio: 'Centro (Villahermosa)',
-    fechaCumpleanos: '1975-09-03', // CUMPLEAÑOS HOY!
-    esCumpleanosHoy: true,
-    tipoContacto: 'Funcionario Estatal',
-    avatarUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&auto=format&fit=crop&q=80',
-    observaciones: [
-      {
-        id: 'obs-c1',
-        fecha: '02 Sep 2026',
-        hora: '11:30 AM',
-        autor: 'Dip. Ruben Roque',
-        texto: 'Hablé con ella para canalizar las hemodiálisis del Hospital Juan Graham. Muy receptiva y atenta.',
-        esDiputado: true,
-      }
-    ],
-  },
-  {
-    id: 'con-2',
-    nombre: 'Lic. Yolanda Osuna Huerta',
-    telefono: '993 555 1212',
-    cargo: 'Presidenta Municipal de Centro',
-    organizacion: 'H. Ayuntamiento de Centro',
-    correos: ['presidencia@villahermosa.gob.mx'],
-    domicilio: 'Palacio Municipal, Tabasco 2000',
-    colonia: 'Col. Tabasco 2000',
-    municipio: 'Centro (Villahermosa)',
-    fechaCumpleanos: '1968-09-03', // CUMPLEAÑOS HOY!
-    esCumpleanosHoy: true,
-    tipoContacto: 'Alcalde / Municipal',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
-    observaciones: [
-      {
-        id: 'obs-c2',
-        fecha: '28 Ago 2026',
-        hora: '01:00 PM',
-        autor: 'Dip. Ruben Roque',
-        texto: 'Acordamos brigada conjunta de luminarias y bacheo en Atasta y Tamulté.',
-        esDiputado: true,
-      }
-    ],
-  },
-  {
-    id: 'con-3',
-    nombre: 'Ing. Daniel Casasús Ruz',
-    telefono: '993 777 4433',
-    cargo: 'Secretario de Ordenamiento Territorial y Obras Públicas',
-    organizacion: 'SOTOP Tabasco',
-    correos: ['daniel.casasus@sotop.tabasco.gob.mx'],
-    domicilio: 'Carretera Villahermosa-Cárdenas Km 3.5',
-    colonia: 'Parque Industrial Anacleto Canabal',
-    municipio: 'Centro (Villahermosa)',
-    fechaCumpleanos: '1984-11-15',
-    esCumpleanosHoy: false,
-    tipoContacto: 'Funcionario Estatal',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-    observaciones: [],
-  },
-  {
-    id: 'con-4',
-    nombre: 'Juan Carlos Morales Hernández',
-    telefono: '993 123 4567',
-    cargo: 'Ciudadano Solicitante',
-    organizacion: 'Comité de Pacientes Renales',
-    correos: ['carlos.morales.tab@gmail.com'],
-    domicilio: 'Calle Narciso Mendoza #104',
-    colonia: 'Col. Atasta de Serra',
-    municipio: 'Centro (Villahermosa)',
-    fechaCumpleanos: '1982-04-15',
-    esCumpleanosHoy: false,
-    tipoContacto: 'Ciudadano / Gestión',
-    folioGestion: 'GES-2026-089',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-    observaciones: [
-      {
-        id: 'obs-c3',
-        fecha: '28 Ago 2026',
-        hora: '09:15 AM',
-        autor: 'Recepción y Gestión',
-        texto: 'Se le abrió expediente de gestión folio GES-2026-089 para apoyo de hemodiálisis.',
-        esDiputado: false,
-      }
-    ],
-  },
-  {
-    id: 'con-5',
-    nombre: 'Laura Mendoza Gallegos',
-    telefono: '993 987 6543',
-    cargo: 'Presidenta del Comité Vecinal',
-    organizacion: 'Vecinos Unidos Col. San Pedro',
-    correos: ['laura.mendoza.sanpedro@hotmail.com'],
-    domicilio: 'Av. Paseo de las Flores #302',
-    colonia: 'Col. San Pedro, Sección 2',
-    municipio: 'Centro (Villahermosa)',
-    fechaCumpleanos: '1978-09-12',
-    esCumpleanosHoy: false,
-    tipoContacto: 'Ciudadano / Gestión',
-    folioGestion: 'GES-2026-088',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
-    observaciones: [
-      {
-        id: 'obs-c4',
-        fecha: '26 Ago 2026',
-        hora: '11:00 AM',
-        autor: 'Lic. Roberto Garza Priego',
-        texto: 'Entregó firmas de 45 vecinos para desazolve del dren.',
-        esDiputado: false,
-      }
-    ],
-  },
-  {
-    id: 'con-6',
-    nombre: 'Prof. Héctor Domínguez Zurita',
-    telefono: '993 555 4321',
-    cargo: 'Director de Escuela Primaria',
-    organizacion: 'Primaria Benito Juárez Ejido Guadalupe',
-    correos: ['director.hector.zurita@setab.edu.mx'],
-    domicilio: 'Carretera Vecinal Km 4.5',
-    colonia: 'Ejido Guadalupe',
-    municipio: 'Comalcalco',
-    fechaCumpleanos: '1971-03-20',
-    esCumpleanosHoy: false,
-    tipoContacto: 'Ciudadano / Gestión',
-    folioGestion: 'GES-2026-087',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80',
-    observaciones: [],
-  },
-  {
-    id: 'con-7',
-    nombre: 'Doña Rosaura Vázquez Pérez',
-    telefono: '993 444 8899',
-    cargo: 'Adulto Mayor / Beneficiaria',
-    organizacion: 'Comunidad Plan de Chontalpa',
-    correos: ['familia.vazquez.c29@gmail.com'],
-    domicilio: 'Poblado C-29 s/n',
-    colonia: 'Plan de Chontalpa',
-    municipio: 'Cárdenas',
-    fechaCumpleanos: '1965-11-05',
-    esCumpleanosHoy: false,
-    tipoContacto: 'Ciudadano / Gestión',
-    folioGestion: 'GES-2026-086',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
-    observaciones: [],
-  },
-  {
-    id: 'con-8',
-    nombre: 'Lic. Jorge Alberto Javier Quero',
-    telefono: '993 310 8800',
-    cargo: 'Director General y Conductor de Noticias',
-    organizacion: 'Grupo VX / XEVX La Grande de Tabasco',
-    correos: ['direccion@grupovx.com', 'noticias@tabascohoy.com'],
-    domicilio: 'Av. Paseo Usumacinta #204',
-    colonia: 'Col. Guayabal',
-    municipio: 'Centro (Villahermosa)',
-    fechaCumpleanos: '1970-07-22',
-    esCumpleanosHoy: false,
-    tipoContacto: 'Medio de Comunicación',
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80',
-    observaciones: [],
-  },
-];
+const INITIAL_CONTACTOS: ContactoDirectorio[] = [];
 
 const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export default function DirectorioPage() {
   const [contactos, setContactos] = useState<ContactoDirectorio[]>(INITIAL_CONTACTOS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await getContactos();
+        if (res.success && res.data && res.data.length > 0) {
+          const mapped: ContactoDirectorio[] = res.data.map((d: any) => ({
+            id: d.id,
+            nombre: d.nombre,
+            telefono: d.telefono,
+            cargo: d.cargo,
+            organizacion: d.organizacion,
+            correos: d.email ? [d.email] : [],
+            domicilio: d.direccion || '',
+            colonia: '',
+            municipio: 'Centro',
+            fechaCumpleanos: d.fechaNacimiento || '',
+            tipoContacto: (d.categoria as any) || 'Funcionario Estatal',
+            avatarUrl: d.foto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            observaciones: [],
+          }));
+          setContactos(mapped);
+        }
+      } catch (err) {
+        console.warn('Error loading contactos:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('Todos');
   const [filtroSoloCumpleanos, setFiltroSoloCumpleanos] = useState(false);
