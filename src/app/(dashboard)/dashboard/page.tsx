@@ -432,20 +432,20 @@ export default function DashboardPage() {
       {/* =========================================================================
           WIDGET: GESTIÓN RÁPIDA DE GRUPOS DIRECTAMENTE DESDE EL DASHBOARD
          ========================================================================= */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+      <div className="bg-white rounded-2xl border border-zinc-200 p-5 sm:p-6 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-100">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs">
               <UsersRound className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-gray-900">Grupos y Redes de Contactos</h2>
+                <h2 className="text-base font-bold text-zinc-900">Grupos y Redes de Contactos</h2>
                 <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
                   Acción Directa
                 </span>
               </div>
-              <p className="text-xs text-gray-500">Administra o quita usuarios de un grupo directamente con el botón de acción rápida</p>
+              <p className="text-xs text-zinc-500">Administra o quita usuarios de un grupo directamente con el botón de acción rápida</p>
             </div>
           </div>
 
@@ -476,12 +476,12 @@ export default function DashboardPage() {
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
                   isSelected
                     ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-zinc-100 text-zinc-700 hover:bg-gray-200'
                 }`}
               >
                 <span>{grp.nombre}</span>
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                  isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                  isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-zinc-700'
                 }`}>
                   {grp.miembros.length}
                 </span>
@@ -497,7 +497,7 @@ export default function DashboardPage() {
 
           return (
             <div className="space-y-3 pt-1">
-              <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center justify-between text-xs text-zinc-500">
                 <span className="font-semibold">
                   Integrantes ({currentGrupo.miembros.length}):
                 </span>
@@ -519,18 +519,18 @@ export default function DashboardPage() {
                   {currentGrupo.miembros.map((mb) => (
                     <div
                       key={mb.id}
-                      className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200/80 flex items-center justify-between gap-3 hover:bg-white hover:border-gray-300 hover:shadow-xs transition-all"
+                      className="p-3.5 bg-zinc-50 rounded-2xl border border-zinc-200/80 flex items-center justify-between gap-3 hover:bg-white hover:border-gray-300 hover:shadow-xs transition-all"
                     >
                       <div className="flex items-center gap-2.5 overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={mb.foto}
                           alt={mb.nombre}
-                          className="h-9 w-9 rounded-full object-cover border border-gray-200 shrink-0"
+                          className="h-9 w-9 rounded-full object-cover border border-zinc-200 shrink-0"
                         />
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-gray-900 truncate">{mb.nombre}</p>
-                          <p className="text-[11px] text-gray-500 truncate">{mb.cargo} • {mb.municipio}</p>
+                          <p className="text-xs font-bold text-zinc-900 truncate">{mb.nombre}</p>
+                          <p className="text-[11px] text-zinc-500 truncate">{mb.cargo} • {mb.municipio}</p>
                         </div>
                       </div>
 
@@ -559,7 +559,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-xs text-gray-400">
+                <div className="p-8 text-center bg-zinc-50 rounded-2xl border border-dashed border-zinc-200 text-xs text-zinc-400">
                   No hay miembros en este grupo actualmente.
                 </div>
               )}
@@ -577,16 +577,16 @@ export default function DashboardPage() {
         {/* 1. Gestiones Nuevas */}
         <Link 
           href="/gestiones"
-          className="bg-white dark:bg-[#121824] p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between group"
+          className="bg-white dark:bg-[#121824] p-5 rounded-2xl border border-zinc-200/80 dark:border-gray-800 shadow-xs hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gestiones Nuevas</span>
+            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Gestiones Nuevas</span>
             <div className="h-7 w-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <FolderKanban className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-black text-gray-900 dark:text-white">{gestionesNuevasCount}</span>
+            <span className="text-2xl font-black text-zinc-900 dark:text-white">{gestionesNuevasCount}</span>
             <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
               Recibidas
             </span>
@@ -596,10 +596,10 @@ export default function DashboardPage() {
         {/* 2. Gestiones en Proceso */}
         <Link 
           href="/gestiones"
-          className="bg-white dark:bg-[#121824] p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs hover:border-purple-300 hover:shadow-md transition-all flex flex-col justify-between group"
+          className="bg-white dark:bg-[#121824] p-5 rounded-2xl border border-zinc-200/80 dark:border-gray-800 shadow-xs hover:border-purple-300 hover:shadow-md transition-all flex flex-col justify-between group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gestiones en Proceso</span>
+            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Gestiones en Proceso</span>
             <div className="h-7 w-7 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
               <Clock className="h-4 w-4" />
             </div>
@@ -615,10 +615,10 @@ export default function DashboardPage() {
         {/* 3. Tareas Nuevas */}
         <Link 
           href="/tareas"
-          className="bg-white dark:bg-[#121824] p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs hover:border-amber-300 hover:shadow-md transition-all flex flex-col justify-between group"
+          className="bg-white dark:bg-[#121824] p-5 rounded-2xl border border-zinc-200/80 dark:border-gray-800 shadow-xs hover:border-amber-300 hover:shadow-md transition-all flex flex-col justify-between group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tareas Nuevas</span>
+            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tareas Nuevas</span>
             <div className="h-7 w-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <CheckSquare className="h-4 w-4" />
             </div>
@@ -634,10 +634,10 @@ export default function DashboardPage() {
         {/* 4. Tareas en Proceso */}
         <Link 
           href="/tareas"
-          className="bg-white dark:bg-[#121824] p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between group"
+          className="bg-white dark:bg-[#121824] p-5 rounded-2xl border border-zinc-200/80 dark:border-gray-800 shadow-xs hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tareas en Proceso</span>
+            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tareas en Proceso</span>
             <div className="h-7 w-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <Flame className="h-4 w-4" />
             </div>
@@ -709,32 +709,32 @@ export default function DashboardPage() {
         {/* =========================================================================
             COLUMNA 2/3: AGENDA PARLAMENTARIA Y GOOGLE CALENDAR
            ========================================================================= */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 p-6 shadow-xs space-y-5 transition-colors">
+        <div className="lg:col-span-2 bg-white dark:bg-[#121824] rounded-2xl border border-zinc-200/80 dark:border-gray-800 p-6 shadow-xs space-y-5 transition-colors">
           {/* Header de la Agenda */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-100 dark:border-gray-800">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-2xs">
                 <CalendarIcon className="h-5 w-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Agenda Oficial y Sesiones</h2>
+                  <h2 className="text-base font-bold text-zinc-900 dark:text-white">Agenda Oficial y Sesiones</h2>
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     Google Calendar Live
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Horarios de 1 hora, comisiones, sedes y compartir por WhatsApp</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Horarios de 1 hora, comisiones, sedes y compartir por WhatsApp</p>
               </div>
             </div>
 
             {/* Controles de Fecha */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl text-xs font-semibold">
+              <div className="flex items-center bg-zinc-100 dark:bg-gray-800 p-1 rounded-xl text-xs font-semibold">
                 <button
                   onClick={() => setFechaSeleccionada('2026-09-03')}
                   className={`px-3 py-1 rounded-lg transition-all ${
-                    fechaSeleccionada === '2026-09-03' ? 'bg-white text-blue-600 shadow-xs font-bold' : 'text-gray-600 dark:text-gray-300'
+                    fechaSeleccionada === '2026-09-03' ? 'bg-white text-blue-600 shadow-xs font-bold' : 'text-zinc-600 dark:text-gray-300'
                   }`}
                 >
                   Hoy (3 Sep)
@@ -742,7 +742,7 @@ export default function DashboardPage() {
                 <button
                   onClick={() => setFechaSeleccionada('2026-09-04')}
                   className={`px-3 py-1 rounded-lg transition-all ${
-                    fechaSeleccionada === '2026-09-04' ? 'bg-white text-blue-600 shadow-xs font-bold' : 'text-gray-600 dark:text-gray-300'
+                    fechaSeleccionada === '2026-09-04' ? 'bg-white text-blue-600 shadow-xs font-bold' : 'text-zinc-600 dark:text-gray-300'
                   }`}
                 >
                   Mañana (4 Sep)
@@ -767,12 +767,12 @@ export default function DashboardPage() {
               eventosDelDia.map((ev) => (
                 <div
                   key={ev.id}
-                  className="p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800/90 bg-gray-50 dark:bg-gray-800/40/50 hover:bg-white hover:border-blue-300 hover:shadow-md transition-all space-y-2.5 group relative"
+                  className="p-4 rounded-2xl border border-zinc-200/80 dark:border-gray-800/90 bg-zinc-50 dark:bg-gray-800/40/50 hover:bg-white hover:border-blue-300 hover:shadow-md transition-all space-y-2.5 group relative"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full bg-blue-600"></span>
-                      <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-gray-200/80 dark:border-gray-800">
+                      <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-zinc-200/80 dark:border-gray-800">
                         {ev.tipo}
                       </span>
                       <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
@@ -792,27 +792,27 @@ export default function DashboardPage() {
                     </a>
                   </div>
 
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors leading-snug">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-blue-600 transition-colors leading-snug">
                     {ev.titulo}
                   </h3>
 
                   {ev.notas && (
-                    <p className="text-xs text-gray-600 dark:text-gray-300 bg-white p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 leading-relaxed">
+                    <p className="text-xs text-zinc-600 dark:text-gray-300 bg-white p-2.5 rounded-xl border border-zinc-100 dark:border-gray-800 leading-relaxed">
                       {ev.notas}
                     </p>
                   )}
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center rounded-2xl border-2 border-dashed border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40/50 space-y-2">
+              <div className="p-8 text-center rounded-2xl border-2 border-dashed border-zinc-200/80 dark:border-gray-800 bg-zinc-50 dark:bg-gray-800/40/50 space-y-2">
                 <CalendarIcon className="h-8 w-8 text-slate-300 mx-auto" />
-                <p className="text-xs font-bold text-gray-600 dark:text-gray-300">No hay eventos programados para esta fecha.</p>
+                <p className="text-xs font-bold text-zinc-600 dark:text-gray-300">No hay eventos programados para esta fecha.</p>
               </div>
             )}
           </div>
 
           {/* Footer de la Agenda con enlace al módulo completo */}
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs">
+          <div className="pt-2 border-t border-zinc-100 dark:border-gray-800 flex items-center justify-between text-xs">
             <button
               onClick={() => setIsModalEventoOpen(true)}
               className="inline-flex items-center gap-1 text-blue-600 font-bold hover:underline"
@@ -834,21 +834,21 @@ export default function DashboardPage() {
         {/* =========================================================================
             COLUMNA 1/3: MIS TAREAS ASIGNADAS (SOLO NUEVAS Y EN PROCESO)
            ========================================================================= */}
-        <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 p-6 shadow-xs space-y-5 transition-colors">
+        <div className="bg-white dark:bg-[#121824] rounded-2xl border border-zinc-200/80 dark:border-gray-800 p-6 shadow-xs space-y-5 transition-colors">
           {/* Header de Mis Tareas con perfil de usuario activo */}
-          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-gray-800">
             <div className="flex items-center gap-2.5">
               <div className="h-10 w-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-2xs">
                 <CheckSquare className="h-5 w-5" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Mis Tareas Pendientes</h2>
+                  <h2 className="text-base font-bold text-zinc-900 dark:text-white">Mis Tareas Pendientes</h2>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={USUARIO_ACTIVO.foto} alt={USUARIO_ACTIVO.nombre} className="h-4 w-4 rounded-full object-cover" />
-                  <span className="font-semibold text-gray-700 dark:text-gray-200">{USUARIO_ACTIVO.nombre}</span>
+                  <span className="font-semibold text-zinc-700 dark:text-gray-200">{USUARIO_ACTIVO.nombre}</span>
                 </div>
               </div>
             </div>
@@ -863,18 +863,18 @@ export default function DashboardPage() {
           </div>
 
           {/* Filtro Exclusivo: NUEVAS y EN PROCESO */}
-          <div className="flex items-center justify-between gap-1.5 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl text-xs font-semibold">
+          <div className="flex items-center justify-between gap-1.5 p-1 bg-zinc-100 dark:bg-gray-800 rounded-2xl text-xs font-semibold">
             <button
               onClick={() => setFiltroEstatusTarea('NUEVAS')}
               className={`flex-1 py-2 rounded-xl text-center transition-all flex items-center justify-center gap-1.5 ${
                 filtroEstatusTarea === 'NUEVAS' 
                   ? 'bg-white text-amber-700 shadow-xs font-bold' 
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-gray-100'
               }`}
             >
               <span>Nuevas</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                filtroEstatusTarea === 'NUEVAS' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-gray-600 dark:text-gray-300'
+                filtroEstatusTarea === 'NUEVAS' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-zinc-600 dark:text-gray-300'
               }`}>
                 {misTareasNuevas.length}
               </span>
@@ -885,12 +885,12 @@ export default function DashboardPage() {
               className={`flex-1 py-2 rounded-xl text-center transition-all flex items-center justify-center gap-1.5 ${
                 filtroEstatusTarea === 'EN_PROCESO' 
                   ? 'bg-white text-blue-700 shadow-xs font-bold' 
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-gray-100'
               }`}
             >
               <span>En Proceso</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                filtroEstatusTarea === 'EN_PROCESO' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-gray-600 dark:text-gray-300'
+                filtroEstatusTarea === 'EN_PROCESO' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-zinc-600 dark:text-gray-300'
               }`}>
                 {misTareasEnProceso.length}
               </span>
@@ -904,7 +904,7 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={tarea.id}
-                    className="p-3.5 rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white hover:border-blue-300 hover:shadow-xs transition-all space-y-2.5 group"
+                    className="p-3.5 rounded-2xl border border-zinc-200/80 dark:border-gray-800 bg-white hover:border-blue-300 hover:shadow-xs transition-all space-y-2.5 group"
                   >
                     <div className="flex items-start gap-2.5">
                       {/* Checkbox para completar */}
@@ -922,7 +922,7 @@ export default function DashboardPage() {
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                             tarea.prioridad === 'Alta' ? 'bg-red-50 text-red-700 border border-red-200' :
                             tarea.prioridad === 'Media' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                            'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-gray-800'
+                            'bg-zinc-100 dark:bg-gray-800 text-zinc-600 dark:text-gray-300 border border-zinc-200/80 dark:border-gray-800'
                           }`}>
                             {tarea.prioridad}
                           </span>
@@ -932,12 +932,12 @@ export default function DashboardPage() {
                           </span>
                         </div>
 
-                        <h4 className="text-xs font-bold mt-1 text-gray-900 dark:text-white leading-tight">
+                        <h4 className="text-xs font-bold mt-1 text-zinc-900 dark:text-white leading-tight">
                           {tarea.titulo}
                         </h4>
 
                         {tarea.descripcion && (
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 leading-relaxed">
                             {tarea.descripcion}
                           </p>
                         )}
@@ -945,8 +945,8 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Footer de la Tarea: Módulo + Botón de acción */}
-                    <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[10px]">
-                      <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-0.5 rounded-md font-medium">
+                    <div className="pt-2 border-t border-zinc-100 dark:border-gray-800 flex items-center justify-between text-[10px]">
+                      <span className="bg-zinc-100 dark:bg-gray-800 text-zinc-700 dark:text-gray-200 px-2 py-0.5 rounded-md font-medium">
                         📁 {tarea.moduloRelacionado}
                       </span>
 
@@ -980,9 +980,9 @@ export default function DashboardPage() {
                 );
               })
             ) : (
-              <div className="p-8 text-center rounded-2xl border-2 border-dashed border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40/50 space-y-2">
+              <div className="p-8 text-center rounded-2xl border-2 border-dashed border-zinc-200/80 dark:border-gray-800 bg-zinc-50 dark:bg-gray-800/40/50 space-y-2">
                 <CheckSquare className="h-7 w-7 text-slate-300 mx-auto" />
-                <p className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                <p className="text-xs font-bold text-zinc-600 dark:text-gray-300">
                   No tienes tareas {filtroEstatusTarea === 'NUEVAS' ? 'nuevas' : 'en proceso'} asignadas.
                 </p>
                 <p className="text-[10px] text-slate-400">¡Tu bandeja de pendientes está al día!</p>
@@ -991,7 +991,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Footer de Tareas con enlace a /tareas */}
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs">
+          <div className="pt-2 border-t border-zinc-100 dark:border-gray-800 flex items-center justify-between text-xs">
             <button
               onClick={() => setIsModalTareaOpen(true)}
               className="text-blue-600 font-bold hover:underline"
@@ -1012,35 +1012,35 @@ export default function DashboardPage() {
       {/* MODAL 1: NUEVA TAREA */}
       {isModalTareaOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-zinc-200/80 dark:border-gray-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-gray-800 pb-3">
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <CheckSquare className="h-5 w-5 text-emerald-600" />
                 Asignar Tarea Personal
               </h3>
-              <button onClick={() => setIsModalTareaOpen(false)} className="text-slate-400 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
+              <button onClick={() => setIsModalTareaOpen(false)} className="text-slate-400 hover:text-zinc-600 dark:text-gray-300 font-bold">✕</button>
             </div>
 
             <form onSubmit={handleCrearTarea} className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Título de la Tarea <span className="text-red-500">*</span></label>
+                <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Título de la Tarea <span className="text-red-500">*</span></label>
                 <input
                   required
                   type="text"
                   value={nuevaTareaTitulo}
                   onChange={(e) => setNuevaTareaTitulo(e.target.value)}
                   placeholder="Ej: Revisar dictamen de comisiones..."
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100 font-medium"
+                  className="w-full p-2.5 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Prioridad</label>
+                  <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Prioridad</label>
                   <select
                     value={nuevaTareaPrioridad}
                     onChange={(e) => setNuevaTareaPrioridad(e.target.value as any)}
-                    className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                    className="w-full p-2 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                   >
                     <option value="Alta">Alta</option>
                     <option value="Media">Media</option>
@@ -1048,11 +1048,11 @@ export default function DashboardPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Módulo Vinculado</label>
+                  <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Módulo Vinculado</label>
                   <select
                     value={nuevaTareaModulo}
                     onChange={(e) => setNuevaTareaModulo(e.target.value)}
-                    className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                    className="w-full p-2 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                   >
                     <option value="Gestiones">Gestiones</option>
                     <option value="Iniciativas">Iniciativas</option>
@@ -1067,43 +1067,43 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Fecha Límite <span className="text-red-500">*</span></label>
+                  <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Fecha Límite <span className="text-red-500">*</span></label>
                   <input
                     required
                     type="date"
                     value={nuevaTareaFecha}
                     onChange={(e) => setNuevaTareaFecha(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-xl text-gray-800 dark:text-gray-100 font-medium"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl text-zinc-800 dark:text-gray-100 font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Hora Límite <span className="text-red-500">*</span></label>
+                  <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Hora Límite <span className="text-red-500">*</span></label>
                   <input
                     required
                     type="time"
                     value={nuevaTareaHora}
                     onChange={(e) => setNuevaTareaHora(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-300 rounded-xl text-gray-800 dark:text-gray-100 font-medium"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-xl text-zinc-800 dark:text-gray-100 font-medium"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Instrucciones / Descripción</label>
+                <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Instrucciones / Descripción</label>
                 <textarea
                   rows={2}
                   value={nuevaTareaDesc}
                   onChange={(e) => setNuevaTareaDesc(e.target.value)}
                   placeholder="Detalles sobre lo que se debe realizar y entregar..."
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                  className="w-full p-2.5 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-gray-800">
                 <button
                   type="button"
                   onClick={() => setIsModalTareaOpen(false)}
-                  className="px-4 py-2 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-xl"
+                  className="px-4 py-2 font-semibold text-zinc-600 dark:text-gray-300 hover:bg-zinc-100 dark:bg-gray-800 rounded-xl"
                 >
                   Cancelar
                 </button>
@@ -1122,35 +1122,35 @@ export default function DashboardPage() {
       {/* MODAL 2: NUEVO EVENTO EN AGENDA */}
       {isModalEventoOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-zinc-200/80 dark:border-gray-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-gray-800 pb-3">
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5 text-blue-600" />
                 Registrar Evento en Agenda
               </h3>
-              <button onClick={() => setIsModalEventoOpen(false)} className="text-slate-400 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
+              <button onClick={() => setIsModalEventoOpen(false)} className="text-slate-400 hover:text-zinc-600 dark:text-gray-300 font-bold">✕</button>
             </div>
 
             <form onSubmit={handleCrearEvento} className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Título del Evento <span className="text-red-500">*</span></label>
+                <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Título del Evento <span className="text-red-500">*</span></label>
                 <input
                   required
                   type="text"
                   value={nuevoEvtTitulo}
                   onChange={(e) => setNuevoEvtTitulo(e.target.value)}
                   placeholder="Ej: Sesión Ordinaria de Pleno..."
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100 font-medium"
+                  className="w-full p-2.5 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Tipo de Evento</label>
+                  <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Tipo de Evento</label>
                   <select
                     value={nuevoEvtTipo}
                     onChange={(e) => setNuevoEvtTipo(e.target.value)}
-                    className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                    className="w-full p-2 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                   >
                     <option value="Comisión">Comisión</option>
                     <option value="Sesión Solemne">Sesión Solemne</option>
@@ -1161,75 +1161,75 @@ export default function DashboardPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Fecha</label>
+                  <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Fecha</label>
                   <input
                     type="date"
                     value={nuevoEvtFecha}
                     onChange={(e) => setNuevoEvtFecha(e.target.value)}
-                    className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                    className="w-full p-2 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Hora Inicio</label>
+                  <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Hora Inicio</label>
                   <input
                     type="time"
                     value={nuevoEvtHoraInicio}
                     onChange={(e) => setNuevoEvtHoraInicio(e.target.value)}
-                    className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                    className="w-full p-2 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Hora Fin</label>
+                  <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Hora Fin</label>
                   <input
                     type="time"
                     value={nuevoEvtHoraFin}
                     onChange={(e) => setNuevoEvtHoraFin(e.target.value)}
-                    className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                    className="w-full p-2 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Lugar / Sede Oficial</label>
+                <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Lugar / Sede Oficial</label>
                 <input
                   type="text"
                   value={nuevoEvtLugar}
                   onChange={(e) => setNuevoEvtLugar(e.target.value)}
                   placeholder="Ej: Sala de Comisiones en Congreso"
-                  className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                  className="w-full p-2 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Enlace de Ubicación (Google Maps)</label>
+                <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Enlace de Ubicación (Google Maps)</label>
                 <input
                   type="url"
                   value={nuevoEvtLugarUrl}
                   onChange={(e) => setNuevoEvtLugarUrl(e.target.value)}
                   placeholder="https://maps.google.com/..."
-                  className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                  className="w-full p-2 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Notas / Puntos a tratar</label>
+                <label className="block font-semibold text-zinc-700 dark:text-gray-200 mb-1">Notas / Puntos a tratar</label>
                 <textarea
                   rows={2}
                   value={nuevoEvtNotas}
                   onChange={(e) => setNuevoEvtNotas(e.target.value)}
                   placeholder="Asuntos a tratar en el evento..."
-                  className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100"
+                  className="w-full p-2 bg-zinc-50 dark:bg-gray-800/40 border border-zinc-200/80 dark:border-gray-800 rounded-xl text-zinc-800 dark:text-gray-100"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-gray-800">
                 <button
                   type="button"
                   onClick={() => setIsModalEventoOpen(false)}
-                  className="px-4 py-2 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-xl"
+                  className="px-4 py-2 font-semibold text-zinc-600 dark:text-gray-300 hover:bg-zinc-100 dark:bg-gray-800 rounded-xl"
                 >
                   Cancelar
                 </button>
