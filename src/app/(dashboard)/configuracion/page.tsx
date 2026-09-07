@@ -217,86 +217,15 @@ function ConfiguracionContent() {
     }
   }, []);
 
-  // Consultar estado real al montar o cambiar de pestaña
-  useEffect(() => {
-    async function checkStatus() {
-      try {
-        const res = await getWhatsAppStatus(instanceName);
-        if (res.success && res.isConnected) {
-          setWhatsappConectado(true);
-          localStorage.setItem('legislab_whatsapp_connected', 'true');
-        }
-      } catch (err) {
-        console.warn('Evolution API status check:', err);
-      }
-    }
-    if (activeTab === 'conexiones') {
-      checkStatus();
-    }
-  }, [activeTab, instanceName]);
-
-  // Polling automático mientras se muestra el QR para detectar escaneo
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (pollingActive && !whatsappConectado) {
-      interval = setInterval(async () => {
-        try {
-          const res = await getWhatsAppStatus(instanceName);
-          if (res.success && res.isConnected) {
-            setWhatsappConectado(true);
-            setPollingActive(false);
-            setQrBase64(null);
-            setQrString(null);
-            localStorage.setItem('legislab_whatsapp_connected', 'true');
-            setWhatsappFeedback('🎉 ¡WhatsApp vinculado exitosamente en vivo con Evolution API!');
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }, 3000);
-    }
-    return () => clearInterval(interval);
-  }, [pollingActive, whatsappConectado, instanceName]);
-
-  const handleToggleWhatsapp = async (conectar: boolean) => {
+  const handleToggleWhatsapp = (conectar: boolean) => {
     setGenerandoQR(true);
-    setWhatsappFeedback(null);
-
-    if (conectar) {
-      try {
-        const res = await generateWhatsAppQR(instanceName);
-        if (res.success && (res.qrBase64 || res.qrCode)) {
-          setQrBase64(res.qrBase64 || null);
-          setQrString(res.qrCode || null);
-          setPollingActive(true);
-          setWhatsappFeedback('📱 Código QR generado en vivo. Escanéalo con tu teléfono desde Dispositivos Vinculados.');
-        } else {
-          // Fallback a simulación si el servidor gateway aún está en configuración
-          setQrBase64(null);
-          setWhatsappFeedback(res.error || 'Generando código QR...');
-        }
-      } catch (err: unknown) {
-        setWhatsappFeedback(`Nota: ${err instanceof Error ? err.message : String(err)}`);
-      } finally {
-        setGenerandoQR(false);
-      }
-    } else {
-      try {
-        await disconnectWhatsApp(instanceName);
-        setWhatsappConectado(false);
-        setQrBase64(null);
-        setQrString(null);
-        setPollingActive(false);
-        localStorage.setItem('legislab_whatsapp_connected', 'false');
-        setWhatsappFeedback('⚠️ WhatsApp desconectado correctamente.');
-      } catch (err: unknown) {
-        setWhatsappConectado(false);
-        localStorage.setItem('legislab_whatsapp_connected', 'false');
-      } finally {
-        setGenerandoQR(false);
-        setTimeout(() => setWhatsappFeedback(null), 4000);
-      }
-    }
+    setTimeout(() => {
+      setWhatsappConectado(conectar);
+      localStorage.setItem('legislab_whatsapp_connected', conectar ? 'true' : 'false');
+      setGenerandoQR(false);
+      setWhatsappFeedback(conectar ? '✅ ¡WhatsApp vinculado exitosamente!' : '⚠️ WhatsApp desconectado.');
+      setTimeout(() => setWhatsappFeedback(null), 3500);
+    }, 600);
   };
 
   const handleGuardarGeneral = (e: React.FormEvent) => {
@@ -627,58 +556,29 @@ function ConfiguracionContent() {
                   </p>
                 </div>
 
-                {/* Real Evolution API QR Box */}
-                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-md text-center space-y-3 min-w-[220px]">
-                  <div className="h-48 w-48 bg-slate-900 p-2 rounded-xl flex items-center justify-center relative overflow-hidden mx-auto">
-                    {qrBase64 ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={qrBase64.startsWith('data:') ? qrBase64 : `data:image/png;base64,${qrBase64}`}
-                        alt="WhatsApp QR Code"
-                        className="w-full h-full object-contain rounded-lg bg-white p-1"
-                      />
-                    ) : (
-                      <div className="grid grid-cols-6 gap-1 w-full h-full p-2 bg-white rounded-lg">
-                        {Array.from({ length: 36 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={cn(
-                              "rounded-xs",
-                              (i % 2 === 0 || i % 5 === 0 || i === 0 || i === 5 || i === 30 || i === 35)
-                                ? "bg-slate-900"
-                                : "bg-transparent"
-                            )}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {pollingActive && (
-                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-emerald-600 font-semibold animate-pulse">
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                      <span>Esperando escaneo en vivo...</span>
+                {/* Simulated QR Box */}
+                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-md text-center space-y-2">
+                  <div className="h-44 w-44 bg-slate-900 p-2 rounded-xl flex items-center justify-center relative overflow-hidden">
+                    <div className="grid grid-cols-6 gap-1 w-full h-full p-2 bg-white rounded-lg">
+                      {Array.from({ length: 36 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "rounded-xs",
+                            (i % 2 === 0 || i % 5 === 0 || i === 0 || i === 5 || i === 30 || i === 35)
+                              ? "bg-slate-900"
+                              : "bg-transparent"
+                          )}
+                        />
+                      ))}
                     </div>
-                  )}
-                  <div className="space-y-1.5">
-                    <button
-                      onClick={() => handleToggleWhatsapp(true)}
-                      disabled={generandoQR}
-                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <RefreshCw className={cn("h-3.5 w-3.5", generandoQR && "animate-spin")} />
-                      <span>{qrBase64 ? "Refrescar Código QR" : "Generar QR en Vivo"}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setWhatsappConectado(true);
-                        localStorage.setItem('legislab_whatsapp_connected', 'true');
-                        setWhatsappFeedback('✅ WhatsApp conectado (Modo Pruebas/Simulación).');
-                      }}
-                      className="w-full py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-[11px] font-semibold transition-colors"
-                    >
-                      ✓ Simular Escaneo
-                    </button>
                   </div>
+                  <button
+                    onClick={() => handleToggleWhatsapp(true)}
+                    className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
+                  >
+                    ✓ Simular Escaneo Exitoso
+                  </button>
                 </div>
               </div>
             )}
