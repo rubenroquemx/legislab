@@ -49,9 +49,11 @@ export interface WhatsAppGroup {
 }
 
 function getEvolutionConfig(): EvolutionConfig {
+  const url = process.env.EVOLUTION_API_URL || process.env.SERVER_URL || 'http://localhost:8080';
+  const key = process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY || '';
   return {
-    apiUrl: (process.env.EVOLUTION_API_URL || 'http://localhost:8080').replace(/\/+$/, ''),
-    apiKey: process.env.EVOLUTION_API_KEY || '',
+    apiUrl: url.replace(/\/+$/, ''),
+    apiKey: key,
   };
 }
 
