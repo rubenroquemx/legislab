@@ -1,5 +1,5 @@
-// LegisLab PWA Service Worker
-const CACHE_NAME = 'legislab-pwa-v1';
+// LegisLab PWA Service Worker with Push Notifications Support
+const CACHE_NAME = 'legislab-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/dashboard',
@@ -48,6 +48,55 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
+    })
+  );
+});
+
+// PUSH NOTIFICATIONS EVENT LISTENER
+self.addEventListener('push', (event) => {
+  let payload = { title: 'LegisLab Notificación', body: 'Tienes una nueva actualización en el despacho.', url: '/dashboard' };
+  
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch (e) {
+      payload.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: payload.body,
+    icon: '/icons/icon.svg',
+    badge: '/icons/icon.svg',
+    vibrate: [200, 100, 200],
+    data: {
+      url: payload.url || '/dashboard'
+    },
+    actions: [
+      { action: 'open', title: 'Ver en la App' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, options)
+  );
+});
+
+// NOTIFICATION CLICK EVENT
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/dashboard';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let client of windowClients) {
+        if (client.url.includes(targetUrl) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
     })
   );
 });
