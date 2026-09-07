@@ -1,28 +1,22 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
-  UserMinus,
-  UsersRound,
   Calendar as CalendarIcon, 
   CheckSquare, 
   Clock, 
   MapPin, 
   MessageCircle, 
   Plus, 
-  CheckCircle2, 
   Circle, 
   ExternalLink, 
   ArrowUpRight, 
   Trash2,
   FolderKanban,
   Cake,
-  TrendingUp,
   Activity,
   Flame,
-  Filter,
-  Check
 } from 'lucide-react';
 
 interface EventoAgenda {
@@ -64,24 +58,6 @@ interface CumpleaneroDirectorio {
   fechaNacimiento: string;
 }
 
-interface MiembroGrupoDash {
-  id: string;
-  nombre: string;
-  cargo: string;
-  telefono: string;
-  municipio: string;
-  foto: string;
-}
-
-interface GrupoDashboard {
-  id: string;
-  nombre: string;
-  categoria: string;
-  color: string;
-  whatsappLink?: string;
-  miembros: MiembroGrupoDash[];
-}
-
 const USUARIO_ACTIVO = {
   id: 'usr-1',
   nombre: 'Dip. Ruben Roque',
@@ -89,43 +65,6 @@ const USUARIO_ACTIVO = {
   foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   whatsapp: '993 111 2233'
 };
-
-const INITIAL_GRUPOS_DASHBOARD: GrupoDashboard[] = [
-  {
-    id: 'grp-1',
-    nombre: 'Líderes y Enlaces - Distrito 04',
-    categoria: 'Líderes Seccionales',
-    color: 'blue',
-    whatsappLink: 'https://chat.whatsapp.com/sampleLinkDistrito04',
-    miembros: [
-      { id: 'm1', nombre: 'Ing. Carlos Mendoza', cargo: 'Coordinador Centro', telefono: '993 123 4567', municipio: 'Centro', foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
-      { id: 'm2', nombre: 'Lic. Mariana Solís', cargo: 'Gestora Gaviotas', telefono: '993 987 6543', municipio: 'Centro', foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' },
-      { id: 'm3', nombre: 'Profr. Roberto Méndez', cargo: 'Enlace Tamulté', telefono: '993 456 7890', municipio: 'Centro', foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
-    ]
-  },
-  {
-    id: 'grp-2',
-    nombre: 'Comité de Agua y Servicios Tamulté',
-    categoria: 'Comunitario',
-    color: 'emerald',
-    whatsappLink: 'https://chat.whatsapp.com/sampleLinkAguaTamulte',
-    miembros: [
-      { id: 'm4', nombre: 'Sra. Rosa Gómez', cargo: 'Presidenta de Vecinos', telefono: '993 234 5678', municipio: 'Centro', foto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80' },
-      { id: 'm5', nombre: 'Don Javier Osorio', cargo: 'Vocal de Vigilancia', telefono: '993 345 6789', municipio: 'Centro', foto: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80' },
-    ]
-  },
-  {
-    id: 'grp-3',
-    nombre: 'Prensa y Corresponsales Tabasco',
-    categoria: 'Medios',
-    color: 'purple',
-    whatsappLink: 'https://chat.whatsapp.com/sampleLinkPrensaTab',
-    miembros: [
-      { id: 'm6', nombre: 'Lic. Héctor Morales', cargo: 'Editor Tabasco Hoy', telefono: '993 876 5432', municipio: 'Centro', foto: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80' },
-      { id: 'm7', nombre: 'Claudia Rivera', cargo: 'Reportera TV Azteca', telefono: '993 765 4321', municipio: 'Centro', foto: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
-    ]
-  }
-];
 
 const INITIAL_EVENTOS: EventoAgenda[] = [
   {
@@ -320,10 +259,6 @@ const DATOS_GRAFICO_30_DIAS: PuntoGrafico30Dias[] = [
 ];
 
 export default function DashboardPage() {
-  const [gruposDashboard, setGruposDashboard] = useState<GrupoDashboard[]>(INITIAL_GRUPOS_DASHBOARD);
-  const [grupoActivoId, setGrupoActivoId] = useState<string>('grp-1');
-  const [mensajeNotificacionGrupo, setMensajeNotificacionGrupo] = useState<string | null>(null);
-
   const [eventos, setEventos] = useState<EventoAgenda[]>(INITIAL_EVENTOS);
   const [tareas, setTareas] = useState<TareaUsuario[]>(INITIAL_TAREAS);
 
@@ -380,20 +315,6 @@ export default function DashboardPage() {
   const misTareasEnProceso = misTareasAsignadas.filter(t => t.estatus === 'En Proceso');
 
   const tareasAMostrar = filtroEstatusTarea === 'NUEVAS' ? misTareasNuevas : misTareasEnProceso;
-
-  const handleQuitarMiembroDeGrupo = (grupoId: string, miembroId: string, miembroNombre: string) => {
-    setGruposDashboard(prev => prev.map(grp => {
-      if (grp.id === grupoId) {
-        return {
-          ...grp,
-          miembros: grp.miembros.filter(m => m.id !== miembroId)
-        };
-      }
-      return grp;
-    }));
-    setMensajeNotificacionGrupo(`✓ Se quitó a "${miembroNombre}" del grupo.`);
-    setTimeout(() => setMensajeNotificacionGrupo(null), 3000);
-  };
 
   const handleToggleCompletarTarea = (id: string) => {
     setTareas(tareas.map(t => {
@@ -546,9 +467,8 @@ export default function DashboardPage() {
              - Gestiones en proceso
              - Tareas nuevas
              - Tareas en proceso
-             - Cumpleaños del día
          ========================================================================= */}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         
         {/* 1.1 Gestiones Nuevas */}
         <Link 
@@ -557,14 +477,14 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Gestiones Nuevas</span>
-            <div className="h-6 w-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <FolderKanban className="h-3.5 w-3.5" />
+            <div className="h-7 w-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <FolderKanban className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-bold tracking-tight text-zinc-900">{gestionesNuevasCount}</span>
-              <span className="text-[11px] text-zinc-400 font-medium">solicitudes</span>
+              <span className="text-xs text-zinc-400 font-medium">solicitudes</span>
             </div>
             <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
               Recibidas
@@ -579,14 +499,14 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Gestiones en Proceso</span>
-            <div className="h-6 w-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Clock className="h-3.5 w-3.5" />
+            <div className="h-7 w-7 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <Clock className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-bold tracking-tight text-purple-700">{gestionesEnProcesoCount}</span>
-              <span className="text-[11px] text-zinc-400 font-medium">en trámite</span>
+              <span className="text-xs text-zinc-400 font-medium">en trámite</span>
             </div>
             <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-md">
               En Seguimiento
@@ -601,14 +521,14 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Tareas Nuevas</span>
-            <div className="h-6 w-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <CheckSquare className="h-3.5 w-3.5" />
+            <div className="h-7 w-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <CheckSquare className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-bold tracking-tight text-amber-700">{tareasNuevasCount}</span>
-              <span className="text-[11px] text-zinc-400 font-medium">por iniciar</span>
+              <span className="text-xs text-zinc-400 font-medium">por iniciar</span>
             </div>
             <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-md">
               Pendientes
@@ -623,75 +543,26 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Tareas en Proceso</span>
-            <div className="h-6 w-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Flame className="h-3.5 w-3.5" />
+            <div className="h-7 w-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Flame className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-bold tracking-tight text-emerald-700">{tareasEnProcesoCount}</span>
-              <span className="text-[11px] text-zinc-400 font-medium">en curso</span>
+              <span className="text-xs text-zinc-400 font-medium">en curso</span>
             </div>
             <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">
               En Ejecución
             </span>
           </div>
         </Link>
-
-        {/* 1.5 Cumpleaños del Día */}
-        <div className="bg-zinc-900 text-white rounded-2xl p-3.5 shadow-2xs flex flex-col justify-between relative overflow-hidden border border-zinc-800">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wide flex items-center gap-1.5 text-zinc-300">
-              <Cake className="h-3.5 w-3.5 text-amber-400" />
-              <span>Cumpleaños del Día</span>
-            </span>
-            <span className="text-[10px] font-bold bg-zinc-800 text-amber-300 px-2 py-0.5 rounded-full border border-zinc-700">
-              {CUMPLEANEROS_DEL_DIA.length} Hoy
-            </span>
-          </div>
-
-          <div className="mt-2 space-y-1.5">
-            {CUMPLEANEROS_DEL_DIA.map((cump) => (
-              <div key={cump.id} className="flex items-center justify-between gap-1.5 bg-zinc-800/80 p-1.5 rounded-xl border border-zinc-700/50">
-                <div className="flex items-center gap-2 min-w-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={cump.foto}
-                    alt={cump.nombre}
-                    className="h-6 w-6 rounded-full object-cover border border-zinc-600 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium truncate leading-tight text-zinc-100">{cump.nombre}</p>
-                    <p className="text-[9px] text-zinc-400 truncate">{cump.cargo}</p>
-                  </div>
-                </div>
-
-                <a
-                  href={`https://api.whatsapp.com/send?phone=52${cump.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Estimado(a) ${cump.nombre}, le envío una cordial felicitación con motivo de su cumpleaños. ¡Que pase un excelente día! Atte: Dip. Ruben Roque.`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors shrink-0"
-                  title="Felicitar por WhatsApp"
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                </a>
-              </div>
-            ))}
-          </div>
-
-          <Link
-            href="/directorio"
-            className="text-[10px] font-medium text-zinc-400 hover:text-white mt-1 flex items-center justify-between pt-1 border-t border-zinc-800"
-          >
-            <span>Ver Directorio</span>
-            <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        </div>
       </div>
 
 
       {/* =========================================================================
           2. GRÁFICO DE LÍNEAS DE LOS ÚLTIMOS 30 DÍAS AL 100% DE ANCHO
+             - Rendimiento de Gestiones Ciudadanas
              - Gestiones Resueltas (Verde / Emerald)
              - Gestiones Recibidas (Azul / Blue)
              - Gestiones en Proceso (Morado / Purple)
@@ -1035,152 +906,12 @@ export default function DashboardPage() {
 
 
       {/* =========================================================================
-          3. WIDGET: GESTIÓN RÁPIDA DE GRUPOS DIRECTAMENTE DESDE EL DASHBOARD
-         ========================================================================= */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 sm:p-6 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-zinc-100 text-zinc-800 border border-zinc-200">
-              <UsersRound className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-zinc-900">Grupos y Redes de Contactos</h2>
-                <span className="text-[10px] font-semibold text-zinc-700 bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded-full">
-                  Acción Rápida
-                </span>
-              </div>
-              <p className="text-xs text-zinc-500">Administra o retira contactos de grupos directamente con el botón de acción rápida</p>
-            </div>
-          </div>
-
-          <Link
-            href="/grupos"
-            className="text-xs font-semibold text-zinc-900 hover:text-blue-600 flex items-center gap-1"
-          >
-            <span>Ver Módulo Grupos Completo</span>
-            <ArrowUpRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        {mensajeNotificacionGrupo && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-center justify-between animate-in fade-in">
-            <span>{mensajeNotificacionGrupo}</span>
-            <button onClick={() => setMensajeNotificacionGrupo(null)} className="text-emerald-600 font-bold ml-2">✕</button>
-          </div>
-        )}
-
-        {/* Pestañas de Grupos */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {gruposDashboard.map((grp) => {
-            const isSelected = grupoActivoId === grp.id;
-            return (
-              <button
-                key={grp.id}
-                onClick={() => setGrupoActivoId(grp.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
-                  isSelected
-                    ? 'bg-zinc-900 text-white shadow-2xs font-semibold'
-                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                }`}
-              >
-                <span>{grp.nombre}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  isSelected ? 'bg-zinc-700 text-white' : 'bg-zinc-200 text-zinc-600'
-                }`}>
-                  {grp.miembros.length}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Lista de Miembros con Botón de Quitar */}
-        {(() => {
-          const currentGrupo = gruposDashboard.find(g => g.id === grupoActivoId);
-          if (!currentGrupo) return null;
-
-          return (
-            <div className="space-y-3 pt-1">
-              <div className="flex items-center justify-between text-xs text-zinc-500">
-                <span className="font-semibold">
-                  Integrantes ({currentGrupo.miembros.length}):
-                </span>
-                {currentGrupo.whatsappLink && (
-                  <a
-                    href={currentGrupo.whatsappLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold bg-emerald-50 px-2.5 py-1 rounded-lg text-[11px] border border-emerald-200"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Abrir Chat de WhatsApp</span>
-                  </a>
-                )}
-              </div>
-
-              {currentGrupo.miembros.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {currentGrupo.miembros.map((mb) => (
-                    <div
-                      key={mb.id}
-                      className="p-3 bg-zinc-50/80 rounded-2xl border border-zinc-200/70 flex items-center justify-between gap-3 hover:bg-white hover:border-zinc-300 hover:shadow-2xs transition-all"
-                    >
-                      <div className="flex items-center gap-2.5 overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={mb.foto}
-                          alt={mb.nombre}
-                          className="h-8 w-8 rounded-full object-cover border border-zinc-200 shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-zinc-900 truncate">{mb.nombre}</p>
-                          <p className="text-[11px] text-zinc-500 truncate">{mb.cargo} • {mb.municipio}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <a
-                          href={`https://wa.me/52${mb.telefono.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                          title="WhatsApp"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </a>
-
-                        {/* BOTÓN QUITAR DEL GRUPO */}
-                        <button
-                          onClick={() => handleQuitarMiembroDeGrupo(currentGrupo.id, mb.id, mb.nombre)}
-                          className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors"
-                          title={`Quitar a ${mb.nombre} de este grupo`}
-                        >
-                          <UserMinus className="h-3 w-3" />
-                          <span>Quitar</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 text-center bg-zinc-50 rounded-2xl border border-dashed border-zinc-200 text-xs text-zinc-400">
-                  No hay miembros en este grupo actualmente.
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </div>
-
-
-      {/* =========================================================================
-          4. MAIN GRID: 2/3 AGENDA (Left) + 1/3 TAREAS PENDIENTES (Right)
+          3. MAIN GRID: 2/3 AGENDA DEL DÍA (Left) + 1/3 TAREAS Y CUMPLEAÑOS (Right)
          ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
         {/* =========================================================================
-            COLUMNA 2/3: AGENDA PARLAMENTARIA Y GOOGLE CALENDAR
+            COLUMNA 2/3: AGENDA DEL DÍA
            ========================================================================= */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-2xs space-y-5 transition-colors">
           {/* Header de la Agenda */}
@@ -1191,7 +922,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-zinc-900">Agenda Oficial y Sesiones</h2>
+                  <h2 className="text-base font-bold text-zinc-900">Agenda del día</h2>
                   <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     Google Calendar Live
@@ -1284,7 +1015,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Footer de la Agenda con enlace al módulo completo */}
+          {/* Footer de la Agenda */}
           <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
             <button
               onClick={() => setIsModalEventoOpen(true)}
@@ -1293,191 +1024,251 @@ export default function DashboardPage() {
               <Plus className="h-3.5 w-3.5" />
               <span>+ Agregar Evento a la Agenda</span>
             </button>
-
-            <Link
-              href="/agenda"
-              className="inline-flex items-center gap-1 text-zinc-900 hover:text-blue-600 font-semibold"
-            >
-              <span>Ver Calendario Google Completo</span>
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
           </div>
         </div>
 
         {/* =========================================================================
-            COLUMNA 1/3: MIS TAREAS ASIGNADAS (SOLO NUEVAS Y EN PROCESO)
+            COLUMNA 1/3: MIS TAREAS + CUMPLEAÑOS DEL DÍA ABAJO
            ========================================================================= */}
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-2xs space-y-5 transition-colors">
-          {/* Header de Mis Tareas con perfil de usuario activo */}
-          <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-                <CheckSquare className="h-4.5 w-4.5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h2 className="text-base font-bold text-zinc-900">Mis Tareas</h2>
+        <div className="space-y-6">
+          
+          {/* MIS TAREAS ASIGNADAS */}
+          <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-2xs space-y-5 transition-colors">
+            {/* Header de Mis Tareas con perfil de usuario activo */}
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                  <CheckSquare className="h-4.5 w-4.5" />
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 mt-0.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={USUARIO_ACTIVO.foto} alt={USUARIO_ACTIVO.nombre} className="h-4 w-4 rounded-full object-cover" />
-                  <span className="font-semibold text-zinc-700">{USUARIO_ACTIVO.nombre}</span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="text-base font-bold text-zinc-900">Mis Tareas</h2>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 mt-0.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={USUARIO_ACTIVO.foto} alt={USUARIO_ACTIVO.nombre} className="h-4 w-4 rounded-full object-cover" />
+                    <span className="font-semibold text-zinc-700">{USUARIO_ACTIVO.nombre}</span>
+                  </div>
                 </div>
               </div>
+
+              <button
+                onClick={() => setIsModalTareaOpen(true)}
+                className="p-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
+                title="Nueva Tarea Personal"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
             </div>
 
-            <button
-              onClick={() => setIsModalTareaOpen(true)}
-              className="p-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
-              title="Nueva Tarea Personal"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
+            {/* Filtro Exclusivo: NUEVAS y EN PROCESO */}
+            <div className="flex items-center justify-between gap-1.5 p-1 bg-zinc-100 rounded-xl text-xs font-medium">
+              <button
+                onClick={() => setFiltroEstatusTarea('NUEVAS')}
+                className={`flex-1 py-1.5 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 ${
+                  filtroEstatusTarea === 'NUEVAS' 
+                    ? 'bg-white text-zinc-900 shadow-2xs font-bold' 
+                    : 'text-zinc-500 hover:text-zinc-800'
+                }`}
+              >
+                <span>Nuevas</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  filtroEstatusTarea === 'NUEVAS' ? 'bg-amber-100 text-amber-800' : 'bg-zinc-200 text-zinc-600'
+                }`}>
+                  {misTareasNuevas.length}
+                </span>
+              </button>
 
-          {/* Filtro Exclusivo: NUEVAS y EN PROCESO */}
-          <div className="flex items-center justify-between gap-1.5 p-1 bg-zinc-100 rounded-xl text-xs font-medium">
-            <button
-              onClick={() => setFiltroEstatusTarea('NUEVAS')}
-              className={`flex-1 py-1.5 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 ${
-                filtroEstatusTarea === 'NUEVAS' 
-                  ? 'bg-white text-zinc-900 shadow-2xs font-bold' 
-                  : 'text-zinc-500 hover:text-zinc-800'
-              }`}
-            >
-              <span>Nuevas</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                filtroEstatusTarea === 'NUEVAS' ? 'bg-amber-100 text-amber-800' : 'bg-zinc-200 text-zinc-600'
-              }`}>
-                {misTareasNuevas.length}
-              </span>
-            </button>
+              <button
+                onClick={() => setFiltroEstatusTarea('EN_PROCESO')}
+                className={`flex-1 py-1.5 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 ${
+                  filtroEstatusTarea === 'EN_PROCESO' 
+                    ? 'bg-white text-zinc-900 shadow-2xs font-bold' 
+                    : 'text-zinc-500 hover:text-zinc-800'
+                }`}
+              >
+                <span>En Proceso</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  filtroEstatusTarea === 'EN_PROCESO' ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-200 text-zinc-600'
+                }`}>
+                  {misTareasEnProceso.length}
+                </span>
+              </button>
+            </div>
 
-            <button
-              onClick={() => setFiltroEstatusTarea('EN_PROCESO')}
-              className={`flex-1 py-1.5 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 ${
-                filtroEstatusTarea === 'EN_PROCESO' 
-                  ? 'bg-white text-zinc-900 shadow-2xs font-bold' 
-                  : 'text-zinc-500 hover:text-zinc-800'
-              }`}
-            >
-              <span>En Proceso</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                filtroEstatusTarea === 'EN_PROCESO' ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-200 text-zinc-600'
-              }`}>
-                {misTareasEnProceso.length}
-              </span>
-            </button>
-          </div>
+            {/* Lista de Tareas Asignadas al Usuario Activo */}
+            <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+              {tareasAMostrar.length > 0 ? (
+                tareasAMostrar.map((tarea) => {
+                  return (
+                    <div
+                      key={tarea.id}
+                      className="p-3.5 rounded-2xl border border-zinc-200/70 bg-white hover:border-zinc-300 hover:shadow-2xs transition-all space-y-2.5 group"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleCompletarTarea(tarea.id)}
+                          className="mt-0.5 text-zinc-300 hover:text-emerald-600 transition-colors shrink-0"
+                          title="Marcar como completada"
+                        >
+                          <Circle className="h-4 w-4" />
+                        </button>
 
-          {/* Lista de Tareas Asignadas al Usuario Activo */}
-          <div className="space-y-2.5 max-h-[440px] overflow-y-auto pr-1">
-            {tareasAMostrar.length > 0 ? (
-              tareasAMostrar.map((tarea) => {
-                return (
-                  <div
-                    key={tarea.id}
-                    className="p-3.5 rounded-2xl border border-zinc-200/70 bg-white hover:border-zinc-300 hover:shadow-2xs transition-all space-y-2.5 group"
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleCompletarTarea(tarea.id)}
-                        className="mt-0.5 text-zinc-300 hover:text-emerald-600 transition-colors shrink-0"
-                        title="Marcar como completada"
-                      >
-                        <Circle className="h-4 w-4" />
-                      </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                              tarea.prioridad === 'Alta' ? 'bg-red-50 text-red-700 border border-red-100' :
+                              tarea.prioridad === 'Media' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                              'bg-zinc-100 text-zinc-600 border border-zinc-200'
+                            }`}>
+                              {tarea.prioridad}
+                            </span>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                            tarea.prioridad === 'Alta' ? 'bg-red-50 text-red-700 border border-red-100' :
-                            tarea.prioridad === 'Media' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                            'bg-zinc-100 text-zinc-600 border border-zinc-200'
-                          }`}>
-                            {tarea.prioridad}
-                          </span>
+                            <span className="text-[10px] font-mono text-zinc-400">
+                              ⏰ {tarea.horaLimite}
+                            </span>
+                          </div>
 
-                          <span className="text-[10px] font-mono text-zinc-400">
-                            ⏰ {tarea.horaLimite}
-                          </span>
+                          <h4 className="text-xs font-bold mt-1 text-zinc-900 leading-tight">
+                            {tarea.titulo}
+                          </h4>
+
+                          {tarea.descripcion && (
+                            <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
+                              {tarea.descripcion}
+                            </p>
+                          )}
                         </div>
+                      </div>
 
-                        <h4 className="text-xs font-bold mt-1 text-zinc-900 leading-tight">
-                          {tarea.titulo}
-                        </h4>
+                      {/* Footer de la Tarea */}
+                      <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px]">
+                        <span className="bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md font-medium">
+                          📁 {tarea.moduloRelacionado}
+                        </span>
 
-                        {tarea.descripcion && (
-                          <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
-                            {tarea.descripcion}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {tarea.estatus === 'Pendiente' ? (
+                            <button
+                              onClick={() => handleCambiarEstatusTarea(tarea.id, 'En Proceso')}
+                              className="text-blue-600 font-semibold hover:underline"
+                            >
+                              Iniciar ➔
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleToggleCompletarTarea(tarea.id)}
+                              className="text-emerald-600 font-semibold hover:underline"
+                            >
+                              ✓ Concluir
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => handleEliminarTarea(tarea.id)}
+                            className="p-1 text-zinc-300 hover:text-red-500 rounded opacity-0 group-hover:opacity-100 transition-all"
+                            title="Eliminar tarea"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
                       </div>
                     </div>
+                  );
+                })
+              ) : (
+                <div className="p-8 text-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 space-y-2">
+                  <CheckSquare className="h-6 w-6 text-zinc-300 mx-auto" />
+                  <p className="text-xs font-semibold text-zinc-600">
+                    No tienes tareas {filtroEstatusTarea === 'NUEVAS' ? 'nuevas' : 'en proceso'} asignadas.
+                  </p>
+                  <p className="text-[10px] text-zinc-400">¡Tu bandeja de pendientes está al día!</p>
+                </div>
+              )}
+            </div>
 
-                    {/* Footer de la Tarea */}
-                    <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px]">
-                      <span className="bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md font-medium">
-                        📁 {tarea.moduloRelacionado}
-                      </span>
+            {/* Footer de Tareas */}
+            <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
+              <button
+                onClick={() => setIsModalTareaOpen(true)}
+                className="text-zinc-900 font-semibold hover:text-blue-600"
+              >
+                + Asignar Tarea
+              </button>
+              <Link
+                href="/tareas"
+                className="text-zinc-900 font-semibold hover:text-blue-600 flex items-center gap-1"
+              >
+                <span>Ver Tablero Completo</span>
+                <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
 
-                      <div className="flex items-center gap-1.5">
-                        {tarea.estatus === 'Pendiente' ? (
-                          <button
-                            onClick={() => handleCambiarEstatusTarea(tarea.id, 'En Proceso')}
-                            className="text-blue-600 font-semibold hover:underline"
-                          >
-                            Iniciar ➔
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleToggleCompletarTarea(tarea.id)}
-                            className="text-emerald-600 font-semibold hover:underline"
-                          >
-                            ✓ Concluir
-                          </button>
-                        )}
 
-                        <button
-                          onClick={() => handleEliminarTarea(tarea.id)}
-                          className="p-1 text-zinc-300 hover:text-red-500 rounded opacity-0 group-hover:opacity-100 transition-all"
-                          title="Eliminar tarea"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
+          {/* CUMPLEAÑOS DEL DÍA (ABRICADO ABAJO DE TAREAS) */}
+          <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-2xs space-y-3.5">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                  <Cake className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900">Cumpleaños del día</h3>
+                  <p className="text-[11px] text-zinc-500">Contactos del Directorio Institucional</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                {CUMPLEANEROS_DEL_DIA.length} Hoy
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {CUMPLEANEROS_DEL_DIA.map((cump) => (
+                <div
+                  key={cump.id}
+                  className="p-3 bg-zinc-50/80 rounded-xl border border-zinc-200/70 flex items-center justify-between gap-3 hover:bg-white hover:border-zinc-300 hover:shadow-2xs transition-all"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={cump.foto}
+                      alt={cump.nombre}
+                      className="h-9 w-9 rounded-full object-cover border border-zinc-200 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-zinc-900 truncate leading-tight">{cump.nombre}</p>
+                      <p className="text-[11px] text-zinc-500 truncate">{cump.cargo} • {cump.organizacion}</p>
                     </div>
                   </div>
-                );
-              })
-            ) : (
-              <div className="p-8 text-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 space-y-2">
-                <CheckSquare className="h-6 w-6 text-zinc-300 mx-auto" />
-                <p className="text-xs font-semibold text-zinc-600">
-                  No tienes tareas {filtroEstatusTarea === 'NUEVAS' ? 'nuevas' : 'en proceso'} asignadas.
-                </p>
-                <p className="text-[10px] text-zinc-400">¡Tu bandeja de pendientes está al día!</p>
-              </div>
-            )}
+
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=52${cump.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Estimado(a) ${cump.nombre}, le envío una cordial felicitación con motivo de su cumpleaños. ¡Que pase un excelente día! Atte: Dip. Ruben Roque.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0"
+                    title="Felicitar por WhatsApp"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Felicitar</span>
+                  </a>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-zinc-400">Notificaciones automáticas matutinas</span>
+              <Link
+                href="/directorio"
+                className="text-xs font-semibold text-zinc-900 hover:text-blue-600 flex items-center gap-1"
+              >
+                <span>Ver Directorio</span>
+                <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </div>
           </div>
 
-          {/* Footer de Tareas */}
-          <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
-            <button
-              onClick={() => setIsModalTareaOpen(true)}
-              className="text-zinc-900 font-semibold hover:text-blue-600"
-            >
-              + Asignar Tarea
-            </button>
-            <Link
-              href="/tareas"
-              className="text-zinc-900 font-semibold hover:text-blue-600 flex items-center gap-1"
-            >
-              <span>Ver Tablero Completo</span>
-              <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          </div>
         </div>
       </div>
 
