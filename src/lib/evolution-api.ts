@@ -54,13 +54,18 @@ export interface WhatsAppGroup {
 
 export interface WhatsAppChat {
   id?: string;
+  remoteJid?: string;
   jid?: string;
   name?: string;
   pushName?: string;
+  profilePicUrl?: string;
   unreadCount?: number;
+  updatedAt?: string;
   lastMessage?: {
-    key?: { remoteJid?: string; fromMe?: boolean };
+    key?: { remoteJid?: string; fromMe?: boolean; participant?: string };
+    pushName?: string;
     message?: Record<string, unknown>;
+    messageType?: string;
     messageTimestamp?: number | string;
   };
 }
@@ -238,7 +243,11 @@ export async function sendTextMessage(
 
 export async function fetchAllChats(instanceName: string) {
   const res = await evolutionFetch<WhatsAppChat[] | { chats?: WhatsAppChat[] }>(
-    `/chat/findChats/${encodeURIComponent(instanceName)}`
+    `/chat/findChats/${encodeURIComponent(instanceName)}`,
+    {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }
   );
   if (res.success && res.data) {
     if (Array.isArray(res.data)) return { success: true, data: res.data };

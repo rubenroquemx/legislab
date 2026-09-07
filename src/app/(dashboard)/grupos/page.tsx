@@ -1,6 +1,7 @@
 'use client';
 
 
+
 import { syncWhatsAppGroups } from '@/app/actions/whatsapp';
 
 import { useState, useEffect } from 'react';
@@ -56,87 +57,13 @@ interface ContactGroup {
   miembros: GroupMember[];
 }
 
-const INITIAL_GROUPS: ContactGroup[] = [
-  {
-    id: 'grp-1',
-    nombre: 'Líderes y Enlaces - Distrito 04',
-    descripcion: 'Red de coordinadores territoriales, gestores vecinales y representantes de casilla.',
-    categoria: 'Líderes Seccionales',
-    color: 'blue',
-    whatsappLink: 'https://chat.whatsapp.com/sampleLinkDistrito04',
-    totalMiembros: 48,
-    ultimaActividad: 'Hoy, 10:30 AM',
-    creadoEnWhatsapp: true,
-    miembros: [
-      { id: 'm1', nombre: 'Ing. Carlos Mendoza', cargo: 'Coordinador Centro', telefono: '993 123 4567', municipio: 'Centro', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
-      { id: 'm2', nombre: 'Lic. Mariana Solís', cargo: 'Gestora Gaviotas', telefono: '993 987 6543', municipio: 'Centro', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' },
-      { id: 'm3', nombre: 'Profr. Roberto Méndez', cargo: 'Enlace Tamulté', telefono: '993 456 7890', municipio: 'Centro', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
-    ]
-  },
-  {
-    id: 'grp-2',
-    nombre: 'Comité de Agua y Servicios Tamulté',
-    descripcion: 'Mesa de trabajo y seguimiento a solicitudes de drenaje, pavimentación y agua potable.',
-    categoria: 'Comunitario',
-    color: 'emerald',
-    whatsappLink: 'https://chat.whatsapp.com/sampleLinkAguaTamulte',
-    totalMiembros: 34,
-    ultimaActividad: 'Ayer, 06:15 PM',
-    creadoEnWhatsapp: true,
-    miembros: [
-      { id: 'm4', nombre: 'Sra. Rosa Gómez', cargo: 'Presidenta de Vecinos', telefono: '993 234 5678', municipio: 'Centro', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80' },
-      { id: 'm5', nombre: 'Don Javier Osorio', cargo: 'Vocal de Vigilancia', telefono: '993 345 6789', municipio: 'Centro', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80' },
-    ]
-  },
-  {
-    id: 'grp-3',
-    nombre: 'Prensa y Corresponsales Tabasco',
-    descripcion: 'Canal directo de difusión para boletines, convocatorias de prensa y posicionamientos.',
-    categoria: 'Medios',
-    color: 'purple',
-    whatsappLink: 'https://chat.whatsapp.com/sampleLinkPrensaTab',
-    totalMiembros: 62,
-    ultimaActividad: '2 Sep 2026',
-    creadoEnWhatsapp: true,
-    miembros: [
-      { id: 'm6', nombre: 'Lic. Héctor Morales', cargo: 'Editor - Tabasco Hoy', telefono: '993 876 5432', municipio: 'Centro', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80' },
-      { id: 'm7', nombre: 'Claudia Rivera', cargo: 'Reportera TV Azteca', telefono: '993 765 4321', municipio: 'Centro', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
-    ]
-  },
-  {
-    id: 'grp-4',
-    nombre: 'Jóvenes Emprendedores y Universitarios',
-    descripcion: 'Red de vinculación para iniciativas legislativas en materia de juventud y becas.',
-    categoria: 'Comunitario',
-    color: 'amber',
-    whatsappLink: 'https://chat.whatsapp.com/sampleLinkJovenes',
-    totalMiembros: 89,
-    ultimaActividad: '30 Ago 2026',
-    creadoEnWhatsapp: true,
-    miembros: [
-      { id: 'm8', nombre: 'Valeria Cruz', cargo: 'Sociedad de Alumnos UJAT', telefono: '993 112 2334', municipio: 'Centro', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
-    ]
-  },
-  {
-    id: 'grp-5',
-    nombre: 'Cámaras Empresariales y CANACO',
-    descripcion: 'Diálogo permanente sobre desarrollo económico, incentivos fiscales y comercio local.',
-    categoria: 'Empresarial',
-    color: 'indigo',
-    totalMiembros: 27,
-    ultimaActividad: '28 Ago 2026',
-    creadoEnWhatsapp: false,
-    miembros: [
-      { id: 'm9', nombre: 'Lic. Fernando Garza', cargo: 'Vicepresidente CANACO', telefono: '993 554 4332', municipio: 'Centro', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80' }
-    ]
-  }
-];
+const INITIAL_GROUPS: ContactGroup[] = [];
 
 export default function GruposPage() {
   const [grupos, setGrupos] = useState<ContactGroup[]>(INITIAL_GROUPS);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoria, setSelectedCategoria] = useState<string>('Todos');
-  const [selectedGroup, setSelectedGroup] = useState<ContactGroup | null>(INITIAL_GROUPS[0]);
+  const [selectedGroup, setSelectedGroup] = useState<ContactGroup | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   // Modal y Modos de Creación
@@ -151,31 +78,57 @@ export default function GruposPage() {
   const [creandoEnWhatsapp, setCreandoEnWhatsapp] = useState(false);
 
   // Sincronización Automática con WhatsApp
-  const [isWhatsappConnected, setIsWhatsappConnected] = useState(true);
+  const [isWhatsappConnected, setIsWhatsappConnected] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Auto-sync grupos from Evolution API on mount
   useEffect(() => {
     const saved = localStorage.getItem('legislab_whatsapp_connected');
     if (saved !== null) {
       setIsWhatsappConnected(saved === 'true');
     }
+
+    async function loadLiveGroups() {
+      try {
+        setIsLoading(true);
+        const res = await syncWhatsAppGroups();
+        if (res.success && res.data && res.data.length > 0) {
+          setGrupos(res.data as ContactGroup[]);
+          setIsWhatsappConnected(true);
+          localStorage.setItem('legislab_whatsapp_connected', 'true');
+          if (res.data[0]) setSelectedGroup(res.data[0] as ContactGroup);
+        }
+      } catch (err) {
+        console.warn('Error loading live groups:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadLiveGroups();
   }, []);
 
-  const handleSincronizarAutomaticamente = () => {
+  const handleSincronizarAutomaticamente = async () => {
     if (!isWhatsappConnected) return;
 
     setSincronizando(true);
-    setTimeout(() => {
-      setGrupos(prev => prev.map(g => ({
-        ...g,
-        totalMiembros: g.totalMiembros + Math.floor(Math.random() * 3) + 1,
-        ultimaActividad: 'Sincronizado ahora'
-      })));
+    setSyncFeedback(null);
+    try {
+      const res = await syncWhatsAppGroups();
+      if (res.success && res.data && res.data.length > 0) {
+        setGrupos(res.data as ContactGroup[]);
+        if (res.data[0]) setSelectedGroup(res.data[0] as ContactGroup);
+        setSyncFeedback(`✓ ¡Sincronización en vivo completada! Se cargaron ${res.data.length} grupos desde WhatsApp.`);
+      } else {
+        setSyncFeedback('⚠️ No se encontraron grupos. ' + (res.error || ''));
+      }
+    } catch (err) {
+      setSyncFeedback('⚠️ Error al sincronizar: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
       setSincronizando(false);
-      setSyncFeedback('✓ ¡Sincronización en vivo completada! Se detectaron y actualizaron los integrantes de tus grupos de WhatsApp.');
-      setTimeout(() => setSyncFeedback(null), 4000);
-    }, 1200);
+      setTimeout(() => setSyncFeedback(null), 5000);
+    }
   };
 
   const categorias = ['Todos', 'Comunitario', 'Líderes Seccionales', 'Medios', 'Empresarial', 'Institucional'];
@@ -411,7 +364,22 @@ export default function GruposPage() {
           </div>
 
           <div className="space-y-3">
-            {filteredGrupos.map((grp) => {
+            {isLoading ? (
+              <div className="p-8 bg-white rounded-2xl border border-gray-200 text-center space-y-2 shadow-2xs">
+                <RefreshCw className="h-5 w-5 animate-spin mx-auto text-blue-600" />
+                <p className="text-xs font-semibold text-gray-600">Sincronizando grupos desde WhatsApp...</p>
+              </div>
+            ) : filteredGrupos.length === 0 ? (
+              <div className="p-8 bg-white rounded-2xl border border-gray-200 text-center space-y-2 shadow-2xs">
+                <UsersRound className="h-6 w-6 mx-auto text-gray-400" />
+                <p className="text-xs font-semibold text-gray-700">No se encontraron grupos</p>
+                <p className="text-[11px] text-gray-500">
+                  {isWhatsappConnected ? 'Presiona "Sincronización Automática" para cargar tus grupos de WhatsApp.' : 'Conecta WhatsApp en Conexiones para ver tus grupos en vivo.'}
+                </p>
+              </div>
+            ) : null}
+
+            {!isLoading && filteredGrupos.map((grp) => {
               const isSelected = selectedGroup?.id === grp.id;
 
               return (

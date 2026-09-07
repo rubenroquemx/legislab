@@ -8,6 +8,7 @@ import {
   sendTextMessage,
   fetchAllGroups,
   fetchAllChats,
+  fetchInstances,
   formatPhoneForWhatsApp,
   type WhatsAppGroup,
   type WhatsAppChat,
@@ -50,6 +51,52 @@ export async function getWhatsAppStatus(instanceName = DEFAULT_INSTANCE_NAME) {
       instanceName,
       error: msg,
     };
+  }
+}
+
+/**
+ * Gets detailed instance info (connected phone, profile name, counts)
+ */
+export async function getWhatsAppInstanceInfo(instanceName = DEFAULT_INSTANCE_NAME) {
+  try {
+    const res = await fetchInstances();
+    if (res.success && res.data) {
+      const instances = res.data as any[];
+      const inst = instances.find((i: any) => (i.name || i.instance?.instanceName) === instanceName);
+      if (inst) {
+        const ownerJid = inst.ownerJid || '';
+        const phone = ownerJid.split('@')[0] || '';
+        // Format phone: 5219932200146 -> +52 (993) 220-0146
+        let formattedPhone = phone;
+        if (phone.startsWith('521') && phone.length >= 13) {
+          const area = phone.substring(3, 6);
+          const p1 = phone.substring(6, 9);
+          const p2 = phone.substring(9, 13);
+          formattedPhone = `+52 (${area}) ${p1}-${p2}`;
+        } else if (phone.length > 5) {
+          formattedPhone = `+${phone}`;
+        }
+        
+        return {
+          success: true,
+          data: {
+            instanceName: inst.name || instanceName,
+            connectionStatus: inst.connectionStatus || 'close',
+            phone: formattedPhone,
+            rawPhone: phone,
+            profileName: inst.profileName || 'Sin nombre',
+            profilePicUrl: inst.profilePicUrl || null,
+            messageCount: inst._count?.Message || 0,
+            contactCount: inst._count?.Contact || 0,
+            chatCount: inst._count?.Chat || 0,
+          },
+        };
+      }
+    }
+    return { success: false, error: 'Instancia no encontrada', data: null };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg, data: null };
   }
 }
 
@@ -281,13 +328,50 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
     // Map Evolution API direct chats
     if (chats.length > 0) {
       for (const c of chats) {
-        const jid = c.id || c.jid || '';
+        const jid = c.remoteJid || c.id || c.jid || '';
         if (jid.endsWith('@g.us')) continue; // skip group broadcasts in citizen inbox
+        if (!jid.includes('@s.whatsapp.net') && !jid.includes('@lid')) continue; // only personal chats
 
         const phone = jid.split('@')[0];
-        const name = c.pushName || c.name || `Ciudadano +${phone}`;
-        const lastMsgText = c.lastMessage?.message ? Object.values(c.lastMessage.message)[0] : 'Conversación iniciada';
-        const textStr = typeof lastMsgText === 'string' ? lastMsgText : 'Mensaje recibido';
+        const name = c.pushName || c.lastMessage?.pushName || c.name || `Ciudadano +${phone}`;
+        
+        // Extract last message text from the actual API format
+        let textStr = 'Conversación iniciada';
+        if (c.lastMessage?.message) {
+          const msgObj = c.lastMessage.message;
+          const conversation = msgObj.conversation || msgObj.extendedTextMessage;
+          if (typeof conversation === 'string') {
+            textStr = conversation;
+          } else if (conversation && typeof conversation === 'object' && 'text' in (conversation as Record<string, unknown>)) {
+            textStr = String((conversation as Record<string, unknown>).text);
+          } else {
+            // Try to get any text from message types
+            const firstVal = Object.values(msgObj)[0];
+            if (typeof firstVal === 'string') textStr = firstVal;
+            else if (firstVal && typeof firstVal === 'object' && 'caption' in (firstVal as Record<string, unknown>)) {
+              textStr = String((firstVal as Record<string, unknown>).caption) || 'Mensaje multimedia';
+            } else {
+              textStr = c.lastMessage.messageType ? `[${c.lastMessage.messageType}]` : 'Mensaje recibido';
+            }
+          }
+        }
+        
+        // Truncate long messages
+        if (textStr.length > 120) textStr = textStr.substring(0, 120) + '...';
+
+        // Format time from updatedAt
+        let timeStr = 'Reciente';
+        if (c.updatedAt) {
+          try {
+            const d = new Date(c.updatedAt);
+            const now = new Date();
+            if (d.toDateString() === now.toDateString()) {
+              timeStr = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+            } else {
+              timeStr = d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+            }
+          } catch { timeStr = 'Reciente'; }
+        }
 
         // Check if not already mapped from DB
         if (!mappedConversaciones.some(m => m.ciudadanoTelefono.includes(phone))) {
@@ -295,11 +379,11 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
             id: `chat-${phone}`,
             ciudadanoNombre: name,
             ciudadanoTelefono: `+${phone}`,
-            ciudadanoAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            ciudadanoAvatar: c.profilePicUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
             municipio: 'Centro',
             colonia: 'WhatsApp Directo',
             ultimoMensaje: textStr,
-            ultimaHora: 'Reciente',
+            ultimaHora: timeStr,
             noLeidos: c.unreadCount || 0,
             categoria: 'Gestión Médica' as const,
             estado: 'sin_asignar' as const,
@@ -310,7 +394,7 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
                 autor: 'ciudadano' as const,
                 nombreAutor: name,
                 texto: textStr,
-                hora: 'Hoy',
+                hora: timeStr,
                 fecha: 'Hoy',
               },
             ],
