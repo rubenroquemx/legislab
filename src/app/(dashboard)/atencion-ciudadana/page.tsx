@@ -1,5 +1,7 @@
 'use client';
 
+import { sendWhatsAppMessageAction } from '@/app/actions/whatsapp';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -180,15 +182,18 @@ export default function AtencionCiudadanaPage() {
     return matchSearch;
   });
 
-  const handleEnviarMensaje = (e: React.FormEvent) => {
+  const handleEnviarMensaje = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoMensaje.trim() || !activeConv) return;
+
+    const textoAEnviar = nuevoMensaje;
+    const destinoTelefono = activeConv.ciudadanoTelefono;
 
     const msg: MensajeChat = {
       id: `msg-${Date.now()}`,
       autor: esNotaInterna ? 'nota_interna' : 'agente',
       nombreAutor: esNotaInterna ? 'Dip. Ruben Roque (Nota Interna)' : 'Dip. Ruben Roque',
-      texto: nuevoMensaje,
+      texto: textoAEnviar,
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       fecha: 'Hoy',
       leido: true
@@ -198,7 +203,7 @@ export default function AtencionCiudadanaPage() {
       if (c.id === activeConv.id) {
         return {
           ...c,
-          ultimoMensaje: esNotaInterna ? `[Nota]: ${nuevoMensaje}` : nuevoMensaje,
+          ultimoMensaje: esNotaInterna ? `[Nota]: ${textoAEnviar}` : textoAEnviar,
           ultimaHora: 'Ahora',
           mensajes: [...c.mensajes, msg]
         };
@@ -207,6 +212,19 @@ export default function AtencionCiudadanaPage() {
     }));
 
     setNuevoMensaje('');
+
+    // Disparar mensaje real por WhatsApp Gateway si no es nota interna
+    if (!esNotaInterna && destinoTelefono) {
+      try {
+        await sendWhatsAppMessageAction({
+          to: destinoTelefono,
+          text: textoAEnviar
+        });
+      } catch (err) {
+        console.warn('Evolution API send error:', err);
+      }
+    }
+
     setEsNotaInterna(false);
   };
 

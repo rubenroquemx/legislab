@@ -6,6 +6,10 @@ import { revalidatePath } from 'next/cache';
 
 const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
 
+export async function getFirstOfficeId(): Promise<string> {
+  return DEFAULT_OFFICE_ID;
+}
+
 // -------------------------------------------------------------
 // GESTIONES ACTIONS (Multi-Tenant)
 // -------------------------------------------------------------
