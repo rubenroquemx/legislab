@@ -259,10 +259,10 @@ export default function AtencionCiudadanaPage() {
               <MessageSquareText className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-gray-900">
+              <h1 className="text-2xl font-black tracking-tight text-zinc-900">
                 Atención Ciudadana y WhatsApp Multiagente
               </h1>
-              <p className="text-xs sm:text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-zinc-500">
                 Bandeja centralizada para responder mensajes, asignar ciudadanos al equipo y crear gestiones
               </p>
             </div>
@@ -286,7 +286,7 @@ export default function AtencionCiudadanaPage() {
 
           <Link
             href="/configuracion?tab=conexiones"
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold shadow-2xs transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-xl text-xs font-semibold shadow-2xs transition-colors"
           >
             <QrCode className="h-4 w-4 text-blue-600" />
             <span>Configurar Conector QR</span>
@@ -331,19 +331,19 @@ export default function AtencionCiudadanaPage() {
       )}
 
       {/* MAIN INBOX INTERFACE (3 COLUMNS) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-280px)] min-h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-auto lg:h-[calc(100vh-220px)] min-h-[500px]">
         {/* COLUMNA 1: LISTA DE CONVERSACIONES (4 Cols) */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-gray-200 shadow-2xs flex flex-col overflow-hidden">
+        <div className="lg:col-span-4 bg-white rounded-2xl border border-zinc-200 shadow-2xs flex flex-col overflow-hidden">
           {/* Top Search & Filter Tabs */}
-          <div className="p-3.5 border-b border-gray-100 space-y-2.5">
+          <div className="p-3.5 border-b border-zinc-100 space-y-2.5">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
               <input
                 type="text"
                 placeholder="Buscar ciudadano o teléfono..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-800 placeholder-gray-400 focus:outline-none focus:border-blue-500"
               />
             </div>
 
@@ -353,7 +353,7 @@ export default function AtencionCiudadanaPage() {
                 onClick={() => setFiltroEstado('todos')}
                 className={cn(
                   'px-2.5 py-1 rounded-lg font-semibold whitespace-nowrap transition-colors',
-                  filtroEstado === 'todos' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  filtroEstado === 'todos' ? 'bg-blue-600 text-white' : 'bg-zinc-100 text-gray-600 hover:bg-gray-200'
                 )}
               >
                 Todos ({conversaciones.length})
@@ -362,7 +362,7 @@ export default function AtencionCiudadanaPage() {
                 onClick={() => setFiltroEstado('sin_asignar')}
                 className={cn(
                   'px-2.5 py-1 rounded-lg font-semibold whitespace-nowrap transition-colors',
-                  filtroEstado === 'sin_asignar' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  filtroEstado === 'sin_asignar' ? 'bg-amber-600 text-white' : 'bg-zinc-100 text-gray-600 hover:bg-gray-200'
                 )}
               >
                 Sin Asignar ({conversaciones.filter(c => c.estado === 'sin_asignar').length})
@@ -371,7 +371,7 @@ export default function AtencionCiudadanaPage() {
                 onClick={() => setFiltroEstado('mis_asignados')}
                 className={cn(
                   'px-2.5 py-1 rounded-lg font-semibold whitespace-nowrap transition-colors',
-                  filtroEstado === 'mis_asignados' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  filtroEstado === 'mis_asignados' ? 'bg-blue-600 text-white' : 'bg-zinc-100 text-gray-600 hover:bg-gray-200'
                 )}
               >
                 Mis Chats
@@ -380,7 +380,7 @@ export default function AtencionCiudadanaPage() {
                 onClick={() => setFiltroEstado('gestiones')}
                 className={cn(
                   'px-2.5 py-1 rounded-lg font-semibold whitespace-nowrap transition-colors',
-                  filtroEstado === 'gestiones' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  filtroEstado === 'gestiones' ? 'bg-emerald-600 text-white' : 'bg-zinc-100 text-gray-600 hover:bg-gray-200'
                 )}
               >
                 Con Folio
@@ -400,7 +400,7 @@ export default function AtencionCiudadanaPage() {
                     'p-3.5 flex items-start gap-3 cursor-pointer transition-all text-left',
                     isSelected
                       ? 'bg-blue-50/70 border-l-4 border-l-blue-600'
-                      : 'hover:bg-gray-50/80'
+                      : 'hover:bg-zinc-50/80'
                   )}
                 >
                   <div className="relative shrink-0">
@@ -408,7 +408,7 @@ export default function AtencionCiudadanaPage() {
                     <img
                       src={conv.ciudadanoAvatar}
                       alt={conv.ciudadanoNombre}
-                      className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                      className="h-10 w-10 rounded-full object-cover border border-zinc-200"
                     />
                     {conv.noLeidos > 0 && (
                       <span className="absolute -top-1 -right-1 h-4 w-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
@@ -419,20 +419,20 @@ export default function AtencionCiudadanaPage() {
 
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center justify-between gap-1">
-                      <p className="text-xs font-bold text-gray-900 truncate">
+                      <p className="text-xs font-bold text-zinc-900 truncate">
                         {conv.ciudadanoNombre}
                       </p>
-                      <span className="text-[10px] text-gray-400 shrink-0 font-medium">
+                      <span className="text-[10px] text-zinc-400 shrink-0 font-medium">
                         {conv.ultimaHora}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-gray-500 truncate leading-relaxed">
+                    <p className="text-[11px] text-zinc-500 truncate leading-relaxed">
                       {conv.ultimoMensaje}
                     </p>
 
                     <div className="flex items-center justify-between gap-1 pt-1">
-                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-gray-100 text-gray-600">
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-zinc-100 text-gray-600">
                         {conv.categoria}
                       </span>
 
@@ -441,7 +441,7 @@ export default function AtencionCiudadanaPage() {
                           {conv.folioGestion}
                         </span>
                       ) : conv.asignadoA ? (
-                        <div className="flex items-center gap-1 text-[10px] text-gray-500">
+                        <div className="flex items-center gap-1 text-[10px] text-zinc-500">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={conv.asignadoA.foto} alt="" className="h-3.5 w-3.5 rounded-full" />
                           <span className="truncate max-w-[80px]">{conv.asignadoA.nombre.split(' ')[0]}</span>
@@ -460,21 +460,21 @@ export default function AtencionCiudadanaPage() {
         </div>
 
         {/* COLUMNA 2: CHAT ACTIVO EN TIEMPO REAL (5 Cols) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-gray-200 shadow-2xs flex flex-col overflow-hidden">
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-zinc-200 shadow-2xs flex flex-col overflow-hidden">
           {/* Chat Header */}
-          <div className="p-3.5 border-b border-gray-100 flex items-center justify-between gap-3 bg-gray-50/50">
+          <div className="p-3.5 border-b border-zinc-100 flex items-center justify-between gap-3 bg-zinc-50/50">
             <div className="flex items-center gap-3 overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={activeConv.ciudadanoAvatar}
                 alt={activeConv.ciudadanoNombre}
-                className="h-10 w-10 rounded-full object-cover border border-gray-200 shrink-0"
+                className="h-10 w-10 rounded-full object-cover border border-zinc-200 shrink-0"
               />
               <div className="min-w-0">
-                <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate">
+                <h3 className="text-xs sm:text-sm font-bold text-zinc-900 truncate">
                   {activeConv.ciudadanoNombre}
                 </h3>
-                <p className="text-[11px] text-gray-500 flex items-center gap-1.5">
+                <p className="text-[11px] text-zinc-500 flex items-center gap-1.5">
                   <span className="text-green-600 font-mono font-medium">{activeConv.ciudadanoTelefono}</span>
                   <span>•</span>
                   <span>{activeConv.colonia}</span>
@@ -487,7 +487,7 @@ export default function AtencionCiudadanaPage() {
               <select
                 value={activeConv.asignadoA?.id || ''}
                 onChange={(e) => handleAsignarAgente(e.target.value)}
-                className="text-xs bg-white border border-gray-200 rounded-xl px-2.5 py-1.5 font-semibold text-gray-700 focus:outline-none focus:border-blue-500 shadow-2xs"
+                className="text-xs bg-white border border-zinc-200 rounded-xl px-2.5 py-1.5 font-semibold text-zinc-700 focus:outline-none focus:border-blue-500 shadow-2xs"
               >
                 <option value="">👤 Sin Asignar</option>
                 {AGENTES_DISPONIBLES.map((ag) => (
@@ -524,7 +524,7 @@ export default function AtencionCiudadanaPage() {
                     isAgente ? 'ml-auto items-end' : 'mr-auto items-start'
                   )}
                 >
-                  <span className="text-[10px] text-gray-400 font-medium px-1 mb-0.5">
+                  <span className="text-[10px] text-zinc-400 font-medium px-1 mb-0.5">
                     {msg.nombreAutor}
                   </span>
                   <div
@@ -532,13 +532,13 @@ export default function AtencionCiudadanaPage() {
                       'p-3 rounded-2xl text-xs leading-relaxed shadow-2xs',
                       isAgente
                         ? 'bg-blue-600 text-white rounded-br-xs'
-                        : 'bg-white text-gray-800 border border-gray-200 rounded-bl-xs'
+                        : 'bg-white text-zinc-800 border border-zinc-200 rounded-bl-xs'
                     )}
                   >
                     <p>{msg.texto}</p>
                     <div className={cn(
                       'flex items-center justify-end gap-1 text-[9px] mt-1',
-                      isAgente ? 'text-blue-100' : 'text-gray-400'
+                      isAgente ? 'text-blue-100' : 'text-zinc-400'
                     )}>
                       <span>{msg.hora}</span>
                       {isAgente && <CheckCheck className="h-3 w-3" />}
@@ -550,15 +550,15 @@ export default function AtencionCiudadanaPage() {
           </div>
 
           {/* Quick Answers Dropdown */}
-          <div className="px-3.5 py-1.5 bg-gray-50 border-t border-gray-200 flex items-center gap-2 overflow-x-auto scrollbar-none">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">
+          <div className="px-3.5 py-1.5 bg-zinc-50 border-t border-zinc-200 flex items-center gap-2 overflow-x-auto scrollbar-none">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider shrink-0">
               Respuestas rápidas:
             </span>
             {plantillasRapidas.map((plantilla, idx) => (
               <button
                 key={idx}
                 onClick={() => setNuevoMensaje(plantilla)}
-                className="text-[11px] bg-white hover:bg-blue-50 hover:text-blue-700 text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1 whitespace-nowrap transition-colors"
+                className="text-[11px] bg-white hover:bg-blue-50 hover:text-blue-700 text-gray-600 border border-zinc-200 rounded-lg px-2.5 py-1 whitespace-nowrap transition-colors"
               >
                 {plantilla.slice(0, 32)}...
               </button>
@@ -566,7 +566,7 @@ export default function AtencionCiudadanaPage() {
           </div>
 
           {/* Input Box */}
-          <form onSubmit={handleEnviarMensaje} className="p-3 border-t border-gray-200 bg-white space-y-2">
+          <form onSubmit={handleEnviarMensaje} className="p-3 border-t border-zinc-200 bg-white space-y-2">
             <div className="flex items-center justify-between text-[11px]">
               <label className="flex items-center gap-1.5 cursor-pointer text-amber-700 font-semibold">
                 <input
@@ -589,7 +589,7 @@ export default function AtencionCiudadanaPage() {
                   "flex-1 px-3.5 py-2.5 text-xs rounded-xl border focus:outline-none transition-colors",
                   esNotaInterna
                     ? "bg-amber-50 border-amber-300 text-amber-900 placeholder-amber-500"
-                    : "bg-gray-50 border-gray-200 text-gray-800 placeholder-gray-400 focus:border-blue-500"
+                    : "bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-gray-400 focus:border-blue-500"
                 )}
               />
 
@@ -607,9 +607,9 @@ export default function AtencionCiudadanaPage() {
         </div>
 
         {/* COLUMNA 3: EXPEDIENTE CIUDADANO Y GESTIÓN DIRECTA (3 Cols) */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-200 shadow-2xs p-4.5 space-y-4 flex flex-col overflow-y-auto">
+        <div className="lg:col-span-3 bg-white rounded-2xl border border-zinc-200 shadow-2xs p-4.5 space-y-4 flex flex-col overflow-y-auto">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
               Expediente Ciudadano
             </h3>
             <div className="mt-3 text-center space-y-2">
@@ -620,30 +620,30 @@ export default function AtencionCiudadanaPage() {
                 className="h-16 w-16 rounded-full object-cover border-2 border-white shadow-sm mx-auto"
               />
               <div>
-                <h4 className="text-sm font-bold text-gray-900">{activeConv.ciudadanoNombre}</h4>
-                <p className="text-xs text-gray-500">{activeConv.colonia}, {activeConv.municipio}</p>
+                <h4 className="text-sm font-bold text-zinc-900">{activeConv.ciudadanoNombre}</h4>
+                <p className="text-xs text-zinc-500">{activeConv.colonia}, {activeConv.municipio}</p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-2 pt-2 border-t border-gray-100 text-xs text-gray-600">
+          <div className="space-y-2 pt-2 border-t border-zinc-100 text-xs text-gray-600">
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Teléfono:</span>
-              <span className="font-bold text-gray-800">{activeConv.ciudadanoTelefono}</span>
+              <span className="text-zinc-400">Teléfono:</span>
+              <span className="font-bold text-zinc-800">{activeConv.ciudadanoTelefono}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Municipio:</span>
+              <span className="text-zinc-400">Municipio:</span>
               <span className="font-semibold text-blue-600">{activeConv.municipio}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Tipo de Trámite:</span>
-              <span className="font-bold text-gray-800">{activeConv.categoria}</span>
+              <span className="text-zinc-400">Tipo de Trámite:</span>
+              <span className="font-bold text-zinc-800">{activeConv.categoria}</span>
             </div>
           </div>
 
           {/* Botón Convertir en Gestión */}
-          <div className="pt-2 border-t border-gray-100 space-y-2">
-            <h4 className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+          <div className="pt-2 border-t border-zinc-100 space-y-2">
+            <h4 className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
               <FolderKanban className="h-4 w-4 text-blue-600" />
               Gestión Legislativa / Social
             </h4>
@@ -675,7 +675,7 @@ export default function AtencionCiudadanaPage() {
           </div>
 
           {/* Enlaces Rápidos */}
-          <div className="pt-2 border-t border-gray-100 space-y-1.5 text-xs">
+          <div className="pt-2 border-t border-zinc-100 space-y-1.5 text-xs">
             <a
               href={`https://wa.me/52${activeConv.ciudadanoTelefono.replace(/\D/g, '')}`}
               target="_blank"
@@ -691,7 +691,7 @@ export default function AtencionCiudadanaPage() {
 
             <a
               href={`tel:${activeConv.ciudadanoTelefono}`}
-              className="flex items-center justify-between p-2 rounded-xl bg-gray-50 text-gray-700 hover:bg-gray-100 font-semibold transition-colors"
+              className="flex items-center justify-between p-2 rounded-xl bg-zinc-50 text-zinc-700 hover:bg-zinc-100 font-semibold transition-colors"
             >
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
