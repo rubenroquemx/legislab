@@ -4,6 +4,7 @@
 
 
 
+
 import { 
   getWhatsAppConversacionesAction, 
   sendWhatsAppMessageAction,
@@ -65,6 +66,7 @@ interface MensajeChat {
 
 interface ConversacionAtencion {
   id: string;
+  remoteJid?: string;
   ciudadanoNombre: string;
   ciudadanoTelefono: string;
   ciudadanoAvatar: string;
@@ -189,7 +191,7 @@ export default function AtencionCiudadanaPage() {
     if (!nuevoMensaje.trim() || !activeConv) return;
 
     const texto = nuevoMensaje;
-    const destinatario = activeConv.ciudadanoTelefono;
+    const destinatario = activeConv.remoteJid || activeConv.ciudadanoTelefono;
 
     const msg: MensajeChat = {
       id: `msg-${Date.now()}`,

@@ -450,6 +450,7 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
         if (!mappedConversaciones.some(m => m.ciudadanoTelefono.includes(phone))) {
           mappedConversaciones.push({
             id: `chat-${phone}`,
+            remoteJid: jid,
             ciudadanoNombre: name,
             ciudadanoTelefono: displayPhone,
             ciudadanoAvatar: avatarUrl,

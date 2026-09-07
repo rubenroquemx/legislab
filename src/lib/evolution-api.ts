@@ -215,6 +215,9 @@ export interface WhatsAppContact {
 }
 
 export function formatPhoneForWhatsApp(phone: string): string {
+  if (phone.includes('@')) {
+    return phone;
+  }
   const digits = phone.replace(/\D/g, '');
   if (digits.length === 10) {
     return `521${digits}`;
