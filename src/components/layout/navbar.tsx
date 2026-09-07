@@ -117,9 +117,8 @@ export function Navbar({ onOpenMobileMenu }: NavbarProps) {
           body: body,
           icon: '/icons/icon.svg',
           badge: '/icons/icon.svg',
-          vibrate: [200, 100, 200],
           data: { url: '/atencion-ciudadana' }
-        });
+        } as any);
       });
       setTestSent(true);
       setTimeout(() => setTestSent(false), 3000);
