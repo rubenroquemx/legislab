@@ -1,5 +1,5 @@
 'use client';
-import { Bell, Search, Plus, Menu, ChevronDown } from 'lucide-react';
+import { Bell, Search, Plus, Menu } from 'lucide-react';
 import Link from 'next/link';
 
 interface NavbarProps {
@@ -8,66 +8,60 @@ interface NavbarProps {
 
 export function Navbar({ onOpenMobileMenu }: NavbarProps) {
   return (
-    <header className="h-18 bg-white border-b border-gray-200/80 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
-      {/* Left: Mobile Hamburger & Command Search Bar */}
-      <div className="flex items-center gap-4 max-w-lg w-full">
-        {/* Mobile Hamburger Button */}
+    <header className="h-14 bg-white/80 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
+      <div className="flex items-center gap-3 max-w-md w-full">
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="lg:hidden p-2 -ml-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+          className="lg:hidden p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
           title="Abrir menú"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-4 w-4" />
         </button>
 
-        {/* Command Search Bar (TailAdmin Style) */}
         <div className="relative w-full hidden sm:block">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
           <input
             type="text"
-            placeholder="Search or type command..."
-            className="w-full pl-10 pr-12 py-2 text-xs sm:text-sm bg-gray-50/90 border border-gray-200/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-gray-800 placeholder:text-gray-400"
+            placeholder="Buscar en el despacho o teclear comando..."
+            className="w-full pl-8 pr-12 py-1.5 text-xs bg-zinc-50 border border-zinc-200/80 rounded-lg focus:outline-none focus:border-zinc-400 focus:bg-white transition-all text-zinc-800 placeholder:text-zinc-400"
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono font-bold text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded">
-            ⌘K
-          </span>
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[10px] font-mono text-zinc-400 bg-white border border-zinc-200 px-1 py-0.2 rounded">
+            <span>⌘</span>
+            <span>K</span>
+          </div>
         </div>
       </div>
 
-      {/* Right: Quick Redaction, Notifications & Profile */}
-      <div className="flex items-center gap-2.5 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
         <Link
           href="/redactor"
-          className="hidden md:inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm shadow-blue-600/20 transition-all"
+          className="hidden md:inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-xs transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
-          <span>Nueva Redacción</span>
+          <span>Redactar</span>
         </Link>
 
-        {/* Notifications Bell Button */}
-        <button className="relative p-2.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white"></span>
+        <button 
+          type="button"
+          className="relative p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
+          title="Notificaciones"
+        >
+          <Bell className="h-4 w-4" />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-zinc-900 rounded-full"></span>
         </button>
 
-        {/* User Profile Pill (TailAdmin Style) */}
-        <div className="flex items-center gap-3 pl-2 sm:pl-3 border-l border-gray-200">
+        <div className="flex items-center gap-2.5 pl-2 border-l border-zinc-200">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
             alt="Dip. Ruben Roque"
-            className="h-9 w-9 rounded-full object-cover border-2 border-white shadow-2xs"
+            className="h-7 w-7 rounded-full object-cover border border-zinc-200"
           />
-          <div className="hidden lg:flex flex-col text-left">
-            <span className="text-xs font-bold text-gray-900 leading-tight">
-              Dip. Ruben Roque
-            </span>
-            <span className="text-[10px] text-gray-500 leading-tight">
-              Titular Despacho
-            </span>
+          <div className="hidden sm:block text-left">
+            <p className="text-xs font-semibold text-zinc-900 leading-tight">Dip. Ruben Roque</p>
+            <p className="text-[10px] text-zinc-400 leading-tight">Distrito 04 Federal</p>
           </div>
-          <ChevronDown className="h-4 w-4 text-gray-400 hidden lg:block" />
         </div>
       </div>
     </header>
