@@ -87,23 +87,14 @@ export default function MediosPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-            <Radio className="h-6 w-6 text-blue-600" />
-            Monitoreo de Medios y Clipping
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Seguimiento a entrevistas, cobertura informativa y presencia en prensa, radio, televisión y portales digitales.
-          </p>
-        </div>
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-2">
         <button
           onClick={() => alert('Formulario para registrar nueva nota o entrevista')}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm shadow-blue-600/20 transition-all"
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-1.5 rounded-xl shadow-xs transition-all"
         >
-          <Plus className="h-4 w-4" />
-          Registrar Nota / Cobertura
+          <Plus className="h-3.5 w-3.5" />
+          <span>Registrar Nota / Cobertura</span>
         </button>
       </div>
 

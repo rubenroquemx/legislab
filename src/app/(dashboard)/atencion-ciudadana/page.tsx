@@ -251,47 +251,28 @@ export default function AtencionCiudadanaPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
-              <MessageSquareText className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-zinc-900">
-                Atención Ciudadana y WhatsApp Multiagente
-              </h1>
-              <p className="text-xs sm:text-sm text-zinc-500">
-                Bandeja centralizada para responder mensajes, asignar ciudadanos al equipo y crear gestiones
-              </p>
-            </div>
-          </div>
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-2.5">
+        <div className={cn(
+          "flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold",
+          isWhatsappConnected
+            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60"
+            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/60"
+        )}>
+          <span className={cn(
+            "h-2 w-2 rounded-full",
+            isWhatsappConnected ? "bg-emerald-500 animate-pulse" : "bg-red-500"
+          )}></span>
+          <span>{isWhatsappConnected ? "WhatsApp Conectado (+52 993 111 2233)" : "WhatsApp Desconectado"}</span>
         </div>
 
-        {/* Estado de Conexión y Enlace a Conexiones */}
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-bold",
-            isWhatsappConnected
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : "bg-red-50 text-red-700 border-red-200"
-          )}>
-            <span className={cn(
-              "h-2 w-2 rounded-full",
-              isWhatsappConnected ? "bg-emerald-500 animate-pulse" : "bg-red-500"
-            )}></span>
-            <span>{isWhatsappConnected ? "WhatsApp Conectado (+52 993 111 2233)" : "WhatsApp Desconectado"}</span>
-          </div>
-
-          <Link
-            href="/configuracion?tab=conexiones"
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-xl text-xs font-semibold shadow-2xs transition-colors"
-          >
-            <QrCode className="h-4 w-4 text-blue-600" />
-            <span>Configurar Conector QR</span>
-          </Link>
-        </div>
+        <Link
+          href="/configuracion?tab=conexiones"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-800 hover:bg-zinc-50 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-semibold shadow-xs transition-colors"
+        >
+          <QrCode className="h-3.5 w-3.5 text-blue-600" />
+          <span>Configurar Conector QR</span>
+        </Link>
       </div>
 
       {/* ALERTA EN CASO DE DESCONEXIÓN */}

@@ -112,23 +112,11 @@ export default function MarcoJuridicoPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <Scale className="h-5 w-5 text-blue-600" />
-            Marco Jurídico & Biblioteca Legislativa
-          </h1>
-          <p className="text-xs text-gray-500">
-            Compendio oficial de leyes estatales, códigos, reglamentos y constitución para fundamentación de iniciativas.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
-            🏛️ LXVI Legislatura Tabasco
-          </span>
-        </div>
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-2">
+        <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl">
+          🏛️ LXVI Legislatura Tabasco
+        </span>
       </div>
 
       {/* Search & Categories */}

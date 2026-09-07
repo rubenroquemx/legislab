@@ -348,26 +348,15 @@ export default function TareasPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-            <CheckSquare className="h-6 w-6 text-blue-600" />
-            Tareas Pendientes del Equipo
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Gestión operativa, selectores de fecha/hora, chat de observaciones estilo WhatsApp y seguimiento en vivo.
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={handleOpenCrearModal}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm shadow-blue-600/20 transition-all"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Nueva Tarea</span>
-          </button>
-        </div>
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-2.5">
+        <button
+          onClick={handleOpenCrearModal}
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-1.5 rounded-xl shadow-xs transition-all"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>Nueva Tarea</span>
+        </button>
       </div>
 
       {/* Stats Cards */}

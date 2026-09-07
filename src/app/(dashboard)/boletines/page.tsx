@@ -118,41 +118,30 @@ export default function BoletinesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-            <Newspaper className="h-6 w-6 text-blue-600" />
-            Boletines y Comunicación Social
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Redacción de comunicados de prensa institucionales listos para enviar a medios y periodistas.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 bg-white border border-gray-200/80 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-200 text-xs font-semibold px-3 py-2 rounded-lg shadow-xs transition-colors"
-          >
-            {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-gray-500 dark:text-gray-400" />}
-            <span>{copied ? 'Copiado' : 'Copiar'}</span>
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={isExporting}
-            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-xs transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            <span>Descargar Word</span>
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-xs transition-colors"
-          >
-            <Printer className="h-4 w-4" />
-            <span>Imprimir</span>
-          </button>
-        </div>
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={handleCopy}
+          className="inline-flex items-center gap-1.5 bg-white border border-gray-200/80 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-colors"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />}
+          <span>{copied ? 'Copiado' : 'Copiar'}</span>
+        </button>
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-colors"
+        >
+          <Download className="h-3.5 w-3.5" />
+          <span>Descargar Word</span>
+        </button>
+        <button
+          onClick={() => window.print()}
+          className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-colors"
+        >
+          <Printer className="h-3.5 w-3.5" />
+          <span>Imprimir</span>
+        </button>
       </div>
 
       {/* Main Grid */}

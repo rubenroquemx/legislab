@@ -289,16 +289,7 @@ function ConfiguracionContent() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-          <Settings className="h-6 w-6 text-gray-700" />
-          Configuración y Conexiones del Despacho
-        </h1>
-        <p className="text-xs sm:text-sm text-gray-500 mt-1">
-          Administra la identidad del despacho, conexiones en la nube (WhatsApp QR, Google Drive, Google Calendar) y diseño institucional de membretes.
-        </p>
-      </div>
+
 
       {/* Main Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200 pb-2 overflow-x-auto scrollbar-none">

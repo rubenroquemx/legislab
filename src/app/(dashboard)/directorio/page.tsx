@@ -356,41 +356,29 @@ export default function DirectorioPage() {
 
   return (
     <div className="space-y-4">
-      {/* Header & Quick Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#121824] p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-2xs transition-colors">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-            <PhoneCall className="h-5 w-5 text-blue-600" />
-            Directorio Telefónico y Agenda Institucional
-          </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Diseño estilo iPhone / iOS Contacts con orden alfabético, enlaces a gestiones, WhatsApp y chat interno.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {cumpleanerosCount > 0 && (
-            <button
-              onClick={() => setFiltroSoloCumpleanos(!filtroSoloCumpleanos)}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all ${
-                filtroSoloCumpleanos
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30'
-                  : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-              }`}
-            >
-              <PartyPopper className="h-4 w-4 text-amber-600" />
-              <span>🎂 {cumpleanerosCount} Cumpleaños Hoy</span>
-            </button>
-          )}
-
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-2">
+        {cumpleanerosCount > 0 && (
           <button
-            onClick={handleOpenCrearModal}
-            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-2xl shadow-sm transition-all"
+            onClick={() => setFiltroSoloCumpleanos(!filtroSoloCumpleanos)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              filtroSoloCumpleanos
+                ? 'bg-amber-500 text-white shadow-sm'
+                : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60'
+            }`}
           >
-            <Plus className="h-4 w-4" />
-            <span>+ Nuevo Contacto</span>
+            <PartyPopper className="h-3.5 w-3.5 text-amber-500" />
+            <span>🎂 {cumpleanerosCount} Cumpleaños Hoy</span>
           </button>
-        </div>
+        )}
+
+        <button
+          onClick={handleOpenCrearModal}
+          className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-all"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>Nuevo Contacto</span>
+        </button>
       </div>
 
       {/* Main iPhone Style Master-Detail Layout */}

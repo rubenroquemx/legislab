@@ -490,26 +490,15 @@ export default function UsuariosPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-            <Users className="h-6 w-6 text-blue-600" />
-            Sistema de Usuarios y Equipo del Despacho
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Gestión de integrantes, cargos, WhatsApp directo y matriz de permisos personalizables por módulo (Crear, Editar, Ver y Eliminar).
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={handleOpenCrearModal}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm shadow-blue-600/20 transition-all"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Nuevo Usuario</span>
-          </button>
-        </div>
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-2.5">
+        <button
+          onClick={handleOpenCrearModal}
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-1.5 rounded-xl shadow-xs transition-all"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>Nuevo Usuario</span>
+        </button>
       </div>
 
       {/* Top Stat Cards */}

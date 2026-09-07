@@ -260,52 +260,34 @@ export default function GruposPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
-              <UsersRound className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-gray-900">
-                Grupos y Segmentos
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-500">
-                Organización de contactos, comités territoriales y canales de WhatsApp
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Action Bar */}
+      <div className="flex flex-wrap items-center justify-end gap-2.5">
+        {/* BOTÓN DE SINCRONIZACIÓN AUTOMÁTICA */}
+        <button
+          onClick={handleSincronizarAutomaticamente}
+          disabled={sincronizando || !isWhatsappConnected}
+          className={cn(
+            "flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-xl shadow-xs transition-all",
+            isWhatsappConnected
+              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+          )}
+          title={isWhatsappConnected ? "Sincronizar participantes con WhatsApp" : "Conecta WhatsApp en Conexiones para activar la sincronización"}
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", sincronizando && "animate-spin")} />
+          <span>{sincronizando ? "Sincronizando..." : "Sincronización Automática"}</span>
+        </button>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* BOTÓN DE SINCRONIZACIÓN AUTOMÁTICA */}
-          <button
-            onClick={handleSincronizarAutomaticamente}
-            disabled={sincronizando || !isWhatsappConnected}
-            className={cn(
-              "flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl shadow-2xs transition-all",
-              isWhatsappConnected
-                ? "bg-green-600 hover:bg-green-700 text-white shadow-green-600/20"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-            )}
-            title={isWhatsappConnected ? "Sincronizar participantes con WhatsApp" : "Conecta WhatsApp en Conexiones para activar la sincronización"}
-          >
-            <RefreshCw className={cn("h-4 w-4", sincronizando && "animate-spin")} />
-            <span>{sincronizando ? "Sincronizando..." : "Sincronización Automática"}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setModalMode('crear_en_whatsapp');
-              setShowNewModal(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-sm shadow-blue-500/20 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Nuevo / Agregar Grupo</span>
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            setModalMode('crear_en_whatsapp');
+            setShowNewModal(true);
+          }}
+          className="flex items-center gap-2 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>Nuevo / Agregar Grupo</span>
+        </button>
       </div>
 
       {/* ALERTA EN CASO DE QUE WHATSAPP ESTÉ DESCONECTADO */}

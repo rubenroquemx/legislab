@@ -148,27 +148,15 @@ export default function TerritorioPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <Compass className="h-5 w-5 text-blue-600" />
-            Gestión Territorial & Mapa de Presencia
-          </h1>
-          <p className="text-xs text-gray-500">
-            Georreferenciación en tiempo real de actividades, audiencias ciudadanas y recorridos del despacho.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href="/agenda"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl border border-gray-200 transition-colors"
-          >
-            <Calendar className="h-3.5 w-3.5 text-blue-600" />
-            <span>Alimentado desde Agenda</span>
-          </Link>
-        </div>
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-2">
+        <Link
+          href="/agenda"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl border border-gray-200 transition-colors"
+        >
+          <Calendar className="h-3.5 w-3.5 text-blue-600" />
+          <span>Alimentado desde Agenda</span>
+        </Link>
       </div>
 
       {/* Metrics Row */}
