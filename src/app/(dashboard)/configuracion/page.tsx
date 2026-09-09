@@ -854,7 +854,7 @@ function ConfiguracionContent() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-gray-900">Google Drive — Expedientes y Archivos</h2>
+                    <h2 className="text-base font-bold text-gray-900">Google Drive</h2>
                     {driveConectado ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -906,65 +906,16 @@ function ConfiguracionContent() {
             </div>
 
             {driveConectado ? (
-              <div className="space-y-4">
-                <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4 space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
-                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
-                      <span>Carpeta Oficial Activa: LegisLab - Despacho Parlamentario</span>
-                    </div>
+              <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
+                    <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span>Carpeta Oficial Activa: LegisLab - Despacho Parlamentario</span>
                   </div>
-                  <p className="text-[11px] text-amber-800 leading-relaxed">
-                    Cada vez que registras una nueva gestión o petición ciudadana, LegisLab genera automáticamente una subcarpeta con formato <span className="font-mono bg-amber-100/70 px-1 py-0.5 rounded">/GES-XXXX - Nombre Ciudadano/</span> dentro de esta unidad.
-                  </p>
                 </div>
-
-                <form onSubmit={handleGuardarDrive} className="space-y-3 pt-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        URL / Enlace de la Carpeta en Google Drive
-                      </label>
-                      <input
-                        type="url"
-                        value={googleDriveFolderUrl}
-                        onChange={(e) => setGoogleDriveFolderUrl(e.target.value)}
-                        placeholder="https://drive.google.com/drive/folders/..."
-                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono text-amber-900 focus:bg-white focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        ID de Carpeta (Folder ID)
-                      </label>
-                      <input
-                        type="text"
-                        readOnly
-                        value={driveFolderIdReal || "Auto-generado por API"}
-                        className="w-full p-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-mono text-gray-600 select-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end">
-                    <button
-                      type="submit"
-                      className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
-                    >
-                      {guardadoDrive ? (
-                        <>
-                          <Check className="h-4 w-4" />
-                          <span>¡Carpeta de Google Drive Actualizada!</span>
-                        </>
-                      ) : (
-                        <>
-                          <HardDrive className="h-4 w-4" />
-                          <span>Guardar Cambios de Carpeta</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Cada vez que registras una nueva gestión o petición ciudadana, LegisLab genera automáticamente una subcarpeta con formato <span className="font-mono bg-amber-100/70 px-1 py-0.5 rounded">/GES-XXXX - Nombre Ciudadano/</span> dentro de esta unidad.
+                </p>
               </div>
             ) : (
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-xs text-gray-600 leading-relaxed">
@@ -982,7 +933,7 @@ function ConfiguracionContent() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-gray-900">Google Calendar — Agenda y Sesiones</h2>
+                    <h2 className="text-base font-bold text-gray-900">Google Calendar</h2>
                     {calendarConectado ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -1041,45 +992,9 @@ function ConfiguracionContent() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleGuardarCalendar} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                    <span>Opcional: Enlace / URL Secreta iCal de Google Calendar</span>
-                    <a
-                      href="https://calendar.google.com/calendar/u/0/r/settings"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
-                    >
-                      <span>Obtener enlace iCal</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </label>
-                  <input
-                    type="url"
-                    value={googleCalendarUrl}
-                    onChange={(e) => setGoogleCalendarUrl(e.target.value)}
-                    placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono text-blue-700 focus:bg-white focus:outline-none"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end pt-1">
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold px-4 py-2 rounded-xl transition-all"
-                  >
-                    {guardadoCalendar ? (
-                      <>
-                        <Check className="h-4 w-4 text-emerald-600" />
-                        <span>¡Guardado!</span>
-                      </>
-                    ) : (
-                      <span>Guardar URL iCal</span>
-                    )}
-                  </button>
-                </div>
-              </form>
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-xs text-gray-600 leading-relaxed">
+                Al conectar Google Calendar con un solo clic mediante OAuth 2.0, las sesiones ordinarias, reuniones de comisión y audiencias ciudadanas de LegisLab se sincronizarán en tiempo real con tu calendario personal o institucional.
+              </div>
             )}
           </div>
         </div>
