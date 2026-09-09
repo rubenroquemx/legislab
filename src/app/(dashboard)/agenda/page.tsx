@@ -948,63 +948,61 @@ export default function AgendaPage() {
   return (
     <div className="space-y-4 font-sans text-gray-800 dark:text-gray-100">
       {/* Google Calendar Top Bar */}
-      <div className="bg-white px-5 py-3.5 rounded-2xl border border-gray-200/80 dark:border-gray-800/90 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={() => {
-              setNuevaFecha(fechaSeleccionada);
-              setNuevaHora('09:00');
-              setNuevaHoraFin('10:30');
-              setIsCustomTipo(false);
-              setCustomTipoInput('');
-              setIsModalCrearOpen(true);
-            }}
-            className="inline-flex items-center gap-2.5 bg-white hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-full border border-gray-200/80 dark:border-gray-800 shadow-sm hover:shadow-md transition-all text-xs sm:text-sm"
-          >
-            <div className="h-5 w-5 flex items-center justify-center font-bold text-lg text-[#1a73e8]">+</div>
-            <span className="font-medium text-gray-800 dark:text-gray-100">Crear</span>
-          </button>
-
-          <button
-            onClick={() => setFechaSeleccionada(formatDate(new Date()))}
-            className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white border border-gray-300 dark:border-gray-700 rounded-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors shadow-2xs"
-          >
-            Hoy
-          </button>
-
-          <div className="flex items-center gap-1">
+      <div className="bg-white dark:bg-[#121824] px-3.5 sm:px-5 py-3 rounded-2xl border border-gray-200/80 dark:border-gray-800/90 shadow-xs space-y-2.5 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4">
+        {/* Fila 1: Botón Crear + Hoy + Flechas + Título fecha */}
+        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
-              onClick={handleNavAnterior}
-              title="Anterior"
-              className="p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:bg-gray-800 rounded-full transition-colors"
+              onClick={() => {
+                setNuevaFecha(fechaSeleccionada);
+                setNuevaHora('09:00');
+                setNuevaHoraFin('10:30');
+                setIsCustomTipo(false);
+                setCustomTipoInput('');
+                setIsModalCrearOpen(true);
+              }}
+              className="inline-flex items-center gap-1 sm:gap-2 bg-white hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-200 font-semibold px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-gray-200/80 dark:border-gray-800 shadow-sm hover:shadow-md transition-all text-xs sm:text-sm shrink-0"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <div className="h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-bold text-base sm:text-lg text-[#1a73e8]">+</div>
+              <span className="font-medium text-gray-800 dark:text-gray-100">Crear</span>
             </button>
+
             <button
-              onClick={handleNavSiguiente}
-              title="Siguiente"
-              className="p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:bg-gray-800 rounded-full transition-colors"
+              onClick={() => setFechaSeleccionada(formatDate(new Date()))}
+              className="px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white border border-gray-300 dark:border-gray-700 rounded-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors shadow-2xs shrink-0"
             >
-              <ChevronRight className="h-4 w-4" />
+              Hoy
             </button>
+
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={handleNavAnterior}
+                title="Anterior"
+                className="p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:bg-gray-800 rounded-full transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleNavSiguiente}
+                title="Siguiente"
+                className="p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:bg-gray-800 rounded-full transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          <h2 className="text-base sm:text-lg font-medium text-gray-800 dark:text-gray-100 capitalize tracking-tight ml-1">
+          <h2 className="text-xs sm:text-lg font-medium text-gray-800 dark:text-gray-100 capitalize tracking-tight truncate max-w-[150px] sm:max-w-none text-right sm:text-left ml-1">
             {getTituloNavegacion()}
           </h2>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800/80 text-[11px] font-medium text-gray-600 dark:text-gray-300 shadow-2xs">
-            <div className={`h-2 w-2 rounded-full ${isSyncingGCal ? 'bg-blue-500 animate-ping' : 'bg-[#0b8043]'}`}></div>
-            <span className="font-semibold text-gray-700 dark:text-gray-200">Google Calendar:</span>
-            <span className="text-gray-500 dark:text-gray-400">{isSyncingGCal ? 'Sincronizando...' : lastSyncTime}</span>
-          </div>
-
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800/90 p-1 rounded-xl text-xs font-semibold border border-gray-200/80 dark:border-gray-800/60">
+        {/* Fila 2: Selector Vista + Badge Sync + Compartir */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full md:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-800/60">
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800/90 p-0.5 sm:p-1 rounded-xl text-xs font-semibold border border-gray-200/80 dark:border-gray-800/60 shrink-0">
             <button
               onClick={() => setVista('dia')}
-              className={`px-3 py-1 rounded-lg transition-all ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all ${
                 vista === 'dia'
                   ? 'bg-white text-[#1a73e8] shadow-xs font-bold'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white'
@@ -1014,7 +1012,7 @@ export default function AgendaPage() {
             </button>
             <button
               onClick={() => setVista('semana')}
-              className={`px-3 py-1 rounded-lg transition-all ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all ${
                 vista === 'semana'
                   ? 'bg-white text-[#1a73e8] shadow-xs font-bold'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white'
@@ -1024,7 +1022,7 @@ export default function AgendaPage() {
             </button>
             <button
               onClick={() => setVista('mes')}
-              className={`px-3 py-1 rounded-lg transition-all ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all ${
                 vista === 'mes'
                   ? 'bg-white text-[#1a73e8] shadow-xs font-bold'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white'
@@ -1034,17 +1032,24 @@ export default function AgendaPage() {
             </button>
           </div>
 
+          <div className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800/80 text-[11px] font-medium text-gray-600 dark:text-gray-300 shadow-2xs">
+            <div className={`h-2 w-2 rounded-full ${isSyncingGCal ? 'bg-blue-500 animate-ping' : 'bg-[#0b8043]'}`}></div>
+            <span className="font-semibold text-gray-700 dark:text-gray-200">Google Calendar:</span>
+            <span className="text-gray-500 dark:text-gray-400">{isSyncingGCal ? 'Sincronizando...' : lastSyncTime}</span>
+          </div>
+
           <button
             onClick={handleOpenCompartir}
             disabled={!diaTieneEventos}
-            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all ${
+            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 sm:px-3.5 py-1.5 rounded-full transition-all shrink-0 ${
               diaTieneEventos
                 ? 'bg-[#0b8043] hover:bg-[#096e38] text-white shadow-sm cursor-pointer'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-200/80 dark:border-gray-800 cursor-not-allowed opacity-60'
             }`}
           >
             <Share2 className="h-3.5 w-3.5" />
-            <span>Compartir agenda</span>
+            <span className="hidden sm:inline">Compartir agenda</span>
+            <span className="sm:hidden">Compartir</span>
           </button>
         </div>
       </div>
@@ -1052,14 +1057,14 @@ export default function AgendaPage() {
       {/* 1. GOOGLE CALENDAR VISTA DIARIA (24 HORAS) */}
       {vista === 'dia' && (
         <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden">
-          <div className="p-3 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-4">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-gray-100 capitalize">
-                {new Date(`${fechaSeleccionada}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+          <div className="p-2.5 sm:p-3 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-3 sm:px-4">
+            <div className="flex items-center gap-1.5 sm:gap-2 truncate mr-2">
+              <span className="font-bold text-gray-800 dark:text-gray-100 capitalize truncate">
+                {new Date(`${fechaSeleccionada}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
               </span>
-              <span>• Horario continuo de 24 horas</span>
+              <span className="hidden sm:inline">• Horario continuo 24 horas</span>
             </div>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">{eventosDelDia.length} eventos agendados</span>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 shrink-0">{eventosDelDia.length} eventos</span>
           </div>
 
           <div className="divide-y divide-gray-100 dark:divide-gray-800/70 max-h-[75vh] overflow-y-auto">
@@ -1076,15 +1081,15 @@ export default function AgendaPage() {
                   className={`group flex transition-all cursor-pointer relative ${
                     hasEvents 
                       ? 'min-h-[72px] bg-white dark:bg-transparent hover:bg-blue-50/20' 
-                      : 'min-h-[36px] hover:bg-blue-50/30'
+                      : 'min-h-[34px] sm:min-h-[36px] hover:bg-blue-50/30'
                   }`}
                 >
-                  <div className={`w-28 border-r border-gray-100 dark:border-gray-800/70 flex items-center justify-end pr-3 shrink-0 select-none ${
+                  <div className={`w-14 sm:w-24 md:w-28 border-r border-gray-100 dark:border-gray-800/70 flex items-center justify-end pr-2 sm:pr-3 shrink-0 select-none ${
                     hasEvents ? 'items-start pt-3' : ''
                   }`}>
                     <div className="flex items-center gap-1 text-[11px] font-medium text-gray-400 dark:text-gray-500 group-hover:text-[#1a73e8] transition-colors">
-                      <span className="font-mono">{slot.label24}</span>
-                      <span className="text-[9px] text-gray-400/70">({slot.label12})</span>
+                      <span className="font-mono text-[10px] sm:text-[11px]">{slot.label24}</span>
+                      <span className="hidden sm:inline text-[9px] text-gray-400/70">({slot.label12})</span>
                     </div>
                   </div>
 
@@ -1180,12 +1185,34 @@ export default function AgendaPage() {
 
       {/* 2. GOOGLE CALENDAR VISTA SEMANAL (24 HORAS) */}
       {vista === 'semana' && (
-        <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-x-auto">
-          <div className="min-w-[960px]">
-            <div className="grid grid-cols-8 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 text-center sticky top-0 z-10">
-              <div className="p-3 border-r border-gray-200/80 dark:border-gray-800 flex items-center justify-center text-[11px] font-medium text-gray-400 dark:text-gray-500">
-                24 HORAS
-              </div>
+        <div className="space-y-2">
+          {/* Tira responsiva de selector de días para móvil */}
+          <div className="sm:hidden grid grid-cols-7 gap-1 bg-white dark:bg-[#121824] p-1.5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs text-center">
+            {diasSemana.map((col) => (
+              <button
+                key={col.fecha}
+                type="button"
+                onClick={() => setFechaSeleccionada(col.fecha)}
+                className={`py-1.5 rounded-xl flex flex-col items-center justify-center transition-all ${
+                  fechaSeleccionada === col.fecha
+                    ? 'bg-[#1a73e8] text-white font-bold shadow-xs'
+                    : col.esHoy
+                    ? 'bg-blue-50 dark:bg-blue-950/50 text-[#1a73e8] font-bold border border-blue-200 dark:border-blue-800'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                <span className="text-[9px] uppercase">{col.diaNombre.slice(0, 3)}</span>
+                <span className="text-xs font-mono">{col.diaNumero}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-x-auto">
+            <div className="min-w-[840px] sm:min-w-[960px]">
+              <div className="grid grid-cols-8 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 text-center sticky top-0 z-10">
+                <div className="p-3 border-r border-gray-200/80 dark:border-gray-800 flex items-center justify-center text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                  24 HORAS
+                </div>
               {diasSemana.map((col) => (
                 <div
                   key={col.fecha}
@@ -1307,12 +1334,13 @@ export default function AgendaPage() {
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* 3. GOOGLE CALENDAR VISTA MENSUAL */}
       {vista === 'mes' && (
-        <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs p-4 space-y-3">
-          <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider py-1 border-b border-gray-100 dark:border-gray-800">
+        <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs p-2.5 sm:p-4 space-y-2 sm:space-y-3">
+          <div className="grid grid-cols-7 text-center text-[10px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider py-1 border-b border-gray-100 dark:border-gray-800">
             <span>LUN</span>
             <span>MAR</span>
             <span>MIÉ</span>
@@ -1322,7 +1350,7 @@ export default function AgendaPage() {
             <span>DOM</span>
           </div>
 
-          <div className="grid grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
             {Array.from({ length: 30 }, (_, i) => {
               const diaNum = i + 1;
               const mesStr = parseDate(fechaSeleccionada).getMonth() + 1;
@@ -1330,7 +1358,7 @@ export default function AgendaPage() {
               const fStr = `${yearStr}-${String(mesStr).padStart(2, '0')}-${String(diaNum).padStart(2, '0')}`;
               const evs = eventos.filter((e) => e.fecha === fStr);
               const isSelected = fechaSeleccionada === fStr;
-              const esHoy = fStr === '2026-09-02';
+              const esHoy = fStr === formatDate(new Date());
 
               return (
                 <div
@@ -1341,15 +1369,17 @@ export default function AgendaPage() {
                   }}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, fStr, '09:00')}
-                  className={`min-h-[105px] p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                  className={`min-h-[50px] sm:min-h-[105px] p-1 sm:p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                     isSelected
                       ? 'border-[#1a73e8] bg-[#e8f0fe]/30 shadow-xs'
-                      : 'border-gray-200/80 dark:border-gray-800 hover:border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50/70'
+                      : esHoy
+                      ? 'border-blue-300 dark:border-blue-800 bg-blue-50/20'
+                      : 'border-gray-200/80 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-transparent'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span
-                      className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      className={`h-4 w-4 sm:h-6 sm:w-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold ${
                         esHoy
                           ? 'bg-[#1a73e8] text-white'
                           : isSelected
@@ -1360,13 +1390,22 @@ export default function AgendaPage() {
                       {diaNum}
                     </span>
                     {evs.length > 0 && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                      <span className="text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
                         {evs.length}
                       </span>
                     )}
                   </div>
 
-                  <div className="space-y-1 mt-1 overflow-hidden">
+                  {/* Móvil: puntos de colores */}
+                  <div className="flex sm:hidden flex-wrap gap-0.5 mt-0.5 justify-center">
+                    {evs.slice(0, 3).map((e) => (
+                      <span key={e.id} className={`h-1.5 w-1.5 rounded-full ${getGoogleEventColor(e.tipo).dot}`}></span>
+                    ))}
+                    {evs.length > 3 && <span className="text-[8px] text-[#1a73e8] font-bold leading-none">+</span>}
+                  </div>
+
+                  {/* Escritorio: chips con texto */}
+                  <div className="hidden sm:block space-y-1 mt-1 overflow-hidden">
                     {evs.slice(0, 2).map((e) => {
                       const style = getGoogleEventColor(e.tipo);
                       return (
@@ -1400,8 +1439,8 @@ export default function AgendaPage() {
 
       {/* MODAL DETALLES DEL EVENTO */}
       {eventoDetalle && !eventoAEditar && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className={`h-3 w-3 rounded-full ${getGoogleEventColor(eventoDetalle.tipo).dot}`}></span>
@@ -1518,8 +1557,8 @@ export default function AgendaPage() {
 
       {/* MODAL EDITAR EVENTO */}
       {eventoAEditar && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Edit3 className="h-5 w-5 text-[#1a73e8]" />
@@ -1905,8 +1944,8 @@ export default function AgendaPage() {
 
       {/* MODAL NUEVO EVENTO */}
       {isModalCrearOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-xl space-y-5 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Plus className="h-5 w-5 text-[#1a73e8]" />
@@ -2342,8 +2381,8 @@ export default function AgendaPage() {
 
       {/* MODAL COMPARTIR AGENDA POR WHATSAPP */}
       {isModalCompartirOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-[#0b8043] flex items-center justify-center text-white">
