@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   if (error || !code) {
     console.warn('Google Drive OAuth error:', error);
     return NextResponse.redirect(
-      new URL(`/configuracion?tab=conexiones&gdrive_error=${encodeURIComponent(error || 'no_code')}`, request.url)
+      new URL(`/configuracion?tab=conexiones&gdrive_error=${encodeURIComponent(error || 'no_code')}`, origin)
     );
   }
 
@@ -50,11 +50,11 @@ export async function GET(request: NextRequest) {
       console.warn('Database save warning during Google Drive callback:', dbErr);
     }
 
-    return NextResponse.redirect(new URL('/configuracion?tab=conexiones&gdrive_status=connected', request.url));
+    return NextResponse.redirect(new URL('/configuracion?tab=conexiones&gdrive_status=connected', origin));
   } catch (err: any) {
     console.error('Error exchanging Google Drive code:', err);
     return NextResponse.redirect(
-      new URL(`/configuracion?tab=conexiones&gdrive_error=${encodeURIComponent(err?.message || 'exchange_failed')}`, request.url)
+      new URL(`/configuracion?tab=conexiones&gdrive_error=${encodeURIComponent(err?.message || 'exchange_failed')}`, origin)
     );
   }
 }

@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(authUrl);
   } catch (error) {
     console.error('Error generating Google Calendar OAuth URL:', error);
-    return NextResponse.redirect(new URL('/agenda?gcal_error=oauth_init_failed', request.url));
+    const origin = getAppBaseUrl(request);
+    return NextResponse.redirect(new URL('/agenda?gcal_error=oauth_init_failed', origin));
   }
 }

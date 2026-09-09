@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   if (error || !code) {
     console.warn('Google Calendar OAuth error:', error);
-    return NextResponse.redirect(new URL(`/agenda?gcal_error=${encodeURIComponent(error || 'no_code')}`, request.url));
+    return NextResponse.redirect(new URL(`/agenda?gcal_error=${encodeURIComponent(error || 'no_code')}`, origin));
   }
 
   try {
@@ -41,11 +41,11 @@ export async function GET(request: NextRequest) {
       console.warn('Database save warning during Google Calendar callback:', dbErr);
     }
 
-    return NextResponse.redirect(new URL('/agenda?gcal_status=connected', request.url));
+    return NextResponse.redirect(new URL('/agenda?gcal_status=connected', origin));
   } catch (err: any) {
     console.error('Error exchanging Google Calendar code:', err);
     return NextResponse.redirect(
-      new URL(`/agenda?gcal_error=${encodeURIComponent(err?.message || 'exchange_failed')}`, request.url)
+      new URL(`/agenda?gcal_error=${encodeURIComponent(err?.message || 'exchange_failed')}`, origin)
     );
   }
 }
