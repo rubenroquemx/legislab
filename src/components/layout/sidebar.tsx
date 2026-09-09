@@ -136,7 +136,7 @@ export function Sidebar({
                   LegisLab
                 </span>
                 <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 border border-zinc-200 px-1 py-0.2 rounded">
-                  v1.0
+                  v1.1
                 </span>
               </div>
             )}
