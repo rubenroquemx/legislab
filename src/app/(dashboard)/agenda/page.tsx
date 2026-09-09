@@ -125,6 +125,33 @@ function formatDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function isValidGoogleMapsUrl(url: string): boolean {
+  if (!url || !url.trim()) return false;
+  const val = url.trim().toLowerCase();
+  
+  const patterns = [
+    'google.com/maps',
+    'maps.google.',
+    'maps.app.goo.gl',
+    'goo.gl/maps',
+    'share.google',
+    'maps.apple.com',
+    'waze.com',
+    'openstreetmap.org'
+  ];
+  
+  if (patterns.some(p => val.includes(p))) return true;
+
+  try {
+    const formatted = val.startsWith('http://') || val.startsWith('https://') ? val : `https://${val}`;
+    const parsed = new URL(formatted);
+    const host = parsed.hostname;
+    return patterns.some(p => host.includes(p)) || parsed.pathname.includes('/maps') || parsed.pathname.includes('/place') || parsed.searchParams.has('q');
+  } catch {
+    return false;
+  }
+}
+
 function getWeekDays(currentDateStr: string) {
   const base = parseDate(currentDateStr);
   const dayOfWeek = base.getDay();
@@ -133,6 +160,7 @@ function getWeekDays(currentDateStr: string) {
   const monday = new Date(base);
   monday.setDate(base.getDate() + distanceToMonday);
 
+  const todayFormatted = formatDate(new Date());
   const days = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
@@ -144,7 +172,7 @@ function getWeekDays(currentDateStr: string) {
       fecha: fStr,
       diaNombre: diaNombre.toUpperCase(),
       diaNumero,
-      esHoy: fStr === '2026-09-02',
+      esHoy: fStr === todayFormatted,
     });
   }
   return days;
@@ -180,11 +208,34 @@ export default function AgendaPage() {
       }
     }
     load();
+
+    if (typeof window !== 'undefined') {
+      try {
+        const savedSedes = localStorage.getItem('legislab_sedes_frecuentes');
+        if (savedSedes) {
+          const parsed = JSON.parse(savedSedes);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSedesFrecuentes(parsed);
+          }
+        }
+        const savedTipos = localStorage.getItem('legislab_tipos_eventos');
+        if (savedTipos) {
+          const parsedTipos = JSON.parse(savedTipos);
+          if (Array.isArray(parsedTipos) && parsedTipos.length > 0) {
+            setTiposEventos(parsedTipos);
+          }
+        }
+      } catch (e) {
+        console.error('Error loading agenda config from localStorage:', e);
+      }
+    }
   }, []);
+
+  const todayStr = formatDate(new Date());
   const [sedesFrecuentes, setSedesFrecuentes] = useState<SedeFrecuente[]>(SEDES_PREDETERMINADAS);
   const [tiposEventos, setTiposEventos] = useState<string[]>(TIPOS_BASE);
-  const [vista, setVista] = useState<'mes' | 'semana' | 'dia'>('dia');
-  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>('2026-09-02');
+  const [vista, setVista] = useState<'mes' | 'semana' | 'dia'>('semana');
+  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(todayStr);
 
   // Google Calendar live sync states
   const [isSyncingGCal, setIsSyncingGCal] = useState(false);
@@ -196,6 +247,8 @@ export default function AgendaPage() {
   const [eventoDetalle, setEventoDetalle] = useState<EventoLegislativo | null>(null);
   const [eventoAEditar, setEventoAEditar] = useState<EventoLegislativo | null>(null);
   const [eventoAEliminar, setEventoAEliminar] = useState<EventoLegislativo | null>(null);
+  const [sedeAEliminar, setSedeAEliminar] = useState<SedeFrecuente | null>(null);
+  const [tipoAEliminar, setTipoAEliminar] = useState<string | null>(null);
   const [reagendadoPendiente, setReagendadoPendiente] = useState<{
     evento: EventoLegislativo;
     nuevaFecha: string;
@@ -207,7 +260,7 @@ export default function AgendaPage() {
 
   // Form states (Crear)
   const [nuevoTitulo, setNuevoTitulo] = useState('');
-  const [nuevaFecha, setNuevaFecha] = useState('2026-09-02');
+  const [nuevaFecha, setNuevaFecha] = useState(todayStr);
   const [nuevaHora, setNuevaHora] = useState('09:00 AM');
   const [nuevaHoraFin, setNuevaHoraFin] = useState('10:30 AM');
   const [nuevoLugar, setNuevoLugar] = useState('');
@@ -461,10 +514,39 @@ export default function AgendaPage() {
     triggerGoogleCalendarSync();
   };
 
+  const handleConfirmarEliminarSede = () => {
+    if (!sedeAEliminar) return;
+    const updated = sedesFrecuentes.filter((s) => s.id !== sedeAEliminar.id);
+    setSedesFrecuentes(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(updated));
+    }
+    if (sedeSeleccionadaId === sedeAEliminar.id) setSedeSeleccionadaId('');
+    if (editSedeSeleccionadaId === sedeAEliminar.id) setEditSedeSeleccionadaId('personalizada');
+    setSedeAEliminar(null);
+  };
+
+  const handleConfirmarEliminarTipo = () => {
+    if (!tipoAEliminar) return;
+    const updated = tiposEventos.filter((t) => t !== tipoAEliminar);
+    setTiposEventos(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('legislab_tipos_eventos', JSON.stringify(updated));
+    }
+    if (nuevoTipo === tipoAEliminar) setNuevoTipo(updated[0] || 'Comisión');
+    if (editTipo === tipoAEliminar) setEditTipo(updated[0] || 'Comisión');
+    setTipoAEliminar(null);
+  };
+
   const handleCrearEvento = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoTitulo.trim() || !nuevoLugar.trim() || !nuevaUbicacionUrl.trim()) {
-      alert('Por favor completa todos los campos obligatorios (Título, Lugar y Enlace de Ubicación).');
+      alert('Por favor completa todos los campos obligatorios (Nombre del evento, Lugar y Ubicación).');
+      return;
+    }
+
+    if (!isValidGoogleMapsUrl(nuevaUbicacionUrl.trim())) {
+      alert('Por favor ingresa un enlace válido de Google Maps (ej: https://maps.app.goo.gl/... o https://maps.google.com/...).');
       return;
     }
 
@@ -477,7 +559,11 @@ export default function AgendaPage() {
       }
       tipoFinal = customTrimmed;
       if (!tiposEventos.includes(tipoFinal)) {
-        setTiposEventos([...tiposEventos, tipoFinal]);
+        const updatedTipos = [...tiposEventos, tipoFinal];
+        setTiposEventos(updatedTipos);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('legislab_tipos_eventos', JSON.stringify(updatedTipos));
+        }
       }
     }
 
@@ -486,7 +572,7 @@ export default function AgendaPage() {
         (s) => s.nombre.toLowerCase() === nuevoLugar.trim().toLowerCase()
       );
       if (!yaExiste) {
-        setSedesFrecuentes([
+        const updatedSedes = [
           ...sedesFrecuentes,
           {
             id: `sede-${Date.now()}`,
@@ -494,7 +580,11 @@ export default function AgendaPage() {
             ubicacionUrl: nuevaUbicacionUrl.trim(),
             referencia: tipoFinal,
           },
-        ]);
+        ];
+        setSedesFrecuentes(updatedSedes);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(updatedSedes));
+        }
       }
     }
 
@@ -533,6 +623,11 @@ export default function AgendaPage() {
       return;
     }
 
+    if (!isValidGoogleMapsUrl(editUbicacionUrl.trim())) {
+      alert('Por favor ingresa un enlace válido de Google Maps (ej: https://maps.app.goo.gl/... o https://maps.google.com/...).');
+      return;
+    }
+
     let tipoFinal = editTipo;
     if (editIsCustomTipo) {
       const customTrimmed = editCustomTipoInput.trim();
@@ -542,7 +637,11 @@ export default function AgendaPage() {
       }
       tipoFinal = customTrimmed;
       if (!tiposEventos.includes(tipoFinal)) {
-        setTiposEventos([...tiposEventos, tipoFinal]);
+        const updatedTipos = [...tiposEventos, tipoFinal];
+        setTiposEventos(updatedTipos);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('legislab_tipos_eventos', JSON.stringify(updatedTipos));
+        }
       }
     }
 
@@ -653,7 +752,7 @@ export default function AgendaPage() {
           </button>
 
           <button
-            onClick={() => setFechaSeleccionada('2026-09-02')}
+            onClick={() => setFechaSeleccionada(formatDate(new Date()))}
             className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white border border-gray-300 dark:border-gray-700 rounded-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors shadow-2xs"
           >
             Hoy
@@ -1081,7 +1180,7 @@ export default function AgendaPage() {
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className={`h-3 w-3 rounded-full ${getGoogleEventColor(eventoDetalle.tipo).dot}`}></span>
-                <h2 className="text-base font-bold text-gray-900 dark:text-white">Detalles del Compromiso</h2>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">Detalles del evento</h2>
               </div>
               <button 
                 onClick={() => setEventoDetalle(null)} 
@@ -1111,7 +1210,7 @@ export default function AgendaPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-gray-400 dark:text-gray-500 font-medium block">Sede / Lugar:</span>
+                  <span className="text-gray-400 dark:text-gray-500 font-medium block">Lugar:</span>
                   <div className="flex items-center gap-1.5 font-semibold text-gray-900 dark:text-white">
                     <Landmark className="h-3.5 w-3.5 text-[#1a73e8]" />
                     <span>{eventoDetalle.lugar}</span>
@@ -1120,7 +1219,7 @@ export default function AgendaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Enlace de Ubicación:</span>
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Ubicación (Google maps):</span>
                 <a
                   href={eventoDetalle.ubicacionUrl}
                   target="_blank"
@@ -1135,7 +1234,7 @@ export default function AgendaPage() {
 
               {eventoDetalle.descripcion && (
                 <div className="space-y-1.5">
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Notas / Instrucciones Parlamentarias:</span>
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Notas:</span>
                   <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 text-xs text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
                     {eventoDetalle.descripcion}
                   </div>
@@ -1195,11 +1294,11 @@ export default function AgendaPage() {
       {/* MODAL EDITAR EVENTO */}
       {eventoAEditar && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-5 max-h-[92vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Edit3 className="h-5 w-5 text-[#1a73e8]" />
-                Editar Compromiso en Agenda
+                Editar evento
               </h2>
               <button onClick={() => setEventoAEditar(null)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
             </div>
@@ -1207,7 +1306,7 @@ export default function AgendaPage() {
             <form onSubmit={handleGuardarEdicion} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
-                  Título / Asunto del Evento <span className="text-red-500">*</span>
+                  Nombre del evento <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   required
@@ -1259,19 +1358,20 @@ export default function AgendaPage() {
                 </div>
               </div>
 
-              {/* Sedes Frecuentes / Autocompletado en Edición */}
-              <div className="bg-gray-50 dark:bg-gray-800/40/80 p-3.5 rounded-xl border border-gray-200/80 dark:border-gray-800 space-y-3">
+              {/* Lugar */}
+              <div className="bg-gray-50 dark:bg-gray-800/40 p-3.5 rounded-xl border border-gray-200/80 dark:border-gray-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
                     <Building2 className="h-3.5 w-3.5 text-[#1a73e8]" />
-                    <span>Sede / Ubicación:</span>
+                    <span>Lugar:</span>
                   </label>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Selecciona o administra lugares guardados</span>
                 </div>
 
                 <select
                   value={editSedeSeleccionadaId}
                   onChange={(e) => handleSeleccionarSedeFrecuente(e.target.value, true)}
-                  className="w-full p-2 text-xs bg-white border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full p-2 text-xs bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
                 >
                   <option value="personalizada">✏️ Ubicación Manual / Personalizada</option>
                   {sedesFrecuentes.map((sede) => (
@@ -1281,81 +1381,184 @@ export default function AgendaPage() {
                   ))}
                 </select>
 
+                {/* Badges de lugares con botón x de eliminar */}
+                {sedesFrecuentes.length > 0 && (
+                  <div className="pt-1">
+                    <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Lugares guardados:</p>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                      {sedesFrecuentes.map((sede) => {
+                        const isSelected = editSedeSeleccionadaId === sede.id;
+                        return (
+                          <div
+                            key={sede.id}
+                            className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-blue-50 border-blue-300 text-[#1a73e8] font-bold dark:bg-blue-950/40 dark:border-blue-700'
+                                : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700'
+                            }`}
+                            onClick={() => handleSeleccionarSedeFrecuente(sede.id, true)}
+                          >
+                            <span className="truncate max-w-[180px]">📍 {sede.nombre}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSedeAEliminar(sede);
+                              }}
+                              title="Eliminar este lugar"
+                              className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors shrink-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2 pt-1">
                   <div>
                     <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1">
-                      Nombre del Lugar / Sede <span className="text-red-500">*</span>
+                      Lugar <span className="text-red-500">*</span>
                     </label>
                     <input
                       required
                       type="text"
                       value={editLugar}
                       onChange={(e) => setEditLugar(e.target.value)}
-                      className="w-full p-2 text-xs bg-white border border-gray-200/80 dark:border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100"
+                      className="w-full p-2 text-xs bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1">
-                      Enlace de Ubicación (Google Maps / Share) <span className="text-red-500">*</span>
+                    <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center justify-between">
+                      <span>Ubicación (Google maps) <span className="text-red-500">*</span></span>
+                      {editUbicacionUrl.trim() && (
+                        isValidGoogleMapsUrl(editUbicacionUrl) ? (
+                          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                            <Check className="h-3 w-3" /> Enlace válido
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" /> URL no reconocida como Google Maps
+                          </span>
+                        )
+                      )}
                     </label>
                     <input
                       required
                       type="url"
                       value={editUbicacionUrl}
                       onChange={(e) => setEditUbicacionUrl(e.target.value)}
-                      className="w-full p-2 text-xs bg-white border border-gray-200/80 dark:border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 text-[#1a73e8] font-mono"
+                      className={`w-full p-2 text-xs bg-white dark:bg-gray-900 border rounded-lg focus:ring-2 font-mono ${
+                        editUbicacionUrl.trim() && !isValidGoogleMapsUrl(editUbicacionUrl)
+                          ? 'border-amber-400 focus:ring-amber-500 text-amber-700 dark:text-amber-300'
+                          : 'border-gray-200/80 dark:border-gray-800 focus:ring-blue-500 text-[#1a73e8]'
+                      }`}
                     />
+                    {editUbicacionUrl.trim() && !isValidGoogleMapsUrl(editUbicacionUrl) && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                        ⚠️ Ingresa un enlace válido de Google Maps (ej: https://maps.app.goo.gl/..., https://maps.google.com/...)
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Tipo de Evento */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200">
-                  Tipo de Evento
-                </label>
-                <select
-                  value={editIsCustomTipo ? '__OTRO__' : editTipo}
-                  onChange={(e) => {
-                    if (e.target.value === '__OTRO__') {
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200">
+                    Tipo de Evento
+                  </label>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Selecciona o administra categorías</span>
+                </div>
+
+                {/* Chips de tipos con botón x para eliminar */}
+                <div className="flex flex-wrap gap-1.5">
+                  {tiposEventos.map((t) => {
+                    const isSelected = !editIsCustomTipo && editTipo === t;
+                    return (
+                      <div
+                        key={t}
+                        className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#1a73e8] text-white border-[#1a73e8] font-bold shadow-xs'
+                            : 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
+                        onClick={() => {
+                          setEditIsCustomTipo(false);
+                          setEditTipo(t);
+                        }}
+                      >
+                        <span>{t}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTipoAEliminar(t);
+                          }}
+                          title="Eliminar este tipo de evento"
+                          className={`p-0.5 rounded transition-colors ${
+                            isSelected
+                              ? 'text-white/80 hover:text-white hover:bg-blue-700'
+                              : 'text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50'
+                          }`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => {
                       setEditIsCustomTipo(true);
                       setEditCustomTipoInput('');
-                    } else {
-                      setEditIsCustomTipo(false);
-                      setEditTipo(e.target.value);
-                    }
-                  }}
-                  className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
-                >
-                  {tiposEventos.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                  <option value="__OTRO__">✨ + Agregar nuevo tipo de evento...</option>
-                </select>
+                    }}
+                    className={`text-xs px-2.5 py-1 rounded-lg border border-dashed border-blue-300 dark:border-blue-700 text-[#1a73e8] hover:bg-blue-50 dark:hover:bg-blue-950/30 font-medium ${
+                      editIsCustomTipo ? 'bg-blue-50 dark:bg-blue-950/50 border-solid font-bold' : ''
+                    }`}
+                  >
+                    + Nuevo tipo
+                  </button>
+                </div>
 
                 {editIsCustomTipo && (
-                  <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-2">
-                    <label className="block text-[11px] font-bold text-blue-900 flex items-center gap-1.5">
+                  <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800 space-y-2 animate-in fade-in">
+                    <label className="block text-[11px] font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
                       <Tag className="h-3.5 w-3.5 text-[#1a73e8]" />
                       <span>Nuevo tipo de evento:</span>
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={editCustomTipoInput}
-                      onChange={(e) => setEditCustomTipoInput(e.target.value)}
-                      placeholder="Ej: Audiencia Pública..."
-                      className="w-full p-2 text-xs bg-white border border-blue-200 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        required
+                        value={editCustomTipoInput}
+                        onChange={(e) => setEditCustomTipoInput(e.target.value)}
+                        placeholder="Ej: Audiencia Pública..."
+                        className="flex-1 p-2 text-xs bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditIsCustomTipo(false);
+                          setEditTipo(tiposEventos[0] || 'Comisión');
+                        }}
+                        className="p-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-lg"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Notas de Texto Largo */}
+              {/* Notas */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
-                  Notas / Instrucciones Parlamentarias
+                  Notas
                 </label>
                 <textarea
                   rows={4}
@@ -1388,7 +1591,7 @@ export default function AgendaPage() {
       {/* MODAL CONFIRMAR REAGENDADO (DRAG & DROP) */}
       {reagendadoPendiente && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-start gap-3.5">
               <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center text-[#1a73e8] shrink-0">
                 <CalendarRange className="h-5 w-5" />
@@ -1440,11 +1643,11 @@ export default function AgendaPage() {
       {/* MODAL NUEVO EVENTO */}
       {isModalCrearOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-xl border border-gray-200/80 dark:border-gray-800 space-y-5 max-h-[92vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-xl space-y-5 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Plus className="h-5 w-5 text-[#1a73e8]" />
-                Registrar Compromiso en Agenda
+                Nuevo evento
               </h2>
               <button onClick={() => setIsModalCrearOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
             </div>
@@ -1452,7 +1655,7 @@ export default function AgendaPage() {
             <form onSubmit={handleCrearEvento} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
-                  Título / Asunto del Evento <span className="text-red-500">*</span>
+                  Nombre del evento <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   required
@@ -1505,22 +1708,22 @@ export default function AgendaPage() {
                 </div>
               </div>
 
-              {/* Sedes Frecuentes / Autocompletado */}
-              <div className="bg-gray-50 dark:bg-gray-800/40/80 p-3.5 rounded-xl border border-gray-200/80 dark:border-gray-800 space-y-3">
+              {/* Lugar */}
+              <div className="bg-gray-50 dark:bg-gray-800/40 p-3.5 rounded-xl border border-gray-200/80 dark:border-gray-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
                     <Building2 className="h-3.5 w-3.5 text-[#1a73e8]" />
-                    <span>Sede / Ubicación Frecuente (Autocompletar):</span>
+                    <span>Lugar:</span>
                   </label>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Elige una o escribe abajo</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Elige una ubicación frecuente o escribe abajo</span>
                 </div>
 
                 <select
                   value={sedeSeleccionadaId}
                   onChange={(e) => handleSeleccionarSedeFrecuente(e.target.value)}
-                  className="w-full p-2 text-xs bg-white border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full p-2 text-xs bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
                 >
-                  <option value="">-- Seleccionar sede guardada --</option>
+                  <option value="">-- Seleccionar lugar guardado --</option>
                   {sedesFrecuentes.map((sede) => (
                     <option key={sede.id} value={sede.id}>
                       📍 {sede.nombre} ({sede.referencia || 'Sede'})
@@ -1529,10 +1732,46 @@ export default function AgendaPage() {
                   <option value="personalizada">✏️ + Otra Ubicación / Personalizada</option>
                 </select>
 
+                {/* Badges de lugares guardados con botón x de eliminación */}
+                {sedesFrecuentes.length > 0 && (
+                  <div className="pt-1">
+                    <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Lugares guardados:</p>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                      {sedesFrecuentes.map((sede) => {
+                        const isSelected = sedeSeleccionadaId === sede.id;
+                        return (
+                          <div
+                            key={sede.id}
+                            className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-blue-50 border-blue-300 text-[#1a73e8] font-bold dark:bg-blue-950/40 dark:border-blue-700'
+                                : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700'
+                            }`}
+                            onClick={() => handleSeleccionarSedeFrecuente(sede.id)}
+                          >
+                            <span className="truncate max-w-[180px]">📍 {sede.nombre}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSedeAEliminar(sede);
+                              }}
+                              title="Eliminar este lugar"
+                              className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors shrink-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2 pt-1">
                   <div>
                     <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1">
-                      Nombre del Lugar / Sede <span className="text-red-500">*</span>
+                      Lugar <span className="text-red-500">*</span>
                     </label>
                     <input
                       required
@@ -1540,22 +1779,42 @@ export default function AgendaPage() {
                       value={nuevoLugar}
                       onChange={(e) => setNuevoLugar(e.target.value)}
                       placeholder="Ej: Sala de Usos Múltiples en Congreso"
-                      className="w-full p-2 text-xs bg-white border border-gray-200/80 dark:border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100"
+                      className="w-full p-2 text-xs bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1">
-                      Enlace de Ubicación (Google Maps / Share) <span className="text-red-500">*</span>
+                    <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center justify-between">
+                      <span>Ubicación (Google maps) <span className="text-red-500">*</span></span>
+                      {nuevaUbicacionUrl.trim() && (
+                        isValidGoogleMapsUrl(nuevaUbicacionUrl) ? (
+                          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                            <Check className="h-3 w-3" /> Enlace válido
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" /> URL no reconocida como Google Maps
+                          </span>
+                        )
+                      )}
                     </label>
                     <input
                       required
                       type="url"
                       value={nuevaUbicacionUrl}
                       onChange={(e) => setNuevaUbicacionUrl(e.target.value)}
-                      placeholder="https://share.google/... o https://maps.app.goo.gl/..."
-                      className="w-full p-2 text-xs bg-white border border-gray-200/80 dark:border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 text-[#1a73e8] font-mono"
+                      placeholder="https://maps.app.goo.gl/... o https://maps.google.com/..."
+                      className={`w-full p-2 text-xs bg-white dark:bg-gray-900 border rounded-lg focus:ring-2 font-mono ${
+                        nuevaUbicacionUrl.trim() && !isValidGoogleMapsUrl(nuevaUbicacionUrl)
+                          ? 'border-amber-400 focus:ring-amber-500 text-amber-700 dark:text-amber-300'
+                          : 'border-gray-200/80 dark:border-gray-800 focus:ring-blue-500 text-[#1a73e8]'
+                      }`}
                     />
+                    {nuevaUbicacionUrl.trim() && !isValidGoogleMapsUrl(nuevaUbicacionUrl) && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                        ⚠️ Ingresa un enlace válido de Google Maps (ej: https://maps.app.goo.gl/..., https://maps.google.com/...)
+                      </p>
+                    )}
                   </div>
 
                   {nuevoLugar && nuevaUbicacionUrl && !sedesFrecuentes.some(s => s.nombre.toLowerCase() === nuevoLugar.trim().toLowerCase()) && (
@@ -1568,7 +1827,7 @@ export default function AgendaPage() {
                       />
                       <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-1">
                         <BookmarkPlus className="h-3.5 w-3.5 text-[#1a73e8]" />
-                        Guardar esta sede en ubicaciones frecuentes para futuros eventos
+                        Guardar este lugar en ubicaciones frecuentes para futuros eventos
                       </span>
                     </label>
                   )}
@@ -1577,31 +1836,66 @@ export default function AgendaPage() {
 
               {/* Tipo de Evento (Dinámico) */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200">
-                  Tipo de Evento
-                </label>
-                <select
-                  value={isCustomTipo ? '__OTRO__' : nuevoTipo}
-                  onChange={(e) => {
-                    if (e.target.value === '__OTRO__') {
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200">
+                    Tipo de Evento
+                  </label>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Selecciona o administra categorías</span>
+                </div>
+
+                {/* Chips de tipos de evento con botón x para eliminar */}
+                <div className="flex flex-wrap gap-1.5">
+                  {tiposEventos.map((t) => {
+                    const isSelected = !isCustomTipo && nuevoTipo === t;
+                    return (
+                      <div
+                        key={t}
+                        className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#1a73e8] text-white border-[#1a73e8] font-bold shadow-xs'
+                            : 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
+                        onClick={() => {
+                          setIsCustomTipo(false);
+                          setNuevoTipo(t);
+                        }}
+                      >
+                        <span>{t}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTipoAEliminar(t);
+                          }}
+                          title="Eliminar este tipo de evento"
+                          className={`p-0.5 rounded transition-colors ${
+                            isSelected
+                              ? 'text-white/80 hover:text-white hover:bg-blue-700'
+                              : 'text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50'
+                          }`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => {
                       setIsCustomTipo(true);
                       setCustomTipoInput('');
-                    } else {
-                      setIsCustomTipo(false);
-                      setNuevoTipo(e.target.value);
-                    }
-                  }}
-                  className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
-                >
-                  {tiposEventos.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                  <option value="__OTRO__">✨ + Agregar nuevo tipo de evento...</option>
-                </select>
+                    }}
+                    className={`text-xs px-2.5 py-1 rounded-lg border border-dashed border-blue-300 dark:border-blue-700 text-[#1a73e8] hover:bg-blue-50 dark:hover:bg-blue-950/30 font-medium ${
+                      isCustomTipo ? 'bg-blue-50 dark:bg-blue-950/50 border-solid font-bold' : ''
+                    }`}
+                  >
+                    + Nuevo tipo
+                  </button>
+                </div>
 
                 {isCustomTipo && (
-                  <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-2 animate-in fade-in">
-                    <label className="block text-[11px] font-bold text-blue-900 flex items-center gap-1.5">
+                  <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800 space-y-2 animate-in fade-in">
+                    <label className="block text-[11px] font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
                       <Tag className="h-3.5 w-3.5 text-[#1a73e8]" />
                       <span>Escribe el nombre del nuevo tipo de evento:</span>
                     </label>
@@ -1612,7 +1906,7 @@ export default function AgendaPage() {
                         value={customTipoInput}
                         onChange={(e) => setCustomTipoInput(e.target.value)}
                         placeholder="Ej: Foro Ciudadano, Rueda de Prensa, Mesa Técnica..."
-                        className="flex-1 p-2 text-xs bg-white border border-blue-200 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
+                        className="flex-1 p-2 text-xs bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-medium"
                       />
                       <button
                         type="button"
@@ -1620,7 +1914,7 @@ export default function AgendaPage() {
                           setIsCustomTipo(false);
                           setNuevoTipo(tiposEventos[0] || 'Comisión');
                         }}
-                        className="p-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 bg-white border border-gray-200/80 dark:border-gray-800 rounded-lg"
+                        className="p-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 rounded-lg"
                       >
                         Cancelar
                       </button>
@@ -1629,16 +1923,16 @@ export default function AgendaPage() {
                 )}
               </div>
 
-              {/* Notas de Texto Largo */}
+              {/* Notas */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
-                  Notas / Instrucciones Ampliadas (Texto Largo)
+                  Notas
                 </label>
                 <textarea
                   rows={4}
                   value={nuevaDescripcion}
                   onChange={(e) => setNuevaDescripcion(e.target.value)}
-                  placeholder="Escribe puntos clave a tratar, acuerdos previos, relación de invitados, documentos o expedientes requeridos para la sesión..."
+                  placeholder="Escribe puntos clave a tratar, acuerdos previos, relación de invitados, documentos o notas..."
                   className="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white text-gray-800 dark:text-gray-100 leading-relaxed"
                 />
               </div>
@@ -1655,7 +1949,7 @@ export default function AgendaPage() {
                   type="submit"
                   className="px-4 py-2 text-xs font-semibold bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-lg shadow-sm"
                 >
-                  Guardar en Agenda
+                  Crear evento
                 </button>
               </div>
             </form>
@@ -1663,16 +1957,16 @@ export default function AgendaPage() {
         </div>
       )}
 
-      {/* MODAL CONFIRMAR ELIMINACIÓN */}
+      {/* MODAL CONFIRMAR ELIMINACIÓN DE EVENTO */}
       {eventoAEliminar && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-start gap-3.5">
-              <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+              <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-gray-900 dark:text-white">¿Eliminar este compromiso?</h3>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">¿Eliminar este evento?</h3>
                 <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
                   ¿Realmente desea eliminar este evento? Esta acción no se puede deshacer.
                 </p>
@@ -1681,7 +1975,7 @@ export default function AgendaPage() {
 
             <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-800 text-xs space-y-1">
               <p className="font-bold text-gray-900 dark:text-white line-clamp-2">🟢 {eventoAEliminar.titulo}</p>
-              <p className="text-gray-600 dark:text-gray-300">⏰ {eventoAEliminar.hora} | Sede: {eventoAEliminar.lugar}</p>
+              <p className="text-gray-600 dark:text-gray-300">⏰ {eventoAEliminar.hora} | Lugar: {eventoAEliminar.lugar}</p>
             </div>
 
             <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
@@ -1705,10 +1999,93 @@ export default function AgendaPage() {
         </div>
       )}
 
+      {/* MODAL CONFIRMAR ELIMINACIÓN DE LUGAR / SEDE */}
+      {sedeAEliminar && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">¿Eliminar lugar frecuente?</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  ¿Realmente deseas eliminar este lugar de tus ubicaciones frecuentes?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-800 text-xs space-y-1">
+              <p className="font-bold text-gray-900 dark:text-white">📍 {sedeAEliminar.nombre}</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono truncate">{sedeAEliminar.ubicacionUrl}</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setSedeAEliminar(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarEliminarSede}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm shadow-red-600/20 transition-all"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Sí, eliminar lugar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR ELIMINACIÓN DE TIPO DE EVENTO */}
+      {tipoAEliminar && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">¿Eliminar tipo de evento?</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  ¿Realmente deseas eliminar la categoría &quot;{tipoAEliminar}&quot;?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-800 text-xs">
+              <p className="font-bold text-gray-900 dark:text-white">🏷️ {tipoAEliminar}</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setTipoAEliminar(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarEliminarTipo}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm shadow-red-600/20 transition-all"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Sí, eliminar tipo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL COMPARTIR AGENDA POR WHATSAPP */}
       {isModalCompartirOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-2xl w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-5 max-h-[92vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-[#0b8043] flex items-center justify-center text-white">
