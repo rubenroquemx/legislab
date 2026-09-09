@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { getGestiones, createGestion } from '@/app/actions/gestiones';
+import { createGestionDriveFolderAction } from '@/app/actions/drive';
 import { getCurrentTimeMexicoCity, MEXICO_TIMEZONE } from '@/lib/date-utils';
 import { 
   FolderKanban, 
@@ -404,6 +405,15 @@ export default function GestionesPage() {
 
     setGestiones([nueva, ...gestiones]);
     
+    // Disparar creación en vivo en Google Drive API si está conectado
+    createGestionDriveFolderAction(newFolio, nombre.trim()).then((driveRes) => {
+      if (driveRes.success && driveRes.folderUrl) {
+        setGestiones((prev) =>
+          prev.map((g) => (g.id === nueva.id ? { ...g, driveFolderUrl: driveRes.folderUrl! } : g))
+        );
+      }
+    }).catch(console.warn);
+
     // Notification of automatic Google Drive Folder Creation by ID
     alert(`✅ ¡Gestión ${newFolio} registrada exitosamente!\n\n📁 Se creó automáticamente la carpeta en Google Drive:\n• Nombre: /${newFolio} - ${nombre.trim()}/\n• ID de Gestión: ${newFolio}\n• Estado: Vinculada y lista para recibir documentos.`);
 

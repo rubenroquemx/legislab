@@ -6,6 +6,8 @@ import {
   disconnectWhatsApp,
   getWhatsAppInstanceInfo
 } from '@/app/actions/whatsapp';
+import { getGoogleDriveStatusAction, disconnectGoogleDriveAction } from '@/app/actions/drive';
+import { getGoogleCalendarStatusAction, disconnectGoogleCalendarAction } from '@/app/actions/agenda';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
@@ -181,6 +183,14 @@ function ConfiguracionContent() {
   const [probandoConexion, setProbandoConexion] = useState(false);
   const [ultimaSync, setUltimaSync] = useState('Hace unos segundos');
 
+  // Google Drive & Google Calendar OAuth 2.0 Live States
+  const [driveConectado, setDriveConectado] = useState(false);
+  const [driveEmail, setDriveEmail] = useState('');
+  const [driveFolderUrlReal, setDriveFolderUrlReal] = useState('');
+  const [driveFolderIdReal, setDriveFolderIdReal] = useState('');
+  const [calendarConectado, setCalendarConectado] = useState(false);
+  const [calendarEmail, setCalendarEmail] = useState('');
+
   // WhatsApp Web Gateway QR Connector State
   const [whatsappConectado, setWhatsappConectado] = useState(false);
   const [generandoQR, setGenerandoQR] = useState(false);
@@ -220,6 +230,22 @@ function ConfiguracionContent() {
         console.error('Error parsing doc configs', e);
       }
     }
+
+    getGoogleDriveStatusAction().then(res => {
+      if (res.success && res.connected) {
+        setDriveConectado(true);
+        setDriveEmail(res.email || '');
+        if (res.folderUrl) setDriveFolderUrlReal(res.folderUrl);
+        if (res.folderId) setDriveFolderIdReal(res.folderId);
+      }
+    });
+
+    getGoogleCalendarStatusAction().then(res => {
+      if (res.success && res.connected) {
+        setCalendarConectado(true);
+        setCalendarEmail(res.email || '');
+      }
+    });
   }, []);
 
   // Verificar estado real de conexión con Evolution API al cargar
@@ -373,6 +399,34 @@ function ConfiguracionContent() {
     localStorage.setItem('legislab_gdrive_folder', googleDriveFolderUrl);
     setGuardadoDrive(true);
     setTimeout(() => setGuardadoDrive(false), 3000);
+  };
+
+  const handleDisconnectDrive = async () => {
+    if (!confirm('¿Deseas desconectar tu cuenta de Google Drive de este despacho?')) return;
+    try {
+      const res = await disconnectGoogleDriveAction();
+      if (res.success) {
+        setDriveConectado(false);
+        setDriveEmail('');
+        setDriveFolderUrlReal('');
+        setDriveFolderIdReal('');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDisconnectCalendar = async () => {
+    if (!confirm('¿Deseas desconectar tu cuenta de Google Calendar de este despacho?')) return;
+    try {
+      const res = await disconnectGoogleCalendarAction();
+      if (res.success) {
+        setCalendarConectado(false);
+        setCalendarEmail('');
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleForzarSincronizacion = () => {
@@ -684,7 +738,7 @@ function ConfiguracionContent() {
             )}
           </div>
 
-          {/* CONEXIÓN 2: GOOGLE DRIVE API */}
+          {/* CONEXIÓN 2: GOOGLE DRIVE */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
               <div className="flex items-center gap-3">
@@ -693,80 +747,83 @@ function ConfiguracionContent() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-gray-900">Google Drive API — Almacenamiento Directo por Folio</h2>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      API Activa (OAuth 2.0)
-                    </span>
+                    <h2 className="text-base font-bold text-gray-900">Google Drive — Expedientes y Archivos</h2>
+                    {driveConectado ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Conectado ({driveEmail || "Cuenta de Google"})
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        No conectado
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Crea automáticamente subcarpetas por cada ID/Folio de Gestión y sube evidencias en segundo plano.
+                    Almacena automáticamente en la nube expedientes, iniciativas, oficios y evidencias por folio.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              {driveConectado ? (
+                <div className="flex items-center gap-2">
+                  {driveFolderUrlReal && (
+                    <a
+                      href={driveFolderUrlReal}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl transition-colors"
+                    >
+                      <FolderOpen className="h-3.5 w-3.5 text-amber-600" />
+                      <span>Abrir Carpeta Raíz en Drive</span>
+                      <ExternalLink className="h-3 w-3 text-amber-500" />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleDisconnectDrive}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl transition-colors"
+                  >
+                    Desconectar Drive
+                  </button>
+                </div>
+              ) : (
                 <a
-                  href={googleDriveFolderUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-xl transition-colors"
+                  href="/api/auth/google-drive"
+                  className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs transition-colors"
                 >
-                  <FolderOpen className="h-3.5 w-3.5 text-amber-600" />
-                  <span>Ver Carpeta Raíz en Drive</span>
-                  <ExternalLink className="h-3 w-3 text-gray-400" />
+                  <HardDrive className="h-4 w-4" />
+                  <span>Conectar con Google Drive</span>
                 </a>
-              </div>
+              )}
             </div>
 
-            <form onSubmit={handleGuardarDrive} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Enlace / URL de la Carpeta Raíz en Google Drive <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={googleDriveFolderUrl}
-                    onChange={(e) => setGoogleDriveFolderUrl(e.target.value)}
-                    placeholder="https://drive.google.com/drive/folders/..."
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono text-amber-800 focus:bg-white focus:outline-none"
-                  />
+            {driveConectado ? (
+              <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
+                  <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Carpeta Principal del Despacho Activa: LegisLab - Despacho Parlamentario</span>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Folder ID de Google Drive API
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value="1A2B3C4D5E6F7G8H9I0J-Expedientes"
-                    className="w-full p-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-mono text-gray-600 select-all"
-                  />
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Cada vez que registras una nueva gestión o petición ciudadana, LegisLab genera automáticamente una subcarpeta con formato <span className="font-mono bg-amber-100/70 px-1 py-0.5 rounded">/GES-XXXX - Nombre Ciudadano/</span> en tu unidad de Google Drive.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-gray-600">
+                  Al conectar Google Drive con un solo clic, se autorizará de forma segura mediante OAuth 2.0 y se creará la carpeta oficial <span className="font-semibold text-gray-800">&quot;LegisLab - Despacho Parlamentario&quot;</span> para organizar los expedientes de tu equipo.
+                </p>
+                <div className="pt-2">
+                  <a
+                    href="/api/auth/google-drive"
+                    className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm transition-all"
+                  >
+                    <HardDrive className="h-4 w-4" />
+                    <span>Autorizar Google Drive (1 Clic)</span>
+                  </a>
                 </div>
               </div>
-
-              <div className="flex items-center justify-end pt-1">
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm transition-all"
-                >
-                  {guardadoDrive ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      <span>¡Configuración de Google Drive API Guardada!</span>
-                    </>
-                  ) : (
-                    <>
-                      <HardDrive className="h-4 w-4" />
-                      <span>Guardar Configuración de Google Drive API</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+            )}
           </div>
 
           {/* CONEXIÓN 3: GOOGLE CALENDAR */}
@@ -778,69 +835,113 @@ function ConfiguracionContent() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-gray-900">Sincronización con Google Calendar</h2>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      En Vivo
-                    </span>
+                    <h2 className="text-base font-bold text-gray-900">Google Calendar — Agenda y Sesiones</h2>
+                    {calendarConectado ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Conectado ({calendarEmail || "Google Calendar"})
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                        Modo iCal / No sincronizado OAuth
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    La agenda de Legislab se actualiza y sincroniza en ambos sentidos con Google Calendar.
+                    Sincronización en vivo con Google Calendar para sesiones ordinarias, comisiones y audiencias.
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleForzarSincronizacion}
-                disabled={probandoConexion}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-xl transition-colors"
-              >
-                <RefreshCw className={cn("h-3.5 w-3.5 text-blue-600", probandoConexion && "animate-spin")} />
-                <span>Forzar Sincronización</span>
-              </button>
+              {calendarConectado ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleForzarSincronizacion}
+                    disabled={probandoConexion}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-xl transition-colors"
+                  >
+                    <RefreshCw className={cn("h-3.5 w-3.5 text-blue-600", probandoConexion && "animate-spin")} />
+                    <span>Sincronizar Ahora</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectCalendar}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl transition-colors"
+                  >
+                    Desconectar Calendar
+                  </button>
+                </div>
+              ) : (
+                <a
+                  href="/api/auth/google-calendar"
+                  className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors"
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span>Conectar con Google Calendar</span>
+                </a>
+              )}
             </div>
 
-            <form onSubmit={handleGuardarCalendar} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                  <span>Enlace / URL Secreta de Google Calendar (iCal)</span>
-                  <a
-                    href="https://calendar.google.com/calendar/u/0/r/settings"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[11px] text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
-                  >
-                    <span>Obtener enlace en Google Calendar</span>
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={googleCalendarUrl}
-                  onChange={(e) => setGoogleCalendarUrl(e.target.value)}
-                  placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono text-blue-700 focus:bg-white focus:outline-none"
-                />
+            {calendarConectado ? (
+              <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs">
+                  <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                  <span>Sincronización bidireccional activa con la cuenta {calendarEmail}</span>
+                </div>
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  Cualquier evento creado en el módulo de Agenda de LegisLab se sincroniza automáticamente con tu Google Calendar y viceversa con zona horaria America/Mexico_City.
+                </p>
               </div>
+            ) : (
+              <form onSubmit={handleGuardarCalendar} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                    <span>Opcional: Enlace / URL Secreta iCal de Google Calendar</span>
+                    <a
+                      href="https://calendar.google.com/calendar/u/0/r/settings"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
+                    >
+                      <span>Obtener enlace iCal</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </label>
+                  <input
+                    type="url"
+                    value={googleCalendarUrl}
+                    onChange={(e) => setGoogleCalendarUrl(e.target.value)}
+                    placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono text-blue-700 focus:bg-white focus:outline-none"
+                  />
+                </div>
 
-              <div className="flex items-center justify-end pt-1">
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm transition-all"
-                >
-                  {guardadoCalendar ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      <span>¡Google Calendar Guardado!</span>
-                    </>
-                  ) : (
-                    <span>Guardar Configuración de Calendar</span>
-                  )}
-                </button>
-              </div>
-            </form>
+                <div className="flex items-center justify-between pt-1">
+                  <a
+                    href="/api/auth/google-calendar"
+                    className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors"
+                  >
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Conectar OAuth 2.0 (Recomendado)</span>
+                  </a>
+
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold px-4 py-2 rounded-xl transition-all"
+                  >
+                    {guardadoCalendar ? (
+                      <>
+                        <Check className="h-4 w-4 text-emerald-600" />
+                        <span>¡Guardado!</span>
+                      </>
+                    ) : (
+                      <span>Guardar URL iCal</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

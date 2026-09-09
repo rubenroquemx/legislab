@@ -76,9 +76,14 @@ export const offices = pgTable('offices', {
     ])
   ),
 
-  // Google Drive Propio del Despacho
+  // Google Drive Propio del Despacho (OAuth 2.0)
+  googleDriveConnected: boolean('google_drive_connected').default(false),
+  googleDriveEmail: text('google_drive_email'),
   googleDriveFolderId: text('google_drive_folder_id'),
   googleDriveFolderUrl: text('google_drive_folder_url'),
+  googleDriveAccessToken: text('google_drive_access_token'),
+  googleDriveRefreshToken: text('google_drive_refresh_token'),
+  googleDriveTokenExpiry: timestamp('google_drive_token_expiry', { mode: 'date' }),
   googleDriveClientId: text('google_drive_client_id'),
   googleDriveClientSecret: text('google_drive_client_secret'),
 
