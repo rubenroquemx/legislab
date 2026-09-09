@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAgendaEventos, createAgendaEvento, deleteAgendaEvento } from '@/app/actions/agenda';
+import { getAgendaEventos, createAgendaEvento, updateAgendaEvento, deleteAgendaEvento } from '@/app/actions/agenda';
 import { 
   Calendar as CalendarIcon, 
   Plus, 
@@ -96,21 +96,6 @@ const SEDES_PREDETERMINADAS: SedeFrecuente[] = [
 
 const INITIAL_EVENTS: EventoLegislativo[] = [];
 
-const HORAS_DEL_DIA = [
-  '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-  '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM', '06:00 PM',
-  '07:00 PM', '08:00 PM', '09:00 PM'
-];
-
-const OPCIONES_HORARIOS = [
-  '07:00 AM', '07:30 AM', '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM',
-  '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
-  '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
-  '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM',
-  '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM', '09:00 PM', '09:30 PM',
-  '10:00 PM'
-];
-
 const TIPOS_BASE = ['Comisión', 'Pleno', 'Solemne', 'Distrito', 'Institucional', 'Medios', 'Reunión de Bancada'];
 
 function parseDate(dateStr: string): Date {
@@ -151,6 +136,58 @@ function isValidGoogleMapsUrl(url: string): boolean {
     return false;
   }
 }
+
+function parseTimeToMinutes(timeStr: string): number {
+  if (!timeStr) return 540;
+  const str = timeStr.trim().toUpperCase();
+  const isPM = str.includes('PM');
+  const isAM = str.includes('AM');
+  const clean = str.replace(/[^\d:]/g, '');
+  const parts = clean.split(':');
+  let hours = parseInt(parts[0] || '0', 10);
+  const minutes = parseInt(parts[1] || '0', 10);
+  
+  if (isPM && hours < 12) hours += 12;
+  if (isAM && hours === 12) hours = 0;
+  return hours * 60 + (isNaN(minutes) ? 0 : minutes);
+}
+
+function getHourNumber(timeStr: string): number {
+  const total = parseTimeToMinutes(timeStr);
+  return Math.floor(total / 60) % 24;
+}
+
+function formatTimeTo24(timeStr: string): string {
+  if (!timeStr) return '09:00';
+  const total = parseTimeToMinutes(timeStr);
+  const h = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function formatTimeDisplay(timeStr: string): string {
+  if (!timeStr) return '';
+  const total = parseTimeToMinutes(timeStr);
+  const h = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  let h12 = h % 12;
+  if (h12 === 0) h12 = 12;
+  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+const HORAS_DEL_DIA_24 = Array.from({ length: 24 }, (_, i) => {
+  const h24 = String(i).padStart(2, '0');
+  const ampm = i >= 12 ? 'PM' : 'AM';
+  let h12 = i % 12;
+  if (h12 === 0) h12 = 12;
+  return {
+    hourNumber: i,
+    label24: `${h24}:00`,
+    label12: `${String(h12).padStart(2, '0')}:00 ${ampm}`,
+    defaultTimeInput: `${h24}:00`,
+  };
+});
 
 function getWeekDays(currentDateStr: string) {
   const base = parseDate(currentDateStr);
@@ -200,9 +237,30 @@ export default function AgendaPage() {
             incluirEnCompartir: true,
           }));
           setEventos(mapped);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('legislab_agenda_eventos', JSON.stringify(mapped));
+          }
+        } else if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem('legislab_agenda_eventos');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setEventos(parsed);
+            }
+          }
         }
       } catch (err) {
         console.warn('Error loading agenda:', err);
+        if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem('legislab_agenda_eventos');
+          if (cached) {
+            try {
+              setEventos(JSON.parse(cached));
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }
       } finally {
         setLoading(false);
       }
@@ -261,8 +319,8 @@ export default function AgendaPage() {
   // Form states (Crear)
   const [nuevoTitulo, setNuevoTitulo] = useState('');
   const [nuevaFecha, setNuevaFecha] = useState(todayStr);
-  const [nuevaHora, setNuevaHora] = useState('09:00 AM');
-  const [nuevaHoraFin, setNuevaHoraFin] = useState('10:30 AM');
+  const [nuevaHora, setNuevaHora] = useState('09:00');
+  const [nuevaHoraFin, setNuevaHoraFin] = useState('10:30');
   const [nuevoLugar, setNuevoLugar] = useState('');
   const [nuevaUbicacionUrl, setNuevaUbicacionUrl] = useState('');
   const [nuevoTipo, setNuevoTipo] = useState<string>('Comisión');
@@ -275,8 +333,8 @@ export default function AgendaPage() {
   // Form states (Editar)
   const [editTitulo, setEditTitulo] = useState('');
   const [editFecha, setEditFecha] = useState('');
-  const [editHora, setEditHora] = useState('');
-  const [editHoraFin, setEditHoraFin] = useState('');
+  const [editHora, setEditHora] = useState('09:00');
+  const [editHoraFin, setEditHoraFin] = useState('10:30');
   const [editLugar, setEditLugar] = useState('');
   const [editUbicacionUrl, setEditUbicacionUrl] = useState('');
   const [editTipo, setEditTipo] = useState<string>('');
@@ -331,16 +389,16 @@ export default function AgendaPage() {
     setIsModalCompartirOpen(true);
   };
 
-  const handleAbrirCrearEnHora = (horaSlot: string, fechaTarget?: string) => {
+  const handleAbrirCrearEnHora = (horaSlotInput: string, fechaTarget?: string) => {
     setNuevaFecha(fechaTarget || fechaSeleccionada);
-    setNuevaHora(horaSlot);
+    const formatted24 = formatTimeTo24(horaSlotInput);
+    setNuevaHora(formatted24);
     
-    const idx = OPCIONES_HORARIOS.indexOf(horaSlot);
-    if (idx !== -1 && idx + 2 < OPCIONES_HORARIOS.length) {
-      setNuevaHoraFin(OPCIONES_HORARIOS[idx + 2]);
-    } else {
-      setNuevaHoraFin(horaSlot);
-    }
+    const startMins = parseTimeToMinutes(formatted24);
+    const endMins = (startMins + 60) % 1440;
+    const endH = Math.floor(endMins / 60);
+    const endM = endMins % 60;
+    setNuevaHoraFin(`${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`);
     
     setIsCustomTipo(false);
     setCustomTipoInput('');
@@ -351,8 +409,8 @@ export default function AgendaPage() {
     setEventoAEditar(ev);
     setEditTitulo(ev.titulo);
     setEditFecha(ev.fecha);
-    setEditHora(ev.hora);
-    setEditHoraFin(ev.horaFin || ev.hora);
+    setEditHora(formatTimeTo24(ev.hora));
+    setEditHoraFin(formatTimeTo24(ev.horaFin || ev.hora));
     setEditLugar(ev.lugar);
     setEditUbicacionUrl(ev.ubicacionUrl);
     setEditTipo(ev.tipo);
@@ -360,7 +418,6 @@ export default function AgendaPage() {
     setEditCustomTipoInput('');
     setEditDescripcion(ev.descripcion || '');
     
-    // Check if place matches a frequent venue
     const match = sedesFrecuentes.find(s => s.nombre.toLowerCase() === ev.lugar.toLowerCase());
     setEditSedeSeleccionadaId(match ? match.id : 'personalizada');
   };
@@ -415,29 +472,32 @@ export default function AgendaPage() {
     setDraggedEventoId(null);
   };
 
-  const handleConfirmarReagendado = () => {
+  const handleConfirmarReagendado = async () => {
     if (!reagendadoPendiente) return;
     const { evento, nuevaFecha, nuevaHora } = reagendadoPendiente;
 
-    let nuevaHoraFin = nuevaHora;
-    const startIdx = OPCIONES_HORARIOS.indexOf(nuevaHora);
-    if (startIdx !== -1 && startIdx + 2 < OPCIONES_HORARIOS.length) {
-      nuevaHoraFin = OPCIONES_HORARIOS[startIdx + 2];
-    }
+    const startMins = parseTimeToMinutes(nuevaHora);
+    const endMins = (startMins + 60) % 1440;
+    const endH = Math.floor(endMins / 60);
+    const endM = endMins % 60;
+    const nuevaHoraFin = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
-    setEventos(
-      eventos.map((ev) => {
-        if (ev.id === evento.id) {
-          return {
-            ...ev,
-            fecha: nuevaFecha,
-            hora: nuevaHora,
-            horaFin: nuevaHoraFin,
-          };
-        }
-        return ev;
-      })
-    );
+    const updatedEvents = eventos.map((ev) => {
+      if (ev.id === evento.id) {
+        return {
+          ...ev,
+          fecha: nuevaFecha,
+          hora: nuevaHora,
+          horaFin: nuevaHoraFin,
+        };
+      }
+      return ev;
+    });
+
+    setEventos(updatedEvents);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('legislab_agenda_eventos', JSON.stringify(updatedEvents));
+    }
 
     if (eventoDetalle && eventoDetalle.id === evento.id) {
       setEventoDetalle({
@@ -450,6 +510,16 @@ export default function AgendaPage() {
 
     setReagendadoPendiente(null);
     triggerGoogleCalendarSync();
+
+    try {
+      await updateAgendaEvento(evento.id, {
+        fecha: nuevaFecha,
+        horaInicio: nuevaHora,
+        horaFin: nuevaHoraFin,
+      });
+    } catch (e) {
+      console.warn('Error persisting reschedule to database:', e);
+    }
   };
 
   const toggleSelectEvento = (id: string) => {
@@ -480,7 +550,7 @@ export default function AgendaPage() {
 
     eventosACompartir.forEach((ev, idx) => {
       texto += `🟢 *${ev.titulo}*\n`;
-      texto += `⏰ ${ev.hora}${ev.horaFin ? ` - ${ev.horaFin}` : ''}\n`;
+      texto += `⏰ ${formatTimeDisplay(ev.hora)}${ev.horaFin ? ` - ${formatTimeDisplay(ev.horaFin)}` : ''}\n`;
       texto += `Lugar: ${ev.lugar}\n`;
       texto += `📍 ${ev.ubicacionUrl}\n`;
       if (idx < eventosACompartir.length - 1) {
@@ -504,14 +574,25 @@ export default function AgendaPage() {
     setTimeout(() => setCopiado(false), 2000);
   };
 
-  const handleConfirmarEliminar = () => {
+  const handleConfirmarEliminar = async () => {
     if (!eventoAEliminar) return;
-    setEventos(eventos.filter((e) => e.id !== eventoAEliminar.id));
-    if (eventoDetalle && eventoDetalle.id === eventoAEliminar.id) {
+    const toDeleteId = eventoAEliminar.id;
+    const updated = eventos.filter((e) => e.id !== toDeleteId);
+    setEventos(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('legislab_agenda_eventos', JSON.stringify(updated));
+    }
+    if (eventoDetalle && eventoDetalle.id === toDeleteId) {
       setEventoDetalle(null);
     }
     setEventoAEliminar(null);
     triggerGoogleCalendarSync();
+
+    try {
+      await deleteAgendaEvento(toDeleteId);
+    } catch (e) {
+      console.warn('Error deleting event from db:', e);
+    }
   };
 
   const handleConfirmarEliminarSede = () => {
@@ -538,7 +619,7 @@ export default function AgendaPage() {
     setTipoAEliminar(null);
   };
 
-  const handleCrearEvento = (e: React.FormEvent) => {
+  const handleCrearEvento = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoTitulo.trim() || !nuevoLugar.trim() || !nuevaUbicacionUrl.trim()) {
       alert('Por favor completa todos los campos obligatorios (Nombre del evento, Lugar y Ubicación).');
@@ -588,8 +669,9 @@ export default function AgendaPage() {
       }
     }
 
+    const tempId = `ev-${Date.now()}`;
     const nuevo: EventoLegislativo = {
-      id: `ev-${Date.now()}`,
+      id: tempId,
       titulo: nuevoTitulo.trim(),
       fecha: nuevaFecha,
       hora: nuevaHora,
@@ -601,7 +683,11 @@ export default function AgendaPage() {
       incluirEnCompartir: true,
     };
 
-    setEventos([...eventos, nuevo]);
+    const nextEvents = [...eventos, nuevo];
+    setEventos(nextEvents);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('legislab_agenda_eventos', JSON.stringify(nextEvents));
+    }
     setFechaSeleccionada(nuevaFecha);
     setNuevoTitulo('');
     setNuevoLugar('');
@@ -613,9 +699,29 @@ export default function AgendaPage() {
     setGuardarComoFrecuente(false);
     setIsModalCrearOpen(false);
     triggerGoogleCalendarSync();
+
+    try {
+      const res = await createAgendaEvento({
+        titulo: nuevo.titulo,
+        tipo: nuevo.tipo,
+        fecha: nuevo.fecha,
+        horaInicio: nuevo.hora,
+        horaFin: nuevo.horaFin || nuevo.hora,
+        lugarNombre: nuevo.lugar,
+        lugarUrl: nuevo.ubicacionUrl,
+        notas: nuevo.descripcion,
+      });
+      if (res.success && res.data?.id) {
+        setEventos((prev) =>
+          prev.map((item) => (item.id === tempId ? { ...item, id: res.data.id } : item))
+        );
+      }
+    } catch (e) {
+      console.warn('Error saving event to database:', e);
+    }
   };
 
-  const handleGuardarEdicion = (e: React.FormEvent) => {
+  const handleGuardarEdicion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!eventoAEditar) return;
     if (!editTitulo.trim() || !editLugar.trim() || !editUbicacionUrl.trim()) {
@@ -657,10 +763,29 @@ export default function AgendaPage() {
       descripcion: editDescripcion.trim(),
     };
 
-    setEventos(eventos.map((ev) => (ev.id === eventoAEditar.id ? updatedEvent : ev)));
+    const nextEvents = eventos.map((ev) => (ev.id === eventoAEditar.id ? updatedEvent : ev));
+    setEventos(nextEvents);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('legislab_agenda_eventos', JSON.stringify(nextEvents));
+    }
     setEventoDetalle(updatedEvent);
     setEventoAEditar(null);
     triggerGoogleCalendarSync();
+
+    try {
+      await updateAgendaEvento(eventoAEditar.id, {
+        titulo: updatedEvent.titulo,
+        tipo: updatedEvent.tipo,
+        fecha: updatedEvent.fecha,
+        horaInicio: updatedEvent.hora,
+        horaFin: updatedEvent.horaFin || updatedEvent.hora,
+        lugarNombre: updatedEvent.lugar,
+        lugarUrl: updatedEvent.ubicacionUrl,
+        notas: updatedEvent.descripcion,
+      });
+    } catch (e) {
+      console.warn('Error updating event in database:', e);
+    }
   };
 
   const getGoogleEventColor = (tipo: string) => {
@@ -739,8 +864,8 @@ export default function AgendaPage() {
           <button
             onClick={() => {
               setNuevaFecha(fechaSeleccionada);
-              setNuevaHora('09:00 AM');
-              setNuevaHoraFin('10:30 AM');
+              setNuevaHora('09:00');
+              setNuevaHoraFin('10:30');
               setIsCustomTipo(false);
               setCustomTipoInput('');
               setIsModalCrearOpen(true);
@@ -835,44 +960,47 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* 1. GOOGLE CALENDAR VISTA DIARIA */}
+      {/* 1. GOOGLE CALENDAR VISTA DIARIA (24 HORAS) */}
       {vista === 'dia' && (
         <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden">
-          <div className="p-3 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40/50 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-4">
+          <div className="p-3 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-4">
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-gray-100 capitalize">
                 {new Date(`${fechaSeleccionada}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
               </span>
-              <span>• Haz clic en un evento para ver detalles o editarlo</span>
+              <span>• Horario continuo de 24 horas</span>
             </div>
             <span className="text-[11px] text-gray-500 dark:text-gray-400">{eventosDelDia.length} eventos agendados</span>
           </div>
 
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {HORAS_DEL_DIA.map((horaSlot) => {
-              const horaPrefix = horaSlot.slice(0, 2);
-              const ampm = horaSlot.slice(-2);
-              
-              const eventosEnHora = eventosDelDia.filter((ev) => {
-                return ev.hora.startsWith(horaPrefix) && ev.hora.endsWith(ampm);
-              });
+          <div className="divide-y divide-gray-100 dark:divide-gray-800/70 max-h-[75vh] overflow-y-auto">
+            {HORAS_DEL_DIA_24.map((slot) => {
+              const eventosEnHora = eventosDelDia.filter((ev) => getHourNumber(ev.hora) === slot.hourNumber);
+              const hasEvents = eventosEnHora.length > 0;
 
               return (
                 <div 
-                  key={horaSlot} 
-                  onClick={() => handleAbrirCrearEnHora(horaSlot, fechaSeleccionada)}
+                  key={slot.hourNumber} 
+                  onClick={() => handleAbrirCrearEnHora(slot.defaultTimeInput, fechaSeleccionada)}
                   onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, fechaSeleccionada, horaSlot)}
-                  className="group flex min-h-[82px] hover:bg-[#e8f0fe]/30 transition-all cursor-pointer relative"
+                  onDrop={(e) => handleDrop(e, fechaSeleccionada, slot.defaultTimeInput)}
+                  className={`group flex transition-all cursor-pointer relative ${
+                    hasEvents 
+                      ? 'min-h-[72px] bg-white dark:bg-transparent hover:bg-blue-50/20' 
+                      : 'min-h-[36px] hover:bg-blue-50/30'
+                  }`}
                 >
-                  <div className="w-24 p-3 border-r border-gray-100 dark:border-gray-800 flex items-start justify-end shrink-0 select-none">
-                    <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 group-hover:text-[#1a73e8] transition-colors">
-                      {horaSlot}
-                    </span>
+                  <div className={`w-28 border-r border-gray-100 dark:border-gray-800/70 flex items-center justify-end pr-3 shrink-0 select-none ${
+                    hasEvents ? 'items-start pt-3' : ''
+                  }`}>
+                    <div className="flex items-center gap-1 text-[11px] font-medium text-gray-400 dark:text-gray-500 group-hover:text-[#1a73e8] transition-colors">
+                      <span className="font-mono">{slot.label24}</span>
+                      <span className="text-[9px] text-gray-400/70">({slot.label12})</span>
+                    </div>
                   </div>
 
-                  <div className="flex-1 p-2 space-y-2">
-                    {eventosEnHora.length > 0 ? (
+                  <div className={`flex-1 p-2 space-y-2 flex flex-col justify-center ${hasEvents ? 'justify-start' : ''}`}>
+                    {hasEvents ? (
                       eventosEnHora.map((ev) => {
                         const style = getGoogleEventColor(ev.tipo);
                         return (
@@ -904,7 +1032,7 @@ export default function AgendaPage() {
                                     handleAbrirEditar(ev);
                                   }}
                                   title="Editar este evento"
-                                  className="p-1 text-gray-500 dark:text-gray-400 hover:text-[#1a73e8] hover:bg-blue-50 rounded-md transition-colors"
+                                  className="p-1 text-gray-500 dark:text-gray-400 hover:text-[#1a73e8] hover:bg-blue-50 dark:hover:bg-gray-800 rounded-md transition-colors"
                                 >
                                   <Edit3 className="h-3.5 w-3.5" />
                                 </button>
@@ -914,7 +1042,7 @@ export default function AgendaPage() {
                                     setEventoAEliminar(ev);
                                   }}
                                   title="Eliminar"
-                                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-md transition-colors"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
@@ -924,7 +1052,7 @@ export default function AgendaPage() {
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300 pt-0.5">
                               <div className="flex items-center gap-1 font-semibold text-gray-700 dark:text-gray-200">
                                 <Clock className="h-3 w-3 text-gray-400 dark:text-gray-500" />
-                                <span>{ev.hora} {ev.horaFin ? `– ${ev.horaFin}` : ''}</span>
+                                <span>{formatTimeDisplay(ev.hora)} {ev.horaFin ? `– ${formatTimeDisplay(ev.horaFin)}` : ''}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Landmark className="h-3 w-3 text-gray-400 dark:text-gray-500" />
@@ -946,10 +1074,10 @@ export default function AgendaPage() {
                         );
                       })
                     ) : (
-                      <div className="h-full flex items-center justify-between pr-4 py-1">
-                        <span className="text-[11px] text-slate-300 italic group-hover:hidden select-none">Disponible</span>
-                        <div className="hidden group-hover:flex items-center gap-1 text-[11px] font-medium text-[#1a73e8] bg-white px-2.5 py-1 rounded-full border border-blue-200 shadow-2xs">
-                          <span>+ Agendar compromiso a las {horaSlot}</span>
+                      <div className="h-full flex items-center justify-between pr-4">
+                        <span className="text-[10px] text-gray-300 dark:text-gray-700 italic group-hover:hidden select-none">Sin eventos</span>
+                        <div className="hidden group-hover:flex items-center gap-1 text-[11px] font-medium text-[#1a73e8] bg-white dark:bg-gray-800 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-900 shadow-2xs">
+                          <span>+ Agendar a las {slot.label24}</span>
                         </div>
                       </div>
                     )}
@@ -961,20 +1089,20 @@ export default function AgendaPage() {
         </div>
       )}
 
-      {/* 2. GOOGLE CALENDAR VISTA SEMANAL */}
+      {/* 2. GOOGLE CALENDAR VISTA SEMANAL (24 HORAS) */}
       {vista === 'semana' && (
         <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-x-auto">
           <div className="min-w-[960px]">
-            <div className="grid grid-cols-8 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40/70 text-center">
+            <div className="grid grid-cols-8 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 text-center sticky top-0 z-10">
               <div className="p-3 border-r border-gray-200/80 dark:border-gray-800 flex items-center justify-center text-[11px] font-medium text-gray-400 dark:text-gray-500">
-                GMT-6
+                24 HORAS
               </div>
               {diasSemana.map((col) => (
                 <div
                   key={col.fecha}
                   onClick={() => setFechaSeleccionada(col.fecha)}
                   className={`p-2.5 border-r border-gray-200/80 dark:border-gray-800 cursor-pointer transition-colors flex flex-col items-center justify-center gap-1 ${
-                    fechaSeleccionada === col.fecha ? 'bg-[#e8f0fe]/50' : 'hover:bg-gray-100 dark:bg-gray-800/70'
+                    fechaSeleccionada === col.fecha ? 'bg-[#e8f0fe]/50 dark:bg-blue-950/30' : 'hover:bg-gray-100 dark:bg-gray-800/70'
                   }`}
                 >
                   <span className={`text-[11px] font-semibold tracking-wider ${col.esHoy ? 'text-[#1a73e8]' : 'text-gray-500 dark:text-gray-400'}`}>
@@ -995,30 +1123,38 @@ export default function AgendaPage() {
               ))}
             </div>
 
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {['08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM'].map((horaSlot) => {
-                const prefix = horaSlot.slice(0, 2);
-                const ampm = horaSlot.slice(-2);
+            <div className="divide-y divide-gray-100 dark:divide-gray-800/70 max-h-[75vh] overflow-y-auto">
+              {HORAS_DEL_DIA_24.map((slot) => {
+                const rowHasEvents = diasSemana.some((col) =>
+                  eventos.some((e) => e.fecha === col.fecha && getHourNumber(e.hora) === slot.hourNumber)
+                );
 
                 return (
-                  <div key={horaSlot} className="grid grid-cols-8 min-h-[92px]">
-                    <div className="p-2 border-r border-gray-100 dark:border-gray-800 text-right text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/40/20 select-none">
-                      {horaSlot}
+                  <div 
+                    key={slot.hourNumber} 
+                    className={`grid grid-cols-8 transition-all ${
+                      rowHasEvents ? 'min-h-[76px]' : 'min-h-[34px] hover:bg-gray-50/50 dark:hover:bg-gray-800/20'
+                    }`}
+                  >
+                    <div className="p-1 border-r border-gray-100 dark:border-gray-800 text-right text-[11px] font-mono text-gray-400 dark:text-gray-500 bg-gray-50/50 dark:bg-gray-800/20 select-none flex items-center justify-end pr-2">
+                      {slot.label24}
                     </div>
                     {diasSemana.map((col) => {
-                      const evs = eventos.filter((e) => e.fecha === col.fecha && e.hora.startsWith(prefix) && e.hora.endsWith(ampm));
+                      const evs = eventos.filter(
+                        (e) => e.fecha === col.fecha && getHourNumber(e.hora) === slot.hourNumber
+                      );
 
                       return (
                         <div
                           key={col.fecha}
                           onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, col.fecha, horaSlot)}
+                          onDrop={(e) => handleDrop(e, col.fecha, slot.defaultTimeInput)}
                           onClick={() => {
                             setFechaSeleccionada(col.fecha);
-                            handleAbrirCrearEnHora(horaSlot, col.fecha);
+                            handleAbrirCrearEnHora(slot.defaultTimeInput, col.fecha);
                           }}
                           className={`p-1 border-r border-gray-100 dark:border-gray-800 cursor-pointer transition-colors ${
-                            fechaSeleccionada === col.fecha ? 'bg-[#e8f0fe]/20' : 'hover:bg-[#e8f0fe]/10'
+                            fechaSeleccionada === col.fecha ? 'bg-[#e8f0fe]/20 dark:bg-blue-950/20' : 'hover:bg-[#e8f0fe]/10'
                           }`}
                         >
                           {evs.map((ev) => {
@@ -1067,7 +1203,7 @@ export default function AgendaPage() {
                                     {ev.tipo}
                                   </span>
                                   <span className="text-[9px] text-gray-500 dark:text-gray-400 font-mono">
-                                    {ev.hora}
+                                    {formatTimeDisplay(ev.hora)}
                                   </span>
                                 </div>
                               </div>
@@ -1115,7 +1251,7 @@ export default function AgendaPage() {
                     setVista('dia');
                   }}
                   onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, fStr, '09:00 AM')}
+                  onDrop={(e) => handleDrop(e, fStr, '09:00')}
                   className={`min-h-[105px] p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                     isSelected
                       ? 'border-[#1a73e8] bg-[#e8f0fe]/30 shadow-xs'
@@ -1156,7 +1292,7 @@ export default function AgendaPage() {
                           className={`text-[10px] font-semibold truncate px-1.5 py-0.5 rounded-md ${style.chip} shadow-2xs hover:opacity-90 flex items-center gap-1`}
                         >
                           <span className="h-1.5 w-1.5 rounded-full bg-white shrink-0"></span>
-                          <span className="truncate">{e.hora.slice(0, 5)} {e.titulo}</span>
+                          <span className="truncate">{formatTimeDisplay(e.hora).slice(0, 5)} {e.titulo}</span>
                         </div>
                       );
                     })}
@@ -1173,10 +1309,10 @@ export default function AgendaPage() {
         </div>
       )}
 
-      {/* MODAL DETALLES DEL EVENTO (Con Botón de Editar) */}
+      {/* MODAL DETALLES DEL EVENTO */}
       {eventoDetalle && !eventoAEditar && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-5 max-h-[92vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className={`h-3 w-3 rounded-full ${getGoogleEventColor(eventoDetalle.tipo).dot}`}></span>
@@ -1205,7 +1341,7 @@ export default function AgendaPage() {
                   <span className="text-gray-400 dark:text-gray-500 font-medium block">Fecha y Horario:</span>
                   <div className="flex items-center gap-1.5 font-semibold text-gray-900 dark:text-white">
                     <Clock className="h-3.5 w-3.5 text-[#1a73e8]" />
-                    <span>{eventoDetalle.fecha} | {eventoDetalle.hora} {eventoDetalle.horaFin ? `– ${eventoDetalle.horaFin}` : ''}</span>
+                    <span>{eventoDetalle.fecha} | {formatTimeDisplay(eventoDetalle.hora)} {eventoDetalle.horaFin ? `– ${formatTimeDisplay(eventoDetalle.horaFin)}` : ''}</span>
                   </div>
                 </div>
 
@@ -1334,27 +1470,22 @@ export default function AgendaPage() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
                     Hora Inicio <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={editHora}
+                  <input
+                    required
+                    type="time"
+                    value={formatTimeTo24(editHora)}
                     onChange={(e) => setEditHora(e.target.value)}
-                    className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                  >
-                    {OPCIONES_HORARIOS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                    className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-mono"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">Hora Término</label>
-                  <select
-                    value={editHoraFin}
+                  <input
+                    type="time"
+                    value={formatTimeTo24(editHoraFin)}
                     onChange={(e) => setEditHoraFin(e.target.value)}
-                    className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                  >
-                    {OPCIONES_HORARIOS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                    className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-mono"
+                  />
                 </div>
               </div>
 
@@ -1684,27 +1815,22 @@ export default function AgendaPage() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
                     Hora Inicio <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={nuevaHora}
+                  <input
+                    required
+                    type="time"
+                    value={formatTimeTo24(nuevaHora)}
                     onChange={(e) => setNuevaHora(e.target.value)}
-                    className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                  >
-                    {OPCIONES_HORARIOS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                    className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-mono"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">Hora Término</label>
-                  <select
-                    value={nuevaHoraFin}
+                  <input
+                    type="time"
+                    value={formatTimeTo24(nuevaHoraFin)}
                     onChange={(e) => setNuevaHoraFin(e.target.value)}
-                    className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                  >
-                    {OPCIONES_HORARIOS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                    className="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-mono"
+                  />
                 </div>
               </div>
 

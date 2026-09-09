@@ -60,6 +60,35 @@ export async function createAgendaEvento(data: {
   }
 }
 
+export async function updateAgendaEvento(
+  id: string,
+  data: Partial<{
+    titulo: string;
+    tipo: string;
+    fecha: string;
+    horaInicio: string;
+    horaFin: string;
+    lugarNombre: string;
+    lugarUrl: string;
+    color: string;
+    notas: string;
+  }>
+) {
+  try {
+    const updated = await db
+      .update(agendaEventos)
+      .set(data)
+      .where(eq(agendaEventos.id, id as any))
+      .returning();
+    revalidatePath('/agenda');
+    revalidatePath('/dashboard');
+    return { success: true, data: updated[0] };
+  } catch (error) {
+    console.error('Error updating agenda evento:', error);
+    return { success: false, error: 'No se pudo actualizar el evento' };
+  }
+}
+
 export async function deleteAgendaEvento(id: string) {
   try {
     await db.delete(agendaEventos).where(eq(agendaEventos.id, id as any));
