@@ -1,5 +1,5 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForDriveTokens, getOrCreateRootDriveFolder } from '@/lib/google-drive';
+import { NextRequest, NextResponse } from 'next/server';
+import { exchangeCodeForDriveTokens, getOrCreateRootDriveFolder, getAppBaseUrl } from '@/lib/google-drive';
 import { db, offices } from '@/db';
 import { eq } from 'drizzle-orm';
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
   const state = searchParams.get('state'); // officeId
 
-  const origin = request.nextUrl.origin || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const origin = getAppBaseUrl(request);
   const redirectUri = `${origin}/api/auth/google-drive/callback`;
 
   if (error || !code) {

@@ -1,8 +1,11 @@
-﻿/**
+/**
  * Google Calendar API (v3) & OAuth 2.0 Integration Client
  */
 
 import { MEXICO_TIMEZONE } from './date-utils';
+import { getAppBaseUrl } from './google-drive';
+
+export { getAppBaseUrl };
 
 export const GOOGLE_AUTH_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',

@@ -1,5 +1,5 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForTokens } from '@/lib/google-calendar';
+import { NextRequest, NextResponse } from 'next/server';
+import { exchangeCodeForTokens, getAppBaseUrl } from '@/lib/google-calendar';
 import { db, offices } from '@/db';
 import { eq } from 'drizzle-orm';
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
   const state = searchParams.get('state'); // officeId
 
-  const origin = request.nextUrl.origin || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const origin = getAppBaseUrl(request);
   const redirectUri = `${origin}/api/auth/google-calendar/callback`;
 
   if (error || !code) {

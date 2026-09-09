@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Google Drive API (v3) & OAuth 2.0 Integration Client
  */
 
@@ -7,6 +7,35 @@ export const GOOGLE_DRIVE_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
 ].join(' ');
+
+/**
+ * Retorna la URL base pública de la aplicación detectando variables de entorno o proxies
+ */
+export function getAppBaseUrl(request?: { nextUrl?: { origin: string }; headers?: { get: (name: string) => string | null } }): string {
+  if (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes('0.0.0.0')) {
+    return process.env.NEXTAUTH_URL.replace(/\/$/, '');
+  }
+  if (process.env.APP_URL && !process.env.APP_URL.includes('0.0.0.0')) {
+    return process.env.APP_URL.replace(/\/$/, '');
+  }
+  if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('0.0.0.0')) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+  }
+
+  if (request) {
+    const forwardedHost = request.headers?.get('x-forwarded-host') || request.headers?.get('host');
+    const forwardedProto = request.headers?.get('x-forwarded-proto') || 'https';
+    if (forwardedHost && !forwardedHost.includes('0.0.0.0')) {
+      return `${forwardedProto}://${forwardedHost}`;
+    }
+    const origin = request.nextUrl?.origin;
+    if (origin && !origin.includes('0.0.0.0')) {
+      return origin;
+    }
+  }
+
+  return 'https://legislab.rubenroque.com.mx';
+}
 
 /**
  * Retorna las credenciales de cliente OAuth configuradas en variables de entorno
