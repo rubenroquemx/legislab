@@ -391,7 +391,15 @@ export default function AgendaPage() {
           const gcalRes = await getGoogleCalendarStatusAction();
           if (gcalRes.success) {
             setGcalConnected(gcalRes.connected);
-            setGcalEmail(gcalRes.email || '');
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('legislab_gcal_connected', gcalRes.connected ? 'true' : 'false');
+            }
+            if (gcalRes.email) {
+              setGcalEmail(gcalRes.email);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('legislab_gcal_email', gcalRes.email);
+              }
+            }
             if (gcalRes.lastSync) {
               setLastSyncTime(
                 new Date(gcalRes.lastSync).toLocaleTimeString('es-MX', {
@@ -409,6 +417,14 @@ export default function AgendaPage() {
         setLoading(false);
       }
     }
+
+    if (typeof window !== 'undefined') {
+      const savedCal = localStorage.getItem('legislab_gcal_connected');
+      if (savedCal !== null) setGcalConnected(savedCal === 'true');
+      const savedEmail = localStorage.getItem('legislab_gcal_email');
+      if (savedEmail) setGcalEmail(savedEmail);
+    }
+
     load();
 
     if (typeof window !== 'undefined') {
@@ -416,6 +432,7 @@ export default function AgendaPage() {
       if (params.get('gcal_status') === 'connected') {
         setToastMessage('✅ ¡Cuenta de Google Calendar conectada exitosamente!');
         setGcalConnected(true);
+        localStorage.setItem('legislab_gcal_connected', 'true');
         setTimeout(() => setToastMessage(null), 5000);
         window.history.replaceState({}, '', window.location.pathname);
       } else if (params.get('gcal_error')) {
