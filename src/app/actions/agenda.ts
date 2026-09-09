@@ -1,10 +1,28 @@
 'use server';
 
-import { db, agendaEventos, agendaSedes, type NewAgendaEvento, type NewAgendaSede } from '@/db';
-import { eq, desc, asc } from 'drizzle-orm';
+import { 
+  db, 
+  agendaEventos, 
+  agendaSedes, 
+  agendaTipos,
+  type NewAgendaEvento, 
+  type NewAgendaSede,
+  type NewAgendaTipo 
+} from '@/db';
+import { eq, desc, asc, and, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
+
+export const DEFAULT_TIPOS_EVENTOS = [
+  'Comisión',
+  'Pleno',
+  'Solemne',
+  'Distrito',
+  'Institucional',
+  'Medios',
+  'Reunión de Bancada',
+];
 
 export const DEFAULT_SEDES_PARLAMENTARIAS = [
   {
@@ -198,4 +216,74 @@ export async function deleteAgendaSede(id: string) {
     return { success: false, error: 'No se pudo eliminar la sede' };
   }
 }
+
+// -------------------------------------------------------------
+// TIPOS DE EVENTO DEL DESPACHO
+// -------------------------------------------------------------
+export async function getAgendaTipos(officeId: string = DEFAULT_OFFICE_ID) {
+  try {
+    let data = await db
+      .select()
+      .from(agendaTipos)
+      .where(eq(agendaTipos.officeId, officeId))
+      .orderBy(asc(agendaTipos.createdAt));
+
+    // Si el despacho aún no tiene tipos registrados, inicializar con los predeterminados
+    if (data.length === 0) {
+      const initialInserts: NewAgendaTipo[] = DEFAULT_TIPOS_EVENTOS.map((nombre) => ({
+        officeId,
+        nombre,
+        color: 'blue',
+      }));
+
+      data = await db.insert(agendaTipos).values(initialInserts).returning();
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.warn('Database query error or offline fallback (agenda tipos):', error);
+    return { success: false, data: [] };
+  }
+}
+
+export async function createAgendaTipo(data: {
+  nombre: string;
+  color?: string;
+  officeId?: string;
+}) {
+  try {
+    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const newTipo: NewAgendaTipo = {
+      officeId,
+      nombre: data.nombre.trim(),
+      color: data.color || 'blue',
+    };
+
+    const inserted = await db.insert(agendaTipos).values(newTipo).returning();
+    revalidatePath('/agenda');
+    return { success: true, data: inserted[0] };
+  } catch (error) {
+    console.error('Error creating agenda tipo:', error);
+    return { success: false, error: 'No se pudo guardar el tipo de evento' };
+  }
+}
+
+export async function deleteAgendaTipo(nombreOrId: string, officeId: string = DEFAULT_OFFICE_ID) {
+  try {
+    await db
+      .delete(agendaTipos)
+      .where(
+        or(
+          eq(agendaTipos.id, nombreOrId as any),
+          and(eq(agendaTipos.officeId, officeId), eq(agendaTipos.nombre, nombreOrId))
+        )
+      );
+    revalidatePath('/agenda');
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting agenda tipo:', error);
+    return { success: false, error: 'No se pudo eliminar el tipo de evento' };
+  }
+}
+
 

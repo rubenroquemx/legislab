@@ -8,7 +8,10 @@ import {
   deleteAgendaEvento,
   getAgendaSedes,
   createAgendaSede,
-  deleteAgendaSede
+  deleteAgendaSede,
+  getAgendaTipos,
+  createAgendaTipo,
+  deleteAgendaTipo
 } from '@/app/actions/agenda';
 import { 
   Calendar as CalendarIcon, 
@@ -230,9 +233,10 @@ export default function AgendaPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [res, resSedes] = await Promise.all([
+        const [res, resSedes, resTipos] = await Promise.all([
           getAgendaEventos(),
           getAgendaSedes(),
+          getAgendaTipos(),
         ]);
 
         if (res.success && res.data && res.data.length > 0) {
@@ -274,6 +278,14 @@ export default function AgendaPage() {
             localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(mappedSedes));
           }
         }
+
+        if (resTipos.success && resTipos.data && resTipos.data.length > 0) {
+          const mappedTipos = resTipos.data.map((t: any) => t.nombre);
+          setTiposEventos(mappedTipos);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('legislab_tipos_eventos', JSON.stringify(mappedTipos));
+          }
+        }
       } catch (err) {
         console.warn('Error loading agenda data:', err);
         if (typeof window !== 'undefined') {
@@ -296,26 +308,23 @@ export default function AgendaPage() {
               console.error(e);
             }
           }
+          const savedTipos = localStorage.getItem('legislab_tipos_eventos');
+          if (savedTipos) {
+            try {
+              const parsedTipos = JSON.parse(savedTipos);
+              if (Array.isArray(parsedTipos) && parsedTipos.length > 0) {
+                setTiposEventos(parsedTipos);
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }
         }
       } finally {
         setLoading(false);
       }
     }
     load();
-
-    if (typeof window !== 'undefined') {
-      try {
-        const savedTipos = localStorage.getItem('legislab_tipos_eventos');
-        if (savedTipos) {
-          const parsedTipos = JSON.parse(savedTipos);
-          if (Array.isArray(parsedTipos) && parsedTipos.length > 0) {
-            setTiposEventos(parsedTipos);
-          }
-        }
-      } catch (e) {
-        console.error('Error loading agenda config from localStorage:', e);
-      }
-    }
   }, []);
 
   const todayStr = formatDate(new Date());
@@ -643,16 +652,23 @@ export default function AgendaPage() {
     }
   };
 
-  const handleConfirmarEliminarTipo = () => {
+  const handleConfirmarEliminarTipo = async () => {
     if (!tipoAEliminar) return;
-    const updated = tiposEventos.filter((t) => t !== tipoAEliminar);
+    const toDelete = tipoAEliminar;
+    const updated = tiposEventos.filter((t) => t !== toDelete);
     setTiposEventos(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('legislab_tipos_eventos', JSON.stringify(updated));
     }
-    if (nuevoTipo === tipoAEliminar) setNuevoTipo(updated[0] || 'Comisión');
-    if (editTipo === tipoAEliminar) setEditTipo(updated[0] || 'Comisión');
+    if (nuevoTipo === toDelete) setNuevoTipo(updated[0] || 'Comisión');
+    if (editTipo === toDelete) setEditTipo(updated[0] || 'Comisión');
     setTipoAEliminar(null);
+
+    try {
+      await deleteAgendaTipo(toDelete);
+    } catch (err) {
+      console.warn('Error deleting tipo from db:', err);
+    }
   };
 
   const handleCrearEvento = async (e: React.FormEvent) => {
@@ -680,6 +696,12 @@ export default function AgendaPage() {
         setTiposEventos(updatedTipos);
         if (typeof window !== 'undefined') {
           localStorage.setItem('legislab_tipos_eventos', JSON.stringify(updatedTipos));
+        }
+
+        try {
+          createAgendaTipo({ nombre: tipoFinal });
+        } catch (err) {
+          console.warn('Error saving tipo to db:', err);
         }
       }
     }
@@ -808,6 +830,12 @@ export default function AgendaPage() {
         setTiposEventos(updatedTipos);
         if (typeof window !== 'undefined') {
           localStorage.setItem('legislab_tipos_eventos', JSON.stringify(updatedTipos));
+        }
+
+        try {
+          createAgendaTipo({ nombre: tipoFinal });
+        } catch (err) {
+          console.warn('Error saving tipo to db:', err);
         }
       }
     }

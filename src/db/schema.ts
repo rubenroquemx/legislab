@@ -236,6 +236,16 @@ export const agendaSedes = pgTable('agenda_sedes', {
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
+export const agendaTipos = pgTable('agenda_tipos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  officeId: uuid('office_id')
+    .notNull()
+    .references(() => offices.id, { onDelete: 'cascade' }),
+  nombre: text('nombre').notNull(),
+  color: text('color').default('blue'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
 // -------------------------------------------------------------
 // DIRECTORIO INSTITUCIONAL & CUMPLEAÑOS
 // -------------------------------------------------------------
@@ -381,6 +391,8 @@ export type AgendaEvento = typeof agendaEventos.$inferSelect;
 export type NewAgendaEvento = typeof agendaEventos.$inferInsert;
 export type AgendaSede = typeof agendaSedes.$inferSelect;
 export type NewAgendaSede = typeof agendaSedes.$inferInsert;
+export type AgendaTipo = typeof agendaTipos.$inferSelect;
+export type NewAgendaTipo = typeof agendaTipos.$inferInsert;
 export type DirectorioContacto = typeof directorioContactos.$inferSelect;
 export type NewDirectorioContacto = typeof directorioContactos.$inferInsert;
 export type GrupoContacto = typeof gruposContactos.$inferSelect;
