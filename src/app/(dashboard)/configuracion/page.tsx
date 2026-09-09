@@ -293,17 +293,18 @@ function ConfiguracionContent() {
   useEffect(() => {
     async function checkStatus() {
       try {
-        const res = await getWhatsAppStatus(instanceName);
-        if (res.success && res.isConnected) {
+        const apiRes = await fetch(`/api/whatsapp/status?instanceName=${encodeURIComponent(instanceName)}`).then(r => r.json()).catch(() => null);
+        const res = apiRes || (await getWhatsAppStatus(instanceName));
+        if (res && res.success && res.isConnected) {
           setWhatsappConectado(true);
           localStorage.setItem('legislab_whatsapp_connected', 'true');
-          const infoRes = await getWhatsAppInstanceInfo(instanceName);
-          if (infoRes.success && infoRes.data) {
-            setConnectedPhone(infoRes.data.phone);
-            setProfileName(infoRes.data.profileName);
-            setMessageCount(infoRes.data.messageCount);
-            setContactCount(infoRes.data.contactCount);
-            setChatCount(infoRes.data.chatCount);
+          const info = res.info;
+          if (info) {
+            setConnectedPhone(info.phone);
+            setProfileName(info.profileName);
+            setMessageCount(info.messageCount || 0);
+            setContactCount(info.contactCount || 0);
+            setChatCount(info.chatCount || 0);
           }
         } else {
           setWhatsappConectado(false);
@@ -329,8 +330,9 @@ function ConfiguracionContent() {
     if (pollingActive && !whatsappConectado) {
       interval = setInterval(async () => {
         try {
-          const res = await getWhatsAppStatus(instanceName);
-          if (res.success && res.isConnected) {
+          const apiRes = await fetch(`/api/whatsapp/status?instanceName=${encodeURIComponent(instanceName)}`).then(r => r.json()).catch(() => null);
+          const res = apiRes || (await getWhatsAppStatus(instanceName));
+          if (res && res.success && res.isConnected) {
             setWhatsappConectado(true);
             setPollingActive(false);
             setQrBase64(null);
@@ -352,14 +354,27 @@ function ConfiguracionContent() {
 
     if (conectar) {
       try {
-        const res = await generateWhatsAppQR(instanceName);
-        if (res.success && (res.qrBase64 || res.qrCode)) {
+        let res: any = null;
+        try {
+          const apiRes = await fetch(`/api/whatsapp/qr?instanceName=${encodeURIComponent(instanceName)}`);
+          if (apiRes.ok) {
+            res = await apiRes.json();
+          }
+        } catch {
+          // Fallback to Server Action
+        }
+
+        if (!res) {
+          res = await generateWhatsAppQR(instanceName);
+        }
+
+        if (res && res.success && (res.qrBase64 || res.qrCode)) {
           setQrBase64(res.qrBase64 || null);
           setQrCodeString(res.qrCode || null);
           setPollingActive(true);
           setWhatsappFeedback('📱 Código QR generado en vivo desde Evolution API. Escanéalo en WhatsApp > Dispositivos Vinculados.');
         } else {
-          setWhatsappFeedback(res.error || 'Generando código QR...');
+          setWhatsappFeedback(res?.error || 'No se pudo obtener el código QR de Evolution API.');
         }
       } catch (err: unknown) {
         setWhatsappFeedback(`Error al conectar con Evolution API: ${err instanceof Error ? err.message : String(err)}`);
@@ -368,7 +383,12 @@ function ConfiguracionContent() {
       }
     } else {
       try {
-        await disconnectWhatsApp(instanceName);
+        await fetch('/api/whatsapp/disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instanceName }),
+        }).catch(() => null);
+        await disconnectWhatsApp(instanceName).catch(() => null);
         setWhatsappConectado(false);
         setQrBase64(null);
         setQrCodeString(null);

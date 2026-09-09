@@ -71,8 +71,19 @@ export interface WhatsAppChat {
 }
 
 function getEvolutionConfig(): EvolutionConfig {
-  const url = process.env.EVOLUTION_API_URL || process.env.SERVER_URL || 'http://localhost:8080';
-  const key = process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY || '';
+  const url =
+    process.env.EVOLUTION_API_URL ||
+    process.env.SERVER_URL ||
+    process.env.WHATSAPP_API_URL ||
+    process.env.NEXT_PUBLIC_EVOLUTION_API_URL ||
+    'https://evoapi.rubenroque.com.mx';
+
+  const key =
+    process.env.EVOLUTION_API_KEY ||
+    process.env.AUTHENTICATION_API_KEY ||
+    process.env.WHATSAPP_API_KEY ||
+    '429683C4C977415CAAFCCE10F7D57E11';
+
   return {
     apiUrl: url.replace(/\/+$/, ''),
     apiKey: key,
@@ -104,11 +115,16 @@ async function evolutionFetch<T>(
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
     const res = await fetch(url, {
       ...options,
       headers,
       cache: 'no-store',
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     const text = await res.text();
     let json: T | undefined;
