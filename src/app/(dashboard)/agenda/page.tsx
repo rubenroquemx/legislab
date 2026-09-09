@@ -230,6 +230,66 @@ function getWeekDays(currentDateStr: string) {
   return days;
 }
 
+function getMonthDays(currentDateStr: string) {
+  const base = parseDate(currentDateStr);
+  const year = base.getFullYear();
+  const month = base.getMonth();
+  
+  // Primer día del mes
+  const firstDay = new Date(year, month, 1, 12, 0, 0);
+  const firstDayOfWeek = firstDay.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+  // Desplazamiento respecto al Lunes (LUN = 0, MAR = 1, ..., DOM = 6)
+  const offset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+  
+  // Días totales del mes actual y mes anterior
+  const daysInMonth = new Date(year, month + 1, 0, 12, 0, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0, 12, 0, 0).getDate();
+  
+  const todayFormatted = formatDate(new Date());
+  const days = [];
+  
+  // 1. Días del mes anterior para completar la primera semana desde el Lunes
+  for (let i = offset - 1; i >= 0; i--) {
+    const diaNum = daysInPrevMonth - i;
+    const d = new Date(year, month - 1, diaNum, 12, 0, 0);
+    const fStr = formatDate(d);
+    days.push({
+      fecha: fStr,
+      diaNumero: diaNum,
+      esMesActual: false,
+      esHoy: fStr === todayFormatted,
+    });
+  }
+  
+  // 2. Días del mes actual
+  for (let i = 1; i <= daysInMonth; i++) {
+    const d = new Date(year, month, i, 12, 0, 0);
+    const fStr = formatDate(d);
+    days.push({
+      fecha: fStr,
+      diaNumero: i,
+      esMesActual: true,
+      esHoy: fStr === todayFormatted,
+    });
+  }
+  
+  // 3. Días del mes siguiente para completar la cuadrícula (35 o 42 celdas)
+  const totalCells = Math.ceil(days.length / 7) * 7;
+  const remaining = totalCells - days.length;
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(year, month + 1, i, 12, 0, 0);
+    const fStr = formatDate(d);
+    days.push({
+      fecha: fStr,
+      diaNumero: i,
+      esMesActual: false,
+      esHoy: fStr === todayFormatted,
+    });
+  }
+  
+  return days;
+}
+
 export default function AgendaPage() {
   const [eventos, setEventos] = useState<EventoLegislativo[]>(INITIAL_EVENTS);
   const [loading, setLoading] = useState(true);
@@ -406,29 +466,44 @@ export default function AgendaPage() {
   const eventosDelDia = eventos.filter((ev) => ev.fecha === fechaSeleccionada);
   const diaTieneEventos = eventosDelDia.length > 0;
   const diasSemana = getWeekDays(fechaSeleccionada);
+  const diasMes = getMonthDays(fechaSeleccionada);
 
   const handleNavAnterior = () => {
     const cur = parseDate(fechaSeleccionada);
     if (vista === 'dia') {
       cur.setDate(cur.getDate() - 1);
+      setFechaSeleccionada(formatDate(cur));
     } else if (vista === 'semana') {
       cur.setDate(cur.getDate() - 7);
+      setFechaSeleccionada(formatDate(cur));
     } else if (vista === 'mes') {
-      cur.setMonth(cur.getMonth() - 1);
+      const year = cur.getFullYear();
+      const month = cur.getMonth();
+      const day = cur.getDate();
+      const maxDaysPrev = new Date(year, month, 0, 12, 0, 0).getDate();
+      const targetDay = Math.min(day, maxDaysPrev);
+      const targetDate = new Date(year, month - 1, targetDay, 12, 0, 0);
+      setFechaSeleccionada(formatDate(targetDate));
     }
-    setFechaSeleccionada(formatDate(cur));
   };
 
   const handleNavSiguiente = () => {
     const cur = parseDate(fechaSeleccionada);
     if (vista === 'dia') {
       cur.setDate(cur.getDate() + 1);
+      setFechaSeleccionada(formatDate(cur));
     } else if (vista === 'semana') {
       cur.setDate(cur.getDate() + 7);
+      setFechaSeleccionada(formatDate(cur));
     } else if (vista === 'mes') {
-      cur.setMonth(cur.getMonth() + 1);
+      const year = cur.getFullYear();
+      const month = cur.getMonth();
+      const day = cur.getDate();
+      const maxDaysNext = new Date(year, month + 2, 0, 12, 0, 0).getDate();
+      const targetDay = Math.min(day, maxDaysNext);
+      const targetDate = new Date(year, month + 1, targetDay, 12, 0, 0);
+      setFechaSeleccionada(formatDate(targetDate));
     }
-    setFechaSeleccionada(formatDate(cur));
   };
 
   const handleOpenCompartir = () => {
@@ -1362,14 +1437,12 @@ export default function AgendaPage() {
           </div>
 
           <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
-            {Array.from({ length: 30 }, (_, i) => {
-              const diaNum = i + 1;
-              const mesStr = parseDate(fechaSeleccionada).getMonth() + 1;
-              const yearStr = parseDate(fechaSeleccionada).getFullYear();
-              const fStr = `${yearStr}-${String(mesStr).padStart(2, '0')}-${String(diaNum).padStart(2, '0')}`;
+            {diasMes.map((cell) => {
+              const fStr = cell.fecha;
               const evs = eventos.filter((e) => e.fecha === fStr);
               const isSelected = fechaSeleccionada === fStr;
-              const esHoy = fStr === formatDate(new Date());
+              const esHoy = cell.esHoy;
+              const esMesActual = cell.esMesActual;
 
               return (
                 <div
@@ -1385,20 +1458,24 @@ export default function AgendaPage() {
                       ? 'border-[#1a73e8] bg-[#e8f0fe]/30 shadow-xs'
                       : esHoy
                       ? 'border-blue-300 dark:border-blue-800 bg-blue-50/20'
-                      : 'border-gray-200/80 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-transparent'
+                      : esMesActual
+                      ? 'border-gray-200/80 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-transparent'
+                      : 'border-gray-100 dark:border-gray-800/40 bg-gray-50/40 dark:bg-gray-900/20 opacity-45 hover:opacity-100'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span
                       className={`h-4 w-4 sm:h-6 sm:w-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold ${
                         esHoy
-                          ? 'bg-[#1a73e8] text-white'
+                          ? 'bg-[#1a73e8] text-white shadow-xs'
                           : isSelected
                           ? 'text-[#1a73e8] font-bold'
-                          : 'text-gray-700 dark:text-gray-200'
+                          : esMesActual
+                          ? 'text-gray-700 dark:text-gray-200'
+                          : 'text-gray-400 dark:text-gray-500'
                       }`}
                     >
-                      {diaNum}
+                      {cell.diaNumero}
                     </span>
                     {evs.length > 0 && (
                       <span className="text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
