@@ -82,6 +82,15 @@ export const offices = pgTable('offices', {
   googleDriveClientId: text('google_drive_client_id'),
   googleDriveClientSecret: text('google_drive_client_secret'),
 
+  // Google Calendar Integration (OAuth 2.0)
+  googleCalendarConnected: boolean('google_calendar_connected').default(false),
+  googleCalendarEmail: text('google_calendar_email'),
+  googleCalendarAccessToken: text('google_calendar_access_token'),
+  googleCalendarRefreshToken: text('google_calendar_refresh_token'),
+  googleCalendarTokenExpiry: timestamp('google_calendar_token_expiry', { mode: 'date' }),
+  googleCalendarId: text('google_calendar_id').default('primary'),
+  googleCalendarLastSync: timestamp('google_calendar_last_sync', { mode: 'date' }),
+
   // Stripe Billing
   stripeCustomerId: text('stripe_customer_id'),
   stripeSubscriptionId: text('stripe_subscription_id'),
@@ -222,6 +231,7 @@ export const agendaEventos = pgTable('agenda_eventos', {
   lugarUrl: text('lugar_url'),
   color: text('color').default('#0284c7'),
   notas: text('notas'),
+  googleEventId: text('google_event_id'),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 

@@ -5,12 +5,20 @@ import {
   agendaEventos, 
   agendaSedes, 
   agendaTipos,
+  offices,
   type NewAgendaEvento, 
   type NewAgendaSede,
   type NewAgendaTipo 
 } from '@/db';
 import { eq, desc, asc, and, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { 
+  refreshAccessToken, 
+  insertGoogleCalendarEvent, 
+  updateGoogleCalendarEvent, 
+  deleteGoogleCalendarEvent,
+  fetchGoogleCalendarEvents 
+} from '@/lib/google-calendar';
 
 const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -57,6 +65,57 @@ export const DEFAULT_SEDES_PARLAMENTARIAS = [
   },
 ];
 
+/**
+ * Obtiene un access token válido para el despacho (refrescándolo automáticamente si está expirado)
+ */
+async function getValidGoogleTokenForOffice(officeId: string): Promise<{
+  accessToken: string;
+  calendarId: string;
+} | null> {
+  try {
+    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
+    const office = officeList[0];
+    if (!office || !office.googleCalendarConnected || !office.googleCalendarAccessToken) {
+      return null;
+    }
+
+    const now = new Date();
+    const expiry = office.googleCalendarTokenExpiry;
+    let currentAccessToken = office.googleCalendarAccessToken;
+
+    // Si el token expira en menos de 2 minutos y tenemos refresh_token, lo renovamos
+    if (expiry && expiry.getTime() - now.getTime() < 2 * 60 * 1000 && office.googleCalendarRefreshToken) {
+      try {
+        const refreshed = await refreshAccessToken(office.googleCalendarRefreshToken);
+        currentAccessToken = refreshed.accessToken;
+        const newExpiry = new Date(Date.now() + (refreshed.expiresIn || 3600) * 1000);
+
+        await db
+          .update(offices)
+          .set({
+            googleCalendarAccessToken: refreshed.accessToken,
+            googleCalendarTokenExpiry: newExpiry,
+            updatedAt: new Date(),
+          })
+          .where(eq(offices.id, officeId));
+      } catch (err) {
+        console.warn('Error refreshing Google token in background:', err);
+      }
+    }
+
+    return {
+      accessToken: currentAccessToken,
+      calendarId: office.googleCalendarId || 'primary',
+    };
+  } catch (e) {
+    console.warn('getValidGoogleTokenForOffice error:', e);
+    return null;
+  }
+}
+
+// -------------------------------------------------------------
+// EVENTOS DE LA AGENDA
+// -------------------------------------------------------------
 export async function getAgendaEventos(officeId: string = DEFAULT_OFFICE_ID) {
   try {
     const data = await db
@@ -101,10 +160,39 @@ export async function createAgendaEvento(data: {
     };
 
     const inserted = await db.insert(agendaEventos).values(newEntry).returning();
+    const createdEvent = inserted[0];
+
+    // Sincronización automática con Google Calendar si está conectado
+    try {
+      const gcal = await getValidGoogleTokenForOffice(officeId);
+      if (gcal) {
+        const gEventId = await insertGoogleCalendarEvent(gcal.accessToken, gcal.calendarId, {
+          titulo: newEntry.titulo,
+          tipo: newEntry.tipo,
+          fecha: newEntry.fecha,
+          horaInicio: newEntry.horaInicio,
+          horaFin: newEntry.horaFin,
+          lugarNombre: newEntry.lugarNombre,
+          lugarUrl: newEntry.lugarUrl || undefined,
+          notas: newEntry.notas || undefined,
+        });
+
+        if (gEventId) {
+          await db
+            .update(agendaEventos)
+            .set({ googleEventId: gEventId })
+            .where(eq(agendaEventos.id, createdEvent.id));
+          createdEvent.googleEventId = gEventId;
+        }
+      }
+    } catch (gErr) {
+      console.warn('Google Calendar auto-sync error on create:', gErr);
+    }
+
     revalidatePath('/agenda');
     revalidatePath('/dashboard');
 
-    return { success: true, data: inserted[0] };
+    return { success: true, data: createdEvent };
   } catch (error) {
     console.error('Error creating agenda evento:', error);
     return { success: false, error: 'No se pudo guardar el evento en agenda' };
@@ -123,7 +211,9 @@ export async function updateAgendaEvento(
     lugarUrl: string;
     color: string;
     notas: string;
-  }>
+    googleEventId: string;
+  }>,
+  officeId: string = DEFAULT_OFFICE_ID
 ) {
   try {
     const updated = await db
@@ -131,24 +221,189 @@ export async function updateAgendaEvento(
       .set(data)
       .where(eq(agendaEventos.id, id as any))
       .returning();
+
+    const ev = updated[0];
+
+    // Sincronización automática de actualización con Google Calendar
+    try {
+      const gcal = await getValidGoogleTokenForOffice(officeId);
+      if (gcal && ev) {
+        if (ev.googleEventId) {
+          await updateGoogleCalendarEvent(gcal.accessToken, gcal.calendarId, ev.googleEventId, {
+            titulo: ev.titulo,
+            tipo: ev.tipo,
+            fecha: ev.fecha,
+            horaInicio: ev.horaInicio,
+            horaFin: ev.horaFin,
+            lugarNombre: ev.lugarNombre,
+            lugarUrl: ev.lugarUrl || undefined,
+            notas: ev.notas || undefined,
+          });
+        } else {
+          // Si no tenía ID en Google Calendar, insertarlo
+          const gEventId = await insertGoogleCalendarEvent(gcal.accessToken, gcal.calendarId, {
+            titulo: ev.titulo,
+            tipo: ev.tipo,
+            fecha: ev.fecha,
+            horaInicio: ev.horaInicio,
+            horaFin: ev.horaFin,
+            lugarNombre: ev.lugarNombre,
+            lugarUrl: ev.lugarUrl || undefined,
+            notas: ev.notas || undefined,
+          });
+          if (gEventId) {
+            await db
+              .update(agendaEventos)
+              .set({ googleEventId: gEventId })
+              .where(eq(agendaEventos.id, id as any));
+          }
+        }
+      }
+    } catch (gErr) {
+      console.warn('Google Calendar auto-sync error on update:', gErr);
+    }
+
     revalidatePath('/agenda');
     revalidatePath('/dashboard');
-    return { success: true, data: updated[0] };
+    return { success: true, data: ev };
   } catch (error) {
     console.error('Error updating agenda evento:', error);
     return { success: false, error: 'No se pudo actualizar el evento' };
   }
 }
 
-export async function deleteAgendaEvento(id: string) {
+export async function deleteAgendaEvento(id: string, officeId: string = DEFAULT_OFFICE_ID) {
   try {
+    // Buscar si tenía googleEventId antes de borrar
+    const existing = await db.select().from(agendaEventos).where(eq(agendaEventos.id, id as any));
+    const ev = existing[0];
+
     await db.delete(agendaEventos).where(eq(agendaEventos.id, id as any));
+
+    // Eliminar también de Google Calendar si estaba sincronizado
+    if (ev && ev.googleEventId) {
+      try {
+        const gcal = await getValidGoogleTokenForOffice(officeId);
+        if (gcal) {
+          await deleteGoogleCalendarEvent(gcal.accessToken, gcal.calendarId, ev.googleEventId);
+        }
+      } catch (gErr) {
+        console.warn('Google Calendar auto-sync error on delete:', gErr);
+      }
+    }
+
     revalidatePath('/agenda');
     revalidatePath('/dashboard');
     return { success: true };
   } catch (error) {
     console.error('Error deleting agenda evento:', error);
     return { success: false, error: 'No se pudo eliminar el evento' };
+  }
+}
+
+// -------------------------------------------------------------
+// GOOGLE CALENDAR ACTIONS (STATUS, DISCONNECT, FULL SYNC)
+// -------------------------------------------------------------
+export async function getGoogleCalendarStatusAction(officeId: string = DEFAULT_OFFICE_ID) {
+  try {
+    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
+    const office = officeList[0];
+    if (!office) {
+      return { success: false, connected: false };
+    }
+
+    return {
+      success: true,
+      connected: Boolean(office.googleCalendarConnected),
+      email: office.googleCalendarEmail || '',
+      lastSync: office.googleCalendarLastSync || null,
+    };
+  } catch (error) {
+    console.warn('Error checking Google Calendar status:', error);
+    return { success: false, connected: false };
+  }
+}
+
+export async function disconnectGoogleCalendarAction(officeId: string = DEFAULT_OFFICE_ID) {
+  try {
+    await db
+      .update(offices)
+      .set({
+        googleCalendarConnected: false,
+        googleCalendarEmail: null,
+        googleCalendarAccessToken: null,
+        googleCalendarRefreshToken: null,
+        googleCalendarTokenExpiry: null,
+        googleCalendarLastSync: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(offices.id, officeId));
+
+    revalidatePath('/agenda');
+    return { success: true, message: 'Google Calendar desconectado exitosamente' };
+  } catch (error) {
+    console.error('Error disconnecting Google Calendar:', error);
+    return { success: false, error: 'No se pudo desconectar Google Calendar' };
+  }
+}
+
+export async function syncGoogleCalendarAction(officeId: string = DEFAULT_OFFICE_ID) {
+  try {
+    const gcal = await getValidGoogleTokenForOffice(officeId);
+    if (!gcal) {
+      return { success: false, error: 'Google Calendar no está conectado' };
+    }
+
+    // Obtener eventos locales del despacho
+    const localEvents = await db
+      .select()
+      .from(agendaEventos)
+      .where(eq(agendaEventos.officeId, officeId));
+
+    let pushedCount = 0;
+
+    // 1. Empujar eventos locales que no tengan ID en Google Calendar
+    for (const ev of localEvents) {
+      if (!ev.googleEventId) {
+        const gEventId = await insertGoogleCalendarEvent(gcal.accessToken, gcal.calendarId, {
+          titulo: ev.titulo,
+          tipo: ev.tipo,
+          fecha: ev.fecha,
+          horaInicio: ev.horaInicio,
+          horaFin: ev.horaFin,
+          lugarNombre: ev.lugarNombre,
+          lugarUrl: ev.lugarUrl || undefined,
+          notas: ev.notas || undefined,
+        });
+
+        if (gEventId) {
+          await db
+            .update(agendaEventos)
+            .set({ googleEventId: gEventId })
+            .where(eq(agendaEventos.id, ev.id));
+          pushedCount++;
+        }
+      }
+    }
+
+    // Actualizar timestamp de última sincronización
+    await db
+      .update(offices)
+      .set({
+        googleCalendarLastSync: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(offices.id, officeId));
+
+    revalidatePath('/agenda');
+    return {
+      success: true,
+      message: `Sincronización completada exitosamente. (${pushedCount} eventos actualizados)`,
+      lastSync: new Date(),
+    };
+  } catch (error: any) {
+    console.error('Error in syncGoogleCalendarAction:', error);
+    return { success: false, error: error?.message || 'Error durante la sincronización' };
   }
 }
 
@@ -285,5 +540,3 @@ export async function deleteAgendaTipo(nombreOrId: string, officeId: string = DE
     return { success: false, error: 'No se pudo eliminar el tipo de evento' };
   }
 }
-
-

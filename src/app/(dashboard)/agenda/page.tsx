@@ -11,7 +11,10 @@ import {
   deleteAgendaSede,
   getAgendaTipos,
   createAgendaTipo,
-  deleteAgendaTipo
+  deleteAgendaTipo,
+  getGoogleCalendarStatusAction,
+  disconnectGoogleCalendarAction,
+  syncGoogleCalendarAction
 } from '@/app/actions/agenda';
 import { 
   Calendar as CalendarIcon, 
@@ -384,11 +387,43 @@ export default function AgendaPage() {
             }
           }
         }
+        try {
+          const gcalRes = await getGoogleCalendarStatusAction();
+          if (gcalRes.success) {
+            setGcalConnected(gcalRes.connected);
+            setGcalEmail(gcalRes.email || '');
+            if (gcalRes.lastSync) {
+              setLastSyncTime(
+                new Date(gcalRes.lastSync).toLocaleTimeString('es-MX', {
+                  timeZone: 'America/Mexico_City',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              );
+            }
+          }
+        } catch (gcalErr) {
+          console.warn('Error loading gcal status:', gcalErr);
+        }
       } finally {
         setLoading(false);
       }
     }
     load();
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('gcal_status') === 'connected') {
+        setToastMessage('✅ ¡Cuenta de Google Calendar conectada exitosamente!');
+        setGcalConnected(true);
+        setTimeout(() => setToastMessage(null), 5000);
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (params.get('gcal_error')) {
+        setToastMessage('⚠️ No se pudo completar la conexión con Google Calendar.');
+        setTimeout(() => setToastMessage(null), 6000);
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
   }, []);
 
   const todayStr = formatDate(new Date());
@@ -397,7 +432,11 @@ export default function AgendaPage() {
   const [vista, setVista] = useState<'mes' | 'semana' | 'dia'>('semana');
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(todayStr);
 
-  // Google Calendar live sync states
+  // Google Calendar live sync states & OAuth
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalEmail, setGcalEmail] = useState('');
+  const [isModalGCalOpen, setIsModalGCalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSyncingGCal, setIsSyncingGCal] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('En vivo');
 
@@ -450,17 +489,72 @@ export default function AgendaPage() {
 
   const triggerGoogleCalendarSync = () => {
     setIsSyncingGCal(true);
-    setTimeout(() => {
+    if (gcalConnected) {
+      syncGoogleCalendarAction().then((res) => {
+        if (res.success) {
+          setLastSyncTime(
+            new Date().toLocaleTimeString('es-MX', {
+              timeZone: 'America/Mexico_City',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          );
+        }
+        setIsSyncingGCal(false);
+      });
+    } else {
+      setTimeout(() => {
+        setIsSyncingGCal(false);
+        setLastSyncTime(
+          new Date().toLocaleTimeString('es-MX', {
+            timeZone: 'America/Mexico_City',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
+        );
+      }, 600);
+    }
+  };
+
+  const handleManualSyncGCal = async () => {
+    setIsSyncingGCal(true);
+    try {
+      const res = await syncGoogleCalendarAction();
+      if (res.success) {
+        setToastMessage(`✓ ${res.message}`);
+        setLastSyncTime(
+          new Date().toLocaleTimeString('es-MX', {
+            timeZone: 'America/Mexico_City',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        );
+      } else {
+        setToastMessage(`⚠️ ${res.error}`);
+      }
+    } catch (e) {
+      setToastMessage('⚠️ Error durante la sincronización');
+    } finally {
       setIsSyncingGCal(false);
-      setLastSyncTime(
-        new Date().toLocaleTimeString('es-MX', {
-          timeZone: 'America/Mexico_City',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        })
-      );
-    }, 600);
+      setTimeout(() => setToastMessage(null), 4000);
+    }
+  };
+
+  const handleDisconnectGCal = async () => {
+    if (!confirm('¿Deseas desconectar tu cuenta de Google Calendar de este despacho?')) return;
+    try {
+      const res = await disconnectGoogleCalendarAction();
+      if (res.success) {
+        setGcalConnected(false);
+        setGcalEmail('');
+        setIsModalGCalOpen(false);
+        setToastMessage('✓ Google Calendar desconectado exitosamente');
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const eventosDelDia = eventos.filter((ev) => ev.fecha === fechaSeleccionada);
@@ -1118,11 +1212,34 @@ export default function AgendaPage() {
             </button>
           </div>
 
-          <div className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800/80 text-[11px] font-medium text-gray-600 dark:text-gray-300 shadow-2xs">
-            <div className={`h-2 w-2 rounded-full ${isSyncingGCal ? 'bg-blue-500 animate-ping' : 'bg-[#0b8043]'}`}></div>
-            <span className="font-semibold text-gray-700 dark:text-gray-200">Google Calendar:</span>
-            <span className="text-gray-500 dark:text-gray-400">{isSyncingGCal ? 'Sincronizando...' : lastSyncTime}</span>
-          </div>
+          {/* Google Calendar Status & Connect Button */}
+          {gcalConnected ? (
+            <button
+              onClick={() => setIsModalGCalOpen(true)}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 text-[11px] font-medium text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all shadow-2xs cursor-pointer group"
+              title="Administrar Google Calendar"
+            >
+              <div className={`h-2 w-2 rounded-full ${isSyncingGCal ? 'bg-emerald-500 animate-ping' : 'bg-emerald-600'}`}></div>
+              <span className="font-bold">Google Calendar:</span>
+              <span className="text-emerald-700 dark:text-emerald-300 truncate max-w-[130px]">
+                {isSyncingGCal ? 'Sincronizando...' : gcalEmail || 'En vivo'}
+              </span>
+              <RefreshCw className={`h-3 w-3 text-emerald-600 opacity-60 group-hover:opacity-100 transition-opacity ${isSyncingGCal ? 'animate-spin' : ''}`} />
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsModalGCalOpen(true)}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-[11px] font-semibold text-[#1a73e8] dark:text-blue-300 hover:bg-blue-100/80 dark:hover:bg-blue-900/50 transition-all shadow-2xs cursor-pointer"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              <span>Conectar Google Calendar</span>
+            </button>
+          )}
 
           <button
             onClick={handleOpenCompartir}
@@ -2564,6 +2681,125 @@ export default function AgendaPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIGURACIÓN / SINCRONIZACIÓN GOOGLE CALENDAR */}
+      {isModalGCalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center border border-blue-200/80 dark:border-blue-900 shadow-2xs">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Google Calendar</h2>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Sincronización oficial bidireccional</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalGCalOpen(false)}
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold p-1 rounded-lg hover:bg-gray-100 dark:bg-gray-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            {gcalConnected ? (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                      Cuenta Conectada
+                    </span>
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">OAuth 2.0 Activo</span>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 font-mono truncate">{gcalEmail || 'Usuario Vinculado'}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Última sincronización: <span className="font-semibold text-gray-700 dark:text-gray-300">{lastSyncTime}</span>
+                  </p>
+                </div>
+
+                <div className="text-xs text-gray-600 dark:text-gray-300 space-y-1.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+                  <p className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    Sincronización automática activada:
+                  </p>
+                  <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                    <li>Los eventos creados en LegisLab se reflejan al instante en tu Google Calendar.</li>
+                    <li>Las modificaciones de hora, lugar y reagendado se actualizan en vivo.</li>
+                    <li>Los eventos eliminados se remueven de tu cuenta Google.</li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <button
+                    type="button"
+                    onClick={handleManualSyncGCal}
+                    disabled={isSyncingGCal}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#1a73e8] hover:bg-[#1557b0] disabled:opacity-60 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm transition-all cursor-pointer"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isSyncingGCal ? 'animate-spin' : ''}`} />
+                    <span>{isSyncingGCal ? 'Sincronizando eventos...' : 'Forzar Sincronización Ahora'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGCal}
+                    className="w-full inline-flex items-center justify-center gap-2 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 py-2 rounded-xl transition-all"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Desconectar Google Calendar</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800 text-xs text-gray-700 dark:text-gray-300 space-y-2">
+                  <p className="font-bold text-gray-900 dark:text-white">Conecta tu cuenta de Google</p>
+                  <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
+                    Vincula tu cuenta personal o institucional (@gmail.com o Google Workspace) para que todos los eventos legislativos se sincronicen automáticamente en tu celular y computadora.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800 space-y-1.5 text-[11px] text-gray-600 dark:text-gray-400">
+                  <p className="font-semibold text-gray-800 dark:text-gray-200">¿Qué incluye la integración?</p>
+                  <p>✓ Sesiones de Pleno, Comisiones y Reuniones de Bancada en tu app móvil.</p>
+                  <p>✓ Ubicaciones oficiales de Google Maps en cada cita.</p>
+                  <p>✓ Recordatorios y alertas nativas de Google Calendar.</p>
+                </div>
+
+                <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <a
+                    href="/api/auth/google-calendar"
+                    className="w-full inline-flex items-center justify-center gap-2.5 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-white text-xs font-bold py-3 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>Iniciar Sesión con Google</span>
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING TOAST NOTIFICATION BANNER */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900/95 dark:bg-white/95 text-white dark:text-gray-900 px-4 py-3 rounded-xl shadow-2xl border border-gray-700 dark:border-gray-300 text-xs font-bold flex items-center gap-2 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 dark:text-emerald-600" />
+          <span>{toastMessage}</span>
         </div>
       )}
     </div>
