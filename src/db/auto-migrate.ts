@@ -146,6 +146,17 @@ export async function ensureDatabaseTables(connectionString: string) {
       )
     `;
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS agenda_sedes (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        office_id UUID NOT NULL REFERENCES offices(id) ON DELETE CASCADE,
+        nombre TEXT NOT NULL,
+        ubicacion_url TEXT NOT NULL,
+        referencia TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      )
+    `;
+
     // 7. Directorio
     await sql`
       CREATE TABLE IF NOT EXISTS directorio_contactos (

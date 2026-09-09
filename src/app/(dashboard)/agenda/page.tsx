@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAgendaEventos, createAgendaEvento, updateAgendaEvento, deleteAgendaEvento } from '@/app/actions/agenda';
+import { 
+  getAgendaEventos, 
+  createAgendaEvento, 
+  updateAgendaEvento, 
+  deleteAgendaEvento,
+  getAgendaSedes,
+  createAgendaSede,
+  deleteAgendaSede
+} from '@/app/actions/agenda';
 import { 
   Calendar as CalendarIcon, 
   Plus, 
@@ -222,7 +230,11 @@ export default function AgendaPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await getAgendaEventos();
+        const [res, resSedes] = await Promise.all([
+          getAgendaEventos(),
+          getAgendaSedes(),
+        ]);
+
         if (res.success && res.data && res.data.length > 0) {
           const mapped: EventoLegislativo[] = res.data.map((d: any) => ({
             id: d.id,
@@ -249,13 +261,37 @@ export default function AgendaPage() {
             }
           }
         }
+
+        if (resSedes.success && resSedes.data && resSedes.data.length > 0) {
+          const mappedSedes: SedeFrecuente[] = resSedes.data.map((s: any) => ({
+            id: s.id,
+            nombre: s.nombre,
+            ubicacionUrl: s.ubicacionUrl,
+            referencia: s.referencia || undefined,
+          }));
+          setSedesFrecuentes(mappedSedes);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(mappedSedes));
+          }
+        }
       } catch (err) {
-        console.warn('Error loading agenda:', err);
+        console.warn('Error loading agenda data:', err);
         if (typeof window !== 'undefined') {
           const cached = localStorage.getItem('legislab_agenda_eventos');
           if (cached) {
             try {
               setEventos(JSON.parse(cached));
+            } catch (e) {
+              console.error(e);
+            }
+          }
+          const savedSedes = localStorage.getItem('legislab_sedes_frecuentes');
+          if (savedSedes) {
+            try {
+              const parsed = JSON.parse(savedSedes);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setSedesFrecuentes(parsed);
+              }
             } catch (e) {
               console.error(e);
             }
@@ -269,13 +305,6 @@ export default function AgendaPage() {
 
     if (typeof window !== 'undefined') {
       try {
-        const savedSedes = localStorage.getItem('legislab_sedes_frecuentes');
-        if (savedSedes) {
-          const parsed = JSON.parse(savedSedes);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setSedesFrecuentes(parsed);
-          }
-        }
         const savedTipos = localStorage.getItem('legislab_tipos_eventos');
         if (savedTipos) {
           const parsedTipos = JSON.parse(savedTipos);
@@ -595,16 +624,23 @@ export default function AgendaPage() {
     }
   };
 
-  const handleConfirmarEliminarSede = () => {
+  const handleConfirmarEliminarSede = async () => {
     if (!sedeAEliminar) return;
-    const updated = sedesFrecuentes.filter((s) => s.id !== sedeAEliminar.id);
+    const toDelete = sedeAEliminar;
+    const updated = sedesFrecuentes.filter((s) => s.id !== toDelete.id);
     setSedesFrecuentes(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(updated));
     }
-    if (sedeSeleccionadaId === sedeAEliminar.id) setSedeSeleccionadaId('');
-    if (editSedeSeleccionadaId === sedeAEliminar.id) setEditSedeSeleccionadaId('personalizada');
+    if (sedeSeleccionadaId === toDelete.id) setSedeSeleccionadaId('');
+    if (editSedeSeleccionadaId === toDelete.id) setEditSedeSeleccionadaId('personalizada');
     setSedeAEliminar(null);
+
+    try {
+      await deleteAgendaSede(toDelete.id);
+    } catch (err) {
+      console.warn('Error deleting sede from db:', err);
+    }
   };
 
   const handleConfirmarEliminarTipo = () => {
@@ -653,18 +689,43 @@ export default function AgendaPage() {
         (s) => s.nombre.toLowerCase() === nuevoLugar.trim().toLowerCase()
       );
       if (!yaExiste) {
-        const updatedSedes = [
-          ...sedesFrecuentes,
-          {
-            id: `sede-${Date.now()}`,
-            nombre: nuevoLugar.trim(),
-            ubicacionUrl: nuevaUbicacionUrl.trim(),
-            referencia: tipoFinal,
-          },
-        ];
+        const tempSedeId = `sede-${Date.now()}`;
+        const newSedeObj: SedeFrecuente = {
+          id: tempSedeId,
+          nombre: nuevoLugar.trim(),
+          ubicacionUrl: nuevaUbicacionUrl.trim(),
+          referencia: tipoFinal,
+        };
+        const updatedSedes = [...sedesFrecuentes, newSedeObj];
         setSedesFrecuentes(updatedSedes);
         if (typeof window !== 'undefined') {
           localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(updatedSedes));
+        }
+
+        // Persist to database for whole office
+        try {
+          createAgendaSede({
+            nombre: nuevoLugar.trim(),
+            ubicacionUrl: nuevaUbicacionUrl.trim(),
+            referencia: tipoFinal,
+          }).then((res) => {
+            if (res.success && res.data) {
+              setSedesFrecuentes((prev) =>
+                prev.map((s) =>
+                  s.id === tempSedeId
+                    ? {
+                        id: res.data.id,
+                        nombre: res.data.nombre,
+                        ubicacionUrl: res.data.ubicacionUrl,
+                        referencia: res.data.referencia || undefined,
+                      }
+                    : s
+                )
+              );
+            }
+          });
+        } catch (err) {
+          console.warn('Error saving sede to db:', err);
         }
       }
     }
@@ -1594,6 +1655,49 @@ export default function AgendaPage() {
                       </p>
                     )}
                   </div>
+
+                  {editLugar && editUbicacionUrl && !sedesFrecuentes.some(s => s.nombre.toLowerCase() === editLugar.trim().toLowerCase()) && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const tempSedeId = `sede-${Date.now()}`;
+                        const newSedeObj = {
+                          id: tempSedeId,
+                          nombre: editLugar.trim(),
+                          ubicacionUrl: editUbicacionUrl.trim(),
+                          referencia: editTipo,
+                        };
+                        const updatedSedes = [...sedesFrecuentes, newSedeObj];
+                        setSedesFrecuentes(updatedSedes);
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(updatedSedes));
+                        }
+                        try {
+                          const res = await createAgendaSede({
+                            nombre: editLugar.trim(),
+                            ubicacionUrl: editUbicacionUrl.trim(),
+                            referencia: editTipo,
+                          });
+                          if (res.success && res.data) {
+                            setSedesFrecuentes((prev) =>
+                              prev.map((s) => (s.id === tempSedeId ? {
+                                id: res.data.id,
+                                nombre: res.data.nombre,
+                                ubicacionUrl: res.data.ubicacionUrl,
+                                referencia: res.data.referencia || undefined,
+                              } : s))
+                            );
+                          }
+                        } catch (err) {
+                          console.warn('Error saving sede to db:', err);
+                        }
+                      }}
+                      className="text-[11px] font-semibold text-[#1a73e8] hover:underline flex items-center gap-1 pt-1"
+                    >
+                      <BookmarkPlus className="h-3.5 w-3.5" />
+                      Guardar este lugar para todo el despacho
+                    </button>
+                  )}
                 </div>
               </div>
 
