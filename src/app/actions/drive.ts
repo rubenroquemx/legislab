@@ -15,7 +15,19 @@ async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
     const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
     if (officeList.length > 0) return officeList[0];
     const anyOffice = await db.select().from(offices).limit(1);
-    return anyOffice[0] || null;
+    if (anyOffice.length > 0) return anyOffice[0];
+
+    const [created] = await db.insert(offices).values({
+      id: DEFAULT_OFFICE_ID,
+      name: 'Despacho Parlamentario Dip. Ruben Roque',
+      titularName: 'Dip. Ruben Roque',
+      titularEmail: 'contacto@rubenroque.mx',
+      legislature: 'LXVI Legislatura',
+      district: 'Distrito 04 Federal',
+      state: 'Tabasco',
+      party: 'MORENA',
+    }).returning();
+    return created;
   } catch (e) {
     console.warn('resolveOffice error:', e);
     return null;

@@ -27,7 +27,26 @@ export async function ensureDatabaseTables(connectionString: string) {
       )
     `;
 
-    // Ensure all Google Drive & Calendar columns exist in offices
+    // Ensure all schema columns exist in offices
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS slug TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS titular_email TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS titular_phone TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'starter'`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS whatsapp_instance_name TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS max_users INTEGER NOT NULL DEFAULT 3`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS subscription_ends_at TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS discount_percent INTEGER DEFAULT 0`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS promo_notes TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS enabled_modules TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS stripe_price_id TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS billing_email TEXT`;
+
+    // Google Drive & Calendar columns
     await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_connected BOOLEAN DEFAULT false`;
     await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_email TEXT`;
     await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_access_token TEXT`;
@@ -35,6 +54,8 @@ export async function ensureDatabaseTables(connectionString: string) {
     await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_token_expiry TIMESTAMP WITH TIME ZONE`;
     await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_folder_id TEXT`;
     await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_folder_url TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_client_id TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_client_secret TEXT`;
 
     await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_calendar_connected BOOLEAN DEFAULT false`;
     await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_calendar_email TEXT`;
@@ -46,11 +67,12 @@ export async function ensureDatabaseTables(connectionString: string) {
 
     // Default office
     await sql`
-      INSERT INTO offices (id, name, titular_name, legislature, district, state, party)
+      INSERT INTO offices (id, name, titular_name, titular_email, legislature, district, state, party)
       VALUES (
         '00000000-0000-0000-0000-000000000001',
         'Despacho Parlamentario Dip. Ruben Roque',
         'Dip. Ruben Roque',
+        'contacto@rubenroque.mx',
         'LXVI Legislatura',
         'Distrito 04 Federal',
         'Tabasco',

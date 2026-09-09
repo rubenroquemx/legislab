@@ -34,7 +34,7 @@ export function getAppBaseUrl(request?: { nextUrl?: { origin: string }; headers?
     }
   }
 
-  return 'https://legislab.rubenroque.com.mx';
+  return 'https://legislab.app';
 }
 
 /**

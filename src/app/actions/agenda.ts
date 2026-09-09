@@ -79,6 +79,7 @@ async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
       id: DEFAULT_OFFICE_ID,
       name: 'Despacho Parlamentario Dip. Ruben Roque',
       titularName: 'Dip. Ruben Roque',
+      titularEmail: 'contacto@rubenroque.mx',
       legislature: 'LXVI Legislatura',
       district: 'Distrito 04 Federal',
       state: 'Tabasco',
