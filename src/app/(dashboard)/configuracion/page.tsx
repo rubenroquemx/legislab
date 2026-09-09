@@ -213,6 +213,16 @@ function ConfiguracionContent() {
     const savedWhatsapp = localStorage.getItem('legislab_whatsapp_connected');
     if (savedWhatsapp !== null) setWhatsappConectado(savedWhatsapp === 'true');
 
+    const savedDriveConn = localStorage.getItem('legislab_gdrive_connected');
+    if (savedDriveConn !== null) setDriveConectado(savedDriveConn === 'true');
+    const savedDriveEmail = localStorage.getItem('legislab_gdrive_email');
+    if (savedDriveEmail) setDriveEmail(savedDriveEmail);
+
+    const savedCalConn = localStorage.getItem('legislab_gcal_connected');
+    if (savedCalConn !== null) setCalendarConectado(savedCalConn === 'true');
+    const savedCalEmail = localStorage.getItem('legislab_gcal_email');
+    if (savedCalEmail) setCalendarEmail(savedCalEmail);
+
     const savedUrl = localStorage.getItem('legislab_gcal_url');
     if (savedUrl) setGoogleCalendarUrl(savedUrl);
     
@@ -231,33 +241,53 @@ function ConfiguracionContent() {
       }
     }
 
+    if (searchParams.get('gdrive_status') === 'connected') {
+      setDriveConectado(true);
+      localStorage.setItem('legislab_gdrive_connected', 'true');
+    }
+
+    if (searchParams.get('gcal_status') === 'connected') {
+      setCalendarConectado(true);
+      localStorage.setItem('legislab_gcal_connected', 'true');
+    }
+
     const refreshDriveAndCalendar = () => {
       getGoogleDriveStatusAction().then(res => {
         if (res.success && res.connected) {
           setDriveConectado(true);
-          setDriveEmail(res.email || '');
+          localStorage.setItem('legislab_gdrive_connected', 'true');
+          if (res.email) {
+            setDriveEmail(res.email);
+            localStorage.setItem('legislab_gdrive_email', res.email);
+          }
           if (res.folderUrl) {
             setDriveFolderUrlReal(res.folderUrl);
             setGoogleDriveFolderUrl(res.folderUrl);
           }
           if (res.folderId) setDriveFolderIdReal(res.folderId);
-        } else if (tabFromQuery === 'conexiones' && searchParams.get('gdrive_status') === 'connected') {
-          setDriveConectado(true);
+        } else if (res.success && !res.connected && searchParams.get('gdrive_status') !== 'connected') {
+          setDriveConectado(false);
+          localStorage.setItem('legislab_gdrive_connected', 'false');
         }
       });
 
       getGoogleCalendarStatusAction().then(res => {
         if (res.success && res.connected) {
           setCalendarConectado(true);
-          setCalendarEmail(res.email || '');
-        } else if (tabFromQuery === 'conexiones' && searchParams.get('gcal_status') === 'connected') {
-          setCalendarConectado(true);
+          localStorage.setItem('legislab_gcal_connected', 'true');
+          if (res.email) {
+            setCalendarEmail(res.email);
+            localStorage.setItem('legislab_gcal_email', res.email);
+          }
+        } else if (res.success && !res.connected && searchParams.get('gcal_status') !== 'connected') {
+          setCalendarConectado(false);
+          localStorage.setItem('legislab_gcal_connected', 'false');
         }
       });
     };
 
     refreshDriveAndCalendar();
-  }, [tabFromQuery, searchParams]);
+  }, [tabFromQuery, searchParams, activeTab]);
 
   // Verificar estado real de conexión con Evolution API al cargar
   useEffect(() => {
@@ -430,6 +460,8 @@ function ConfiguracionContent() {
         setDriveEmail('');
         setDriveFolderUrlReal('');
         setDriveFolderIdReal('');
+        localStorage.setItem('legislab_gdrive_connected', 'false');
+        localStorage.removeItem('legislab_gdrive_email');
       }
     } catch (e) {
       console.error(e);
@@ -443,6 +475,8 @@ function ConfiguracionContent() {
       if (res.success) {
         setCalendarConectado(false);
         setCalendarEmail('');
+        localStorage.setItem('legislab_gcal_connected', 'false');
+        localStorage.removeItem('legislab_gcal_email');
       }
     } catch (e) {
       console.error(e);
