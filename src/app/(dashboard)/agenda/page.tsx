@@ -110,15 +110,19 @@ const INITIAL_EVENTS: EventoLegislativo[] = [];
 const TIPOS_BASE = ['Comisión', 'Pleno', 'Solemne', 'Distrito', 'Institucional', 'Medios', 'Reunión de Bancada'];
 
 function parseDate(dateStr: string): Date {
+  if (!dateStr) return new Date();
   const parts = dateStr.split('-');
-  return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0);
 }
 
 function formatDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(date);
 }
 
 function isValidGoogleMapsUrl(url: string): boolean {
@@ -214,7 +218,7 @@ function getWeekDays(currentDateStr: string) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     const fStr = formatDate(d);
-    const diaNombre = d.toLocaleDateString('es-MX', { weekday: 'short' });
+    const diaNombre = d.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', weekday: 'short' });
     const diaNumero = d.getDate();
     days.push({
       fecha: fStr,
@@ -388,7 +392,14 @@ export default function AgendaPage() {
     setIsSyncingGCal(true);
     setTimeout(() => {
       setIsSyncingGCal(false);
-      setLastSyncTime(new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      setLastSyncTime(
+        new Date().toLocaleTimeString('es-MX', {
+          timeZone: 'America/Mexico_City',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      );
     }, 600);
   };
 
@@ -934,15 +945,15 @@ export default function AgendaPage() {
   const getTituloNavegacion = () => {
     const cur = parseDate(fechaSeleccionada);
     if (vista === 'dia') {
-      return cur.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      return cur.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     }
     if (vista === 'semana') {
       const dias = getWeekDays(fechaSeleccionada);
       const primero = parseDate(dias[0].fecha);
       const ultimo = parseDate(dias[6].fecha);
-      return `${primero.getDate()} ${primero.toLocaleDateString('es-MX', { month: 'short' })} – ${ultimo.getDate()} ${ultimo.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}`;
+      return `${primero.getDate()} ${primero.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', month: 'short' })} – ${ultimo.getDate()} ${ultimo.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', month: 'short', year: 'numeric' })}`;
     }
-    return cur.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    return cur.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', month: 'long', year: 'numeric' });
   };
 
   return (
@@ -1060,7 +1071,7 @@ export default function AgendaPage() {
           <div className="p-2.5 sm:p-3 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-3 sm:px-4">
             <div className="flex items-center gap-1.5 sm:gap-2 truncate mr-2">
               <span className="font-bold text-gray-800 dark:text-gray-100 capitalize truncate">
-                {new Date(`${fechaSeleccionada}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
+                {new Date(`${fechaSeleccionada}T12:00:00`).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', weekday: 'short', day: 'numeric', month: 'short' })}
               </span>
               <span className="hidden sm:inline">• Horario continuo 24 horas</span>
             </div>

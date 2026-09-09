@@ -409,6 +409,7 @@ export default function SaasAdminDashboardPage() {
               </div>
               <div className="text-[11px] text-zinc-400 whitespace-nowrap">
                 {new Date(log.createdAt).toLocaleTimeString('es-MX', {
+                  timeZone: 'America/Mexico_City',
                   hour: '2-digit',
                   minute: '2-digit',
                 })}

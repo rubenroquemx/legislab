@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { getTareas, createTarea, updateTareaStatus, deleteTarea } from '@/app/actions/tareas';
+import { getTodayMexicoCity, formatDateToYYYYMMDD, getCurrentTimeMexicoCity } from '@/lib/date-utils';
 import { 
   CheckSquare, 
   Kanban, 
@@ -98,7 +99,7 @@ export default function TareasPage() {
             fechaLimite: d.fechaLimite,
             horaLimite: d.horaLimite,
             moduloRelacionado: d.moduloRelacionado || 'Gestiones',
-            fechaCreacion: d.createdAt ? new Date(d.createdAt).toISOString().split('T')[0] : '2026-09-03',
+            fechaCreacion: d.createdAt ? formatDateToYYYYMMDD(new Date(d.createdAt)) : getTodayMexicoCity(),
             observaciones: [],
           }));
           setTareas(mapped);
@@ -262,12 +263,12 @@ export default function TareasPage() {
         fechaLimite: formFechaLimite,
         horaLimite: formHoraLimite,
         moduloRelacionado: formModulo,
-        fechaCreacion: new Date().toISOString().split('T')[0],
+        fechaCreacion: getTodayMexicoCity(),
         observaciones: [
           {
             id: `obs-${Date.now()}`,
             fecha: 'Hoy',
-            hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+            hora: getCurrentTimeMexicoCity(),
             autor: 'Despacho Parlamentario',
             texto: 'Tarea creada y asignada al integrante del equipo.',
             esDiputado: false,
@@ -300,7 +301,7 @@ export default function TareasPage() {
     const nuevaObs: ObservacionTarea = {
       id: `obs-${Date.now()}`,
       fecha: 'Hoy',
-      hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      hora: getCurrentTimeMexicoCity(),
       autor: usuarioActivo.nombre,
       texto: nuevaObsTexto.trim(),
       esDiputado: isDip,

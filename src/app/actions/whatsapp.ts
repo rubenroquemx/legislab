@@ -424,9 +424,9 @@ export async function getWhatsAppConversacionesAction(instanceName = DEFAULT_INS
             const d = new Date(c.updatedAt);
             const now = new Date();
             if (d.toDateString() === now.toDateString()) {
-              timeStr = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+              timeStr = d.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' });
             } else {
-              timeStr = d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+              timeStr = d.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: 'numeric', month: 'short' });
             }
           } catch { timeStr = 'Reciente'; }
         }

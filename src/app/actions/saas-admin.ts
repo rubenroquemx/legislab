@@ -452,7 +452,7 @@ export async function addFreeMonthsAction(officeId: string, monthsToAdd: number)
 
       await db.insert(auditLogs).values({
         action: 'promo.free_months_added',
-        description: `Se agregaron +${monthsToAdd} mes(es) gratis al despacho ${officeId}. Nueva fecha de corte: ${newDate.toLocaleDateString('es-MX')}`,
+        description: `Se agregaron +${monthsToAdd} mes(es) gratis al despacho ${officeId}. Nueva fecha de corte: ${newDate.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })}`,
       });
     } catch (e) {
       console.warn('DB update in addFreeMonthsAction:', e);
@@ -461,7 +461,7 @@ export async function addFreeMonthsAction(officeId: string, monthsToAdd: number)
     return {
       success: true,
       newDate,
-      message: `¡Se agregaron +${monthsToAdd} mes(es) gratis exitosamente! Nueva vigencia: ${newDate.toLocaleDateString('es-MX')}`,
+      message: `¡Se agregaron +${monthsToAdd} mes(es) gratis exitosamente! Nueva vigencia: ${newDate.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })}`,
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -495,7 +495,7 @@ export async function setTrialPeriodAction(officeId: string, days: number) {
     return {
       success: true,
       trialEndsAt: newTrialEnds,
-      message: `Free Trial configurado a ${days} días (Vence: ${newTrialEnds.toLocaleDateString('es-MX')})`,
+      message: `Free Trial configurado a ${days} días (Vence: ${newTrialEnds.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })})`,
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

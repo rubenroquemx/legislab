@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       if (text && senderPhone) {
         const officeId = await getFirstOfficeId();
         const now = new Date();
-        const horaStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        const horaStr = now.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' });
 
         await db.insert(atencionMensajes).values({
           officeId,

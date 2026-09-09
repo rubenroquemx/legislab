@@ -7,6 +7,7 @@ import {
   getWhatsAppInstanceInfo
 } from '@/app/actions/whatsapp';
 import { createGestion } from '@/app/actions/gestiones';
+import { getCurrentTimeMexicoCity, MEXICO_TIMEZONE } from '@/lib/date-utils';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -193,7 +194,7 @@ export default function AtencionCiudadanaPage() {
       autor: esNotaInterna ? 'nota_interna' : 'agente',
       nombreAutor: esNotaInterna ? 'Dip. Ruben Roque (Nota Interna)' : 'Dip. Ruben Roque',
       texto: texto,
-      hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      hora: getCurrentTimeMexicoCity(),
       fecha: 'Hoy',
       leido: true
     };
@@ -259,8 +260,8 @@ export default function AtencionCiudadanaPage() {
       convId: activeConv.id,
       autor: 'Dip. Ruben Roque',
       texto: nuevaNotaTexto.trim(),
-      fecha: new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
-      hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      fecha: new Date().toLocaleDateString('es-MX', { timeZone: MEXICO_TIMEZONE, day: 'numeric', month: 'short' }),
+      hora: getCurrentTimeMexicoCity(),
     };
 
     const updated = [newNote, ...notasRapidas];

@@ -135,6 +135,7 @@ export default function SaasUsuariosPage() {
                 </td>
                 <td className="py-3 text-right text-[11px] text-zinc-500">
                   {new Date(user.createdAt).toLocaleDateString('es-MX', {
+                    timeZone: 'America/Mexico_City',
                     day: 'numeric',
                     month: 'short',
                     year: 'numeric',

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { getGestiones, createGestion } from '@/app/actions/gestiones';
+import { getCurrentTimeMexicoCity, MEXICO_TIMEZONE } from '@/lib/date-utils';
 import { 
   FolderKanban, 
   Plus, 
@@ -185,7 +186,7 @@ export default function GestionesPage() {
             estatus: (d.estatus as any) || 'En Trámite con Dependencia',
             prioridad: (d.prioridad as any) || 'Media',
             dependenciaDestino: d.dependenciaCanalizada || 'General',
-            fecha: d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Hoy',
+            fecha: d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-MX', { timeZone: MEXICO_TIMEZONE, day: '2-digit', month: 'short', year: 'numeric' }) : 'Hoy',
             driveFolderUrl: '',
             documentos: [],
             oficios: [],
@@ -393,7 +394,7 @@ export default function GestionesPage() {
         {
           id: `not-${Date.now()}`,
           fecha: 'Hoy',
-          hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+          hora: getCurrentTimeMexicoCity(),
           autor: 'Recepción y Gestión',
           texto: 'Gestión registrada en el sistema. Se procedió a integrar el expediente digital inicial.',
           esDiputado: false,
@@ -438,7 +439,7 @@ export default function GestionesPage() {
     const nuevaNota: NotaObservacion = {
       id: `not-${Date.now()}`,
       fecha: 'Hoy',
-      hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      hora: getCurrentTimeMexicoCity(),
       autor: usuarioActivo.nombre,
       texto: nuevaNotaTexto.trim(),
       esDiputado: esDip,
@@ -545,7 +546,7 @@ export default function GestionesPage() {
   ) => {
     setIsOficioGenerating(true);
     setTimeout(() => {
-      const fechaHoy = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+      const fechaHoy = new Date().toLocaleDateString('es-MX', { timeZone: MEXICO_TIMEZONE, day: 'numeric', month: 'long', year: 'numeric' });
       const texto = `PODER LEGISLATIVO DEL ESTADO DE TABASCO
 H. CONGRESO DEL ESTADO — LXVI LEGISLATURA
 DESPACHO PARLAMENTARIO DEL DIPUTADO RUBEN ROQUE

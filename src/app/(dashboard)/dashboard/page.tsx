@@ -23,6 +23,7 @@ import { getTareas, createTarea, updateTareaStatus, deleteTarea } from '@/app/ac
 import { getAgendaEventos, createAgendaEvento } from '@/app/actions/agenda';
 import { getGestiones } from '@/app/actions/gestiones';
 import { getContactos } from '@/app/actions/directorio';
+import { getTodayMexicoCity } from '@/lib/date-utils';
 
 interface EventoAgenda {
   id: string;
@@ -78,8 +79,8 @@ export default function DashboardPage() {
   const [contactosList, setContactosList] = useState<CumpleaneroDirectorio[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Today's date helper (YYYY-MM-DD)
-  const getTodayISO = () => new Date().toISOString().split('T')[0];
+  // Today's date helper (YYYY-MM-DD in Mexico City timezone)
+  const getTodayISO = () => getTodayMexicoCity();
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(getTodayISO());
 
   // Task Filters
@@ -251,8 +252,8 @@ export default function DashboardPage() {
     for (let i = diasFiltroGrafico - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(now.getDate() - i);
-      const diaStr = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
-      const fechaCompleta = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'long' });
+      const diaStr = d.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short' });
+      const fechaCompleta = d.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'long' });
 
       // Match with real gestiones if available
       const gestionesDia = gestionesList.filter(g => {

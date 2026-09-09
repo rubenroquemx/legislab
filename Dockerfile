@@ -1,4 +1,6 @@
 FROM node:20-alpine AS base
+RUN apk add --no-cache tzdata
+ENV TZ="America/Mexico_City"
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -15,6 +17,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV TZ="America/Mexico_City"
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -23,6 +26,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV TZ="America/Mexico_City"
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

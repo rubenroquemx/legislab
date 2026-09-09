@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { getContactos, createContacto } from '@/app/actions/directorio';
+import { getCurrentTimeMexicoCity } from '@/lib/date-utils';
 import Link from 'next/link';
 import { 
   Search, 
@@ -295,7 +296,7 @@ export default function DirectorioPage() {
           {
             id: `obs-${Date.now()}`,
             fecha: 'Hoy',
-            hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+            hora: getCurrentTimeMexicoCity(),
             autor: usuarioActivo.nombre,
             texto: 'Contacto registrado en el Directorio Oficial.',
             esDiputado: true,
@@ -326,7 +327,7 @@ export default function DirectorioPage() {
     const nuevaObs: ObservacionContacto = {
       id: `obs-${Date.now()}`,
       fecha: 'Hoy',
-      hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      hora: getCurrentTimeMexicoCity(),
       autor: usuarioActivo.nombre,
       texto: nuevaObsTexto.trim(),
       esDiputado: true,
