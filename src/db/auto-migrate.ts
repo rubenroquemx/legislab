@@ -27,6 +27,23 @@ export async function ensureDatabaseTables(connectionString: string) {
       )
     `;
 
+    // Ensure all Google Drive & Calendar columns exist in offices
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_connected BOOLEAN DEFAULT false`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_email TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_access_token TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_refresh_token TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_token_expiry TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_folder_id TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_drive_folder_url TEXT`;
+
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_calendar_connected BOOLEAN DEFAULT false`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_calendar_email TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_calendar_access_token TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_calendar_refresh_token TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_calendar_token_expiry TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_calendar_id TEXT`;
+    await sql`ALTER TABLE offices ADD COLUMN IF NOT EXISTS google_calendar_last_sync TIMESTAMP WITH TIME ZONE`;
+
     // Default office
     await sql`
       INSERT INTO offices (id, name, titular_name, legislature, district, state, party)

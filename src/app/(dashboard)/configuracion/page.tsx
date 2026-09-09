@@ -6,7 +6,7 @@ import {
   disconnectWhatsApp,
   getWhatsAppInstanceInfo
 } from '@/app/actions/whatsapp';
-import { getGoogleDriveStatusAction, disconnectGoogleDriveAction } from '@/app/actions/drive';
+import { getGoogleDriveStatusAction, disconnectGoogleDriveAction, updateGoogleDriveFolderAction } from '@/app/actions/drive';
 import { getGoogleCalendarStatusAction, disconnectGoogleCalendarAction } from '@/app/actions/agenda';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -231,22 +231,33 @@ function ConfiguracionContent() {
       }
     }
 
-    getGoogleDriveStatusAction().then(res => {
-      if (res.success && res.connected) {
-        setDriveConectado(true);
-        setDriveEmail(res.email || '');
-        if (res.folderUrl) setDriveFolderUrlReal(res.folderUrl);
-        if (res.folderId) setDriveFolderIdReal(res.folderId);
-      }
-    });
+    const refreshDriveAndCalendar = () => {
+      getGoogleDriveStatusAction().then(res => {
+        if (res.success && res.connected) {
+          setDriveConectado(true);
+          setDriveEmail(res.email || '');
+          if (res.folderUrl) {
+            setDriveFolderUrlReal(res.folderUrl);
+            setGoogleDriveFolderUrl(res.folderUrl);
+          }
+          if (res.folderId) setDriveFolderIdReal(res.folderId);
+        } else if (tabFromQuery === 'conexiones' && searchParams.get('gdrive_status') === 'connected') {
+          setDriveConectado(true);
+        }
+      });
 
-    getGoogleCalendarStatusAction().then(res => {
-      if (res.success && res.connected) {
-        setCalendarConectado(true);
-        setCalendarEmail(res.email || '');
-      }
-    });
-  }, []);
+      getGoogleCalendarStatusAction().then(res => {
+        if (res.success && res.connected) {
+          setCalendarConectado(true);
+          setCalendarEmail(res.email || '');
+        } else if (tabFromQuery === 'conexiones' && searchParams.get('gcal_status') === 'connected') {
+          setCalendarConectado(true);
+        }
+      });
+    };
+
+    refreshDriveAndCalendar();
+  }, [tabFromQuery, searchParams]);
 
   // Verificar estado real de conexión con Evolution API al cargar
   useEffect(() => {
@@ -394,9 +405,18 @@ function ConfiguracionContent() {
     }, 800);
   };
 
-  const handleGuardarDrive = (e: React.FormEvent) => {
+  const handleGuardarDrive = async (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('legislab_gdrive_folder', googleDriveFolderUrl);
+    try {
+      const res = await updateGoogleDriveFolderAction(googleDriveFolderUrl);
+      if (res.success && res.folderUrl) {
+        setDriveFolderUrlReal(res.folderUrl);
+        if (res.folderId) setDriveFolderIdReal(res.folderId);
+      }
+    } catch (err) {
+      console.warn('Error updating drive folder:', err);
+    }
     setGuardadoDrive(true);
     setTimeout(() => setGuardadoDrive(false), 3000);
   };
@@ -799,14 +819,76 @@ function ConfiguracionContent() {
             </div>
 
             {driveConectado ? (
-              <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4 space-y-2">
-                <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
-                  <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
-                  <span>Carpeta Principal del Despacho Activa: LegisLab - Despacho Parlamentario</span>
+              <div className="space-y-4">
+                <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>Carpeta Oficial Activa: LegisLab - Despacho Parlamentario</span>
+                    </div>
+                    {driveFolderUrlReal && (
+                      <a
+                        href={driveFolderUrlReal}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-bold text-amber-800 hover:text-amber-950 underline flex items-center gap-1 shrink-0"
+                      >
+                        <span>Ver en Google Drive</span>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    Cada vez que registras una nueva gestión o petición ciudadana, LegisLab genera automáticamente una subcarpeta con formato <span className="font-mono bg-amber-100/70 px-1 py-0.5 rounded">/GES-XXXX - Nombre Ciudadano/</span> dentro de esta unidad.
+                  </p>
                 </div>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Cada vez que registras una nueva gestión o petición ciudadana, LegisLab genera automáticamente una subcarpeta con formato <span className="font-mono bg-amber-100/70 px-1 py-0.5 rounded">/GES-XXXX - Nombre Ciudadano/</span> en tu unidad de Google Drive.
-                </p>
+
+                <form onSubmit={handleGuardarDrive} className="space-y-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        URL / Enlace de la Carpeta Raíz en Google Drive
+                      </label>
+                      <input
+                        type="url"
+                        value={googleDriveFolderUrl}
+                        onChange={(e) => setGoogleDriveFolderUrl(e.target.value)}
+                        placeholder="https://drive.google.com/drive/folders/..."
+                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono text-amber-900 focus:bg-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        ID de Carpeta (Folder ID)
+                      </label>
+                      <input
+                        type="text"
+                        readOnly
+                        value={driveFolderIdReal || "Auto-generado por API"}
+                        className="w-full p-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-mono text-gray-600 select-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end">
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
+                    >
+                      {guardadoDrive ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          <span>¡Carpeta de Google Drive Actualizada!</span>
+                        </>
+                      ) : (
+                        <>
+                          <HardDrive className="h-4 w-4" />
+                          <span>Actualizar Carpeta Raíz</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
               </div>
             ) : (
               <div className="space-y-4">

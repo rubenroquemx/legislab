@@ -32,6 +32,10 @@ export async function GET(request: NextRequest) {
       console.warn('Could not create root Drive folder automatically:', fErr);
     }
 
+    // Resolver el ID real del despacho en la base de datos
+    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
+    const targetOfficeId = officeList[0]?.id || (await db.select().from(offices).limit(1))[0]?.id || officeId;
+
     try {
       await db
         .update(offices)
@@ -45,7 +49,7 @@ export async function GET(request: NextRequest) {
           googleDriveFolderUrl: rootFolder.folderUrl || null,
           updatedAt: new Date(),
         })
-        .where(eq(offices.id, officeId));
+        .where(eq(offices.id, targetOfficeId));
     } catch (dbErr) {
       console.warn('Database save warning during Google Drive callback:', dbErr);
     }

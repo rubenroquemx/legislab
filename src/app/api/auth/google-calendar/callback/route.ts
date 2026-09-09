@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
 
     const expiryDate = new Date(Date.now() + (tokens.expiresIn || 3600) * 1000);
 
+    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
+    const targetOfficeId = officeList[0]?.id || (await db.select().from(offices).limit(1))[0]?.id || officeId;
+
     try {
       await db
         .update(offices)
@@ -36,7 +39,7 @@ export async function GET(request: NextRequest) {
           googleCalendarLastSync: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(offices.id, officeId));
+        .where(eq(offices.id, targetOfficeId));
     } catch (dbErr) {
       console.warn('Database save warning during Google Calendar callback:', dbErr);
     }

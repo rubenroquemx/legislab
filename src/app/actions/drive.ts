@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { db, offices } from '@/db';
 import { eq } from 'drizzle-orm';
@@ -6,6 +6,21 @@ import { revalidatePath } from 'next/cache';
 import { refreshDriveAccessToken, createDriveSubfolder } from '@/lib/google-drive';
 
 const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
+
+/**
+ * Encuentra el despacho por ID o fallback al primer despacho activo
+ */
+async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
+  try {
+    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
+    if (officeList.length > 0) return officeList[0];
+    const anyOffice = await db.select().from(offices).limit(1);
+    return anyOffice[0] || null;
+  } catch (e) {
+    console.warn('resolveOffice error:', e);
+    return null;
+  }
+}
 
 /**
  * Obtiene un access token válido para Google Drive del despacho
@@ -16,8 +31,7 @@ async function getValidDriveTokenForOffice(officeId: string): Promise<{
   rootFolderUrl: string | null;
 } | null> {
   try {
-    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
-    const office = officeList[0];
+    const office = await resolveOffice(officeId);
     if (!office || !office.googleDriveConnected || !office.googleDriveAccessToken) {
       return null;
     }
@@ -40,7 +54,7 @@ async function getValidDriveTokenForOffice(officeId: string): Promise<{
             googleDriveTokenExpiry: newExpiry,
             updatedAt: new Date(),
           })
-          .where(eq(offices.id, officeId));
+          .where(eq(offices.id, office.id));
       } catch (err) {
         console.warn('Error refreshing Google Drive token in background:', err);
       }
@@ -62,8 +76,7 @@ async function getValidDriveTokenForOffice(officeId: string): Promise<{
  */
 export async function getGoogleDriveStatusAction(officeId: string = DEFAULT_OFFICE_ID) {
   try {
-    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
-    const office = officeList[0];
+    const office = await resolveOffice(officeId);
     if (!office) {
       return { success: false, connected: false };
     }
@@ -82,10 +95,53 @@ export async function getGoogleDriveStatusAction(officeId: string = DEFAULT_OFFI
 }
 
 /**
+ * Actualiza la carpeta raíz de Google Drive manualmente
+ */
+export async function updateGoogleDriveFolderAction(
+  folderUrl: string,
+  folderId?: string,
+  officeId: string = DEFAULT_OFFICE_ID
+) {
+  try {
+    const office = await resolveOffice(officeId);
+    if (!office) {
+      return { success: false, error: 'Despacho no encontrado' };
+    }
+
+    // Extraer Folder ID de la URL si no viene explícito
+    let resolvedFolderId = folderId || '';
+    if (!resolvedFolderId && folderUrl) {
+      const match = folderUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        resolvedFolderId = match[1];
+      }
+    }
+
+    await db
+      .update(offices)
+      .set({
+        googleDriveFolderUrl: folderUrl.trim(),
+        googleDriveFolderId: resolvedFolderId || office.googleDriveFolderId,
+        updatedAt: new Date(),
+      })
+      .where(eq(offices.id, office.id));
+
+    revalidatePath('/configuracion');
+    return { success: true, folderUrl, folderId: resolvedFolderId };
+  } catch (error) {
+    console.error('Error updating Google Drive folder:', error);
+    return { success: false, error: 'No se pudo actualizar la carpeta.' };
+  }
+}
+
+/**
  * Desconecta la cuenta de Google Drive del despacho
  */
 export async function disconnectGoogleDriveAction(officeId: string = DEFAULT_OFFICE_ID) {
   try {
+    const office = await resolveOffice(officeId);
+    const targetId = office?.id || officeId;
+
     await db
       .update(offices)
       .set({
@@ -98,7 +154,7 @@ export async function disconnectGoogleDriveAction(officeId: string = DEFAULT_OFF
         googleDriveFolderUrl: null,
         updatedAt: new Date(),
       })
-      .where(eq(offices.id, officeId));
+      .where(eq(offices.id, targetId));
 
     revalidatePath('/configuracion');
     revalidatePath('/gestiones');
