@@ -66,6 +66,32 @@ export const DEFAULT_SEDES_PARLAMENTARIAS = [
 ];
 
 /**
+ * Encuentra el despacho por ID o fallback al primer despacho activo
+ */
+async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
+  try {
+    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
+    if (officeList.length > 0) return officeList[0];
+    const anyOffice = await db.select().from(offices).limit(1);
+    if (anyOffice.length > 0) return anyOffice[0];
+
+    const [created] = await db.insert(offices).values({
+      id: DEFAULT_OFFICE_ID,
+      name: 'Despacho Parlamentario Dip. Ruben Roque',
+      titularName: 'Dip. Ruben Roque',
+      legislature: 'LXVI Legislatura',
+      district: 'Distrito 04 Federal',
+      state: 'Tabasco',
+      party: 'MORENA',
+    }).returning();
+    return created;
+  } catch (e) {
+    console.warn('resolveOffice in agenda error:', e);
+    return null;
+  }
+}
+
+/**
  * Obtiene un access token válido para el despacho (refrescándolo automáticamente si está expirado)
  */
 async function getValidGoogleTokenForOffice(officeId: string): Promise<{
@@ -73,8 +99,7 @@ async function getValidGoogleTokenForOffice(officeId: string): Promise<{
   calendarId: string;
 } | null> {
   try {
-    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
-    const office = officeList[0];
+    const office = await resolveOffice(officeId);
     if (!office || !office.googleCalendarConnected || !office.googleCalendarAccessToken) {
       return null;
     }
@@ -97,7 +122,7 @@ async function getValidGoogleTokenForOffice(officeId: string): Promise<{
             googleCalendarTokenExpiry: newExpiry,
             updatedAt: new Date(),
           })
-          .where(eq(offices.id, officeId));
+          .where(eq(offices.id, office.id));
       } catch (err) {
         console.warn('Error refreshing Google token in background:', err);
       }
@@ -306,8 +331,7 @@ export async function deleteAgendaEvento(id: string, officeId: string = DEFAULT_
 // -------------------------------------------------------------
 export async function getGoogleCalendarStatusAction(officeId: string = DEFAULT_OFFICE_ID) {
   try {
-    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
-    const office = officeList[0];
+    const office = await resolveOffice(officeId);
     if (!office) {
       return { success: false, connected: false };
     }
@@ -326,6 +350,9 @@ export async function getGoogleCalendarStatusAction(officeId: string = DEFAULT_O
 
 export async function disconnectGoogleCalendarAction(officeId: string = DEFAULT_OFFICE_ID) {
   try {
+    const office = await resolveOffice(officeId);
+    const targetId = office?.id || officeId;
+
     await db
       .update(offices)
       .set({
@@ -337,9 +364,10 @@ export async function disconnectGoogleCalendarAction(officeId: string = DEFAULT_
         googleCalendarLastSync: null,
         updatedAt: new Date(),
       })
-      .where(eq(offices.id, officeId));
+      .where(eq(offices.id, targetId));
 
     revalidatePath('/agenda');
+    revalidatePath('/configuracion');
     return { success: true, message: 'Google Calendar desconectado exitosamente' };
   } catch (error) {
     console.error('Error disconnecting Google Calendar:', error);

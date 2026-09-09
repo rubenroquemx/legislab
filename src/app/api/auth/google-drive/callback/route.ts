@@ -32,14 +32,22 @@ export async function GET(request: NextRequest) {
       console.warn('Could not create root Drive folder automatically:', fErr);
     }
 
-    // Resolver el ID real del despacho en la base de datos
-    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
-    const targetOfficeId = officeList[0]?.id || (await db.select().from(offices).limit(1))[0]?.id || officeId;
+    // Resolver el ID real del despacho en la base de datos o crearlo si no existe
+    let targetOffice = (await db.select().from(offices).where(eq(offices.id, officeId)))[0];
+    if (!targetOffice) {
+      targetOffice = (await db.select().from(offices).limit(1))[0];
+    }
 
     try {
-      await db
-        .update(offices)
-        .set({
+      if (!targetOffice) {
+        const [inserted] = await db.insert(offices).values({
+          id: '00000000-0000-0000-0000-000000000001',
+          name: 'Despacho Parlamentario Dip. Ruben Roque',
+          titularName: 'Dip. Ruben Roque',
+          legislature: 'LXVI Legislatura',
+          district: 'Distrito 04 Federal',
+          state: 'Tabasco',
+          party: 'MORENA',
           googleDriveConnected: true,
           googleDriveEmail: tokens.email || 'Conectado',
           googleDriveAccessToken: tokens.accessToken,
@@ -47,9 +55,23 @@ export async function GET(request: NextRequest) {
           googleDriveTokenExpiry: expiryDate,
           googleDriveFolderId: rootFolder.folderId || null,
           googleDriveFolderUrl: rootFolder.folderUrl || null,
-          updatedAt: new Date(),
-        })
-        .where(eq(offices.id, targetOfficeId));
+        }).returning();
+        targetOffice = inserted;
+      } else {
+        await db
+          .update(offices)
+          .set({
+            googleDriveConnected: true,
+            googleDriveEmail: tokens.email || 'Conectado',
+            googleDriveAccessToken: tokens.accessToken,
+            googleDriveRefreshToken: tokens.refreshToken || null,
+            googleDriveTokenExpiry: expiryDate,
+            googleDriveFolderId: rootFolder.folderId || null,
+            googleDriveFolderUrl: rootFolder.folderUrl || null,
+            updatedAt: new Date(),
+          })
+          .where(eq(offices.id, targetOffice.id));
+      }
     } catch (dbErr) {
       console.warn('Database save warning during Google Drive callback:', dbErr);
     }

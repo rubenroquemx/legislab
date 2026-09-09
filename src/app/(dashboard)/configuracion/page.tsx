@@ -758,6 +758,39 @@ function ConfiguracionContent() {
             )}
           </div>
 
+          {/* NOTIFICACIONES DE ÉXITO DE OAUTH */}
+          {searchParams.get('gdrive_status') === 'connected' && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-800 text-xs font-semibold shadow-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                <span>¡Google Drive conectado exitosamente! Se ha creado la carpeta oficial del despacho.</span>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => router.replace('/configuracion?tab=conexiones')} 
+                className="text-emerald-700 hover:text-emerald-900 text-xs underline"
+              >
+                Entendido
+              </button>
+            </div>
+          )}
+
+          {searchParams.get('gcal_status') === 'connected' && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-800 text-xs font-semibold shadow-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                <span>¡Google Calendar conectado exitosamente! La agenda se sincronizará en tiempo real.</span>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => router.replace('/configuracion?tab=conexiones')} 
+                className="text-emerald-700 hover:text-emerald-900 text-xs underline"
+              >
+                Entendido
+              </button>
+            </div>
+          )}
+
           {/* CONEXIÓN 2: GOOGLE DRIVE */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
@@ -795,7 +828,7 @@ function ConfiguracionContent() {
                       className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl transition-colors"
                     >
                       <FolderOpen className="h-3.5 w-3.5 text-amber-600" />
-                      <span>Abrir Carpeta Raíz en Drive</span>
+                      <span>Abrir en Google Drive</span>
                       <ExternalLink className="h-3 w-3 text-amber-500" />
                     </a>
                   )}
@@ -810,10 +843,10 @@ function ConfiguracionContent() {
               ) : (
                 <a
                   href="/api/auth/google-drive"
-                  className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs transition-colors"
+                  className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs transition-colors"
                 >
                   <HardDrive className="h-4 w-4" />
-                  <span>Conectar con Google Drive</span>
+                  <span>Conectar con Google Drive (1 Clic)</span>
                 </a>
               )}
             </div>
@@ -826,17 +859,6 @@ function ConfiguracionContent() {
                       <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
                       <span>Carpeta Oficial Activa: LegisLab - Despacho Parlamentario</span>
                     </div>
-                    {driveFolderUrlReal && (
-                      <a
-                        href={driveFolderUrlReal}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] font-bold text-amber-800 hover:text-amber-950 underline flex items-center gap-1 shrink-0"
-                      >
-                        <span>Ver en Google Drive</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
                   </div>
                   <p className="text-[11px] text-amber-800 leading-relaxed">
                     Cada vez que registras una nueva gestión o petición ciudadana, LegisLab genera automáticamente una subcarpeta con formato <span className="font-mono bg-amber-100/70 px-1 py-0.5 rounded">/GES-XXXX - Nombre Ciudadano/</span> dentro de esta unidad.
@@ -847,7 +869,7 @@ function ConfiguracionContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="sm:col-span-2">
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        URL / Enlace de la Carpeta Raíz en Google Drive
+                        URL / Enlace de la Carpeta en Google Drive
                       </label>
                       <input
                         type="url"
@@ -883,7 +905,7 @@ function ConfiguracionContent() {
                       ) : (
                         <>
                           <HardDrive className="h-4 w-4" />
-                          <span>Actualizar Carpeta Raíz</span>
+                          <span>Guardar Cambios de Carpeta</span>
                         </>
                       )}
                     </button>
@@ -891,19 +913,8 @@ function ConfiguracionContent() {
                 </form>
               </div>
             ) : (
-              <div className="space-y-4">
-                <p className="text-xs text-gray-600">
-                  Al conectar Google Drive con un solo clic, se autorizará de forma segura mediante OAuth 2.0 y se creará la carpeta oficial <span className="font-semibold text-gray-800">&quot;LegisLab - Despacho Parlamentario&quot;</span> para organizar los expedientes de tu equipo.
-                </p>
-                <div className="pt-2">
-                  <a
-                    href="/api/auth/google-drive"
-                    className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm transition-all"
-                  >
-                    <HardDrive className="h-4 w-4" />
-                    <span>Autorizar Google Drive (1 Clic)</span>
-                  </a>
-                </div>
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-xs text-gray-600 leading-relaxed">
+                Al conectar Google Drive con un solo clic, se autorizará de forma segura mediante OAuth 2.0 y se creará la carpeta oficial <span className="font-semibold text-gray-800">&quot;LegisLab - Despacho Parlamentario&quot;</span> en tu cuenta para organizar y resguardar automáticamente los expedientes de todo tu equipo.
               </div>
             )}
           </div>
@@ -924,8 +935,8 @@ function ConfiguracionContent() {
                         Conectado ({calendarEmail || "Google Calendar"})
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                        Modo iCal / No sincronizado OAuth
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        No conectado
                       </span>
                     )}
                   </div>
@@ -957,10 +968,10 @@ function ConfiguracionContent() {
               ) : (
                 <a
                   href="/api/auth/google-calendar"
-                  className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors"
+                  className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors"
                 >
                   <Calendar className="h-4 w-4" />
-                  <span>Conectar con Google Calendar</span>
+                  <span>Conectar con Google Calendar (1 Clic)</span>
                 </a>
               )}
             </div>
@@ -999,15 +1010,7 @@ function ConfiguracionContent() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <a
-                    href="/api/auth/google-calendar"
-                    className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors"
-                  >
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>Conectar OAuth 2.0 (Recomendado)</span>
-                  </a>
-
+                <div className="flex items-center justify-end pt-1">
                   <button
                     type="submit"
                     className="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold px-4 py-2 rounded-xl transition-all"
