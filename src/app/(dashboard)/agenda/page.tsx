@@ -1710,6 +1710,8 @@ export default function AgendaPage() {
                       key={ev.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, ev)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, fechaSeleccionada, ev.hora)}
                       onClick={(e) => {
                         e.stopPropagation();
                         setEventoDetalle(ev);
@@ -1903,6 +1905,8 @@ export default function AgendaPage() {
                               key={ev.id}
                               draggable
                               onDragStart={(e) => handleDragStart(e, ev)}
+                              onDragOver={handleDragOver}
+                              onDrop={(e) => handleDrop(e, col.fecha, ev.hora)}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEventoDetalle(ev);
@@ -2286,6 +2290,43 @@ export default function AgendaPage() {
                   <option value="personalizada">✏️ + Otra Ubicación / Personalizada</option>
                 </select>
 
+                {sedesFrecuentes.length > 0 && (
+                  <div className="pt-1">
+                    <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">
+                      Lugares guardados:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                      {sedesFrecuentes.map((sede) => {
+                        const isSelected = sedeSeleccionadaId === sede.id;
+                        return (
+                          <div
+                            key={sede.id}
+                            className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-blue-50 border-blue-300 text-[#1a73e8] font-bold dark:bg-blue-950/40 dark:border-blue-700 shadow-2xs'
+                                : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700'
+                            }`}
+                            onClick={() => handleSeleccionarSedeFrecuente(sede.id)}
+                          >
+                            <span className="truncate max-w-[180px]">📍 {sede.nombre}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSedeAEliminar(sede);
+                              }}
+                              title="Eliminar este lugar guardado"
+                              className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors shrink-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2 pt-1">
                   <div>
                     <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1">
@@ -2569,6 +2610,43 @@ export default function AgendaPage() {
                   ))}
                 </select>
 
+                {sedesFrecuentes.length > 0 && (
+                  <div className="pt-1">
+                    <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">
+                      Lugares guardados:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                      {sedesFrecuentes.map((sede) => {
+                        const isSelected = editSedeSeleccionadaId === sede.id;
+                        return (
+                          <div
+                            key={sede.id}
+                            className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-blue-50 border-blue-300 text-[#1a73e8] font-bold dark:bg-blue-950/40 dark:border-blue-700 shadow-2xs'
+                                : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700'
+                            }`}
+                            onClick={() => handleSeleccionarSedeFrecuente(sede.id, true)}
+                          >
+                            <span className="truncate max-w-[180px]">📍 {sede.nombre}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSedeAEliminar(sede);
+                              }}
+                              title="Eliminar este lugar guardado"
+                              className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors shrink-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2 pt-1">
                   <div>
                     <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1">
@@ -2731,6 +2809,381 @@ export default function AgendaPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR ELIMINACIÓN DE EVENTO */}
+      {eventoAEliminar && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">¿Eliminar este evento?</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  ¿Realmente desea eliminar este evento? Esta acción no se puede deshacer.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-800 text-xs space-y-1">
+              <p className="font-bold text-gray-900 dark:text-white line-clamp-2">🟢 {eventoAEliminar.titulo}</p>
+              <p className="text-gray-600 dark:text-gray-300">⏰ {eventoAEliminar.hora} | Lugar: {eventoAEliminar.lugar}</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setEventoAEliminar(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarEliminar}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm shadow-red-600/20 transition-all"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Sí, eliminar evento</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR ELIMINACIÓN DE LUGAR FRECUENTE */}
+      {sedeAEliminar && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">¿Eliminar lugar frecuente?</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  ¿Realmente deseas eliminar este lugar de tus ubicaciones frecuentes?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-800 text-xs space-y-1">
+              <p className="font-bold text-gray-900 dark:text-white">📍 {sedeAEliminar.nombre}</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono truncate">{sedeAEliminar.ubicacionUrl}</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setSedeAEliminar(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarEliminarSede}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm shadow-red-600/20 transition-all"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Sí, eliminar lugar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR ELIMINACIÓN DE TIPO DE EVENTO */}
+      {tipoAEliminar && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">¿Eliminar tipo de evento?</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  ¿Realmente deseas eliminar la categoría &quot;{tipoAEliminar}&quot;?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-800 text-xs">
+              <p className="font-bold text-gray-900 dark:text-white">🏷️ {tipoAEliminar}</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setTipoAEliminar(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarEliminarTipo}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm shadow-red-600/20 transition-all"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Sí, eliminar tipo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REAGENDAR EVENTO (DRAG & DROP) */}
+      {reagendadoPendiente && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-950/50 flex items-center justify-center text-[#1a73e8] shrink-0">
+                <CalendarRange className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">¿Desea reagendar este evento?</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Se modificará la fecha y horario del compromiso y se sincronizará con Google Calendar.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-800 space-y-2 text-xs">
+              <p className="font-bold text-gray-900 dark:text-white line-clamp-2">🟢 {reagendadoPendiente.evento.titulo}</p>
+              <div className="flex items-center justify-between text-gray-600 dark:text-gray-300 pt-1 border-t border-gray-200/80 dark:border-gray-800/70">
+                <div>
+                  <span className="text-gray-400 dark:text-gray-500 block text-[10px]">Horario anterior:</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-200">{reagendadoPendiente.evento.fecha} | {formatTimeDisplay(reagendadoPendiente.evento.hora)}</span>
+                </div>
+                <ArrowRight className="h-4 w-4 text-[#1a73e8] mx-2 shrink-0" />
+                <div>
+                  <span className="text-[#1a73e8] block text-[10px] font-bold">Nuevo horario:</span>
+                  <span className="font-bold text-[#1a73e8]">{reagendadoPendiente.nuevaFecha} | {formatTimeDisplay(reagendadoPendiente.nuevaHora)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setReagendadoPendiente(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarReagendado}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#1a73e8] hover:bg-[#1557b0] rounded-lg shadow-sm transition-all"
+              >
+                <Check className="h-3.5 w-3.5" />
+                <span>Confirmar Reagendado</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL COMPARTIR AGENDA POR WHATSAPP */}
+      {isModalCompartirOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-[#0b8043] flex items-center justify-center text-white">
+                  <Share2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Compartir Agenda por WhatsApp</h2>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Selecciona o desmarca los eventos que deseas incluir en el mensaje.</p>
+                </div>
+              </div>
+              <button onClick={() => setIsModalCompartirOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+                  Eventos del día ({eventosDelDia.length})
+                </span>
+                <button
+                  onClick={toggleSelectTodos}
+                  className="text-xs font-semibold text-[#1a73e8] hover:underline cursor-pointer"
+                >
+                  {eventosSeleccionadosIds.length === eventosDelDia.length ? 'Desmarcar todos' : 'Seleccionar todos'}
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {eventosDelDia.map((ev) => {
+                  const isChecked = eventosSeleccionadosIds.includes(ev.id);
+                  return (
+                    <div
+                      key={ev.id}
+                      onClick={() => toggleSelectEvento(ev.id)}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                        isChecked
+                          ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20'
+                          : 'border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 opacity-60'
+                      }`}
+                    >
+                      <button type="button" className="mt-0.5 text-emerald-600 shrink-0">
+                        {isChecked ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5 text-gray-400 dark:text-gray-500" />}
+                      </button>
+                      <div className="space-y-0.5 flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">🟢 {ev.titulo}</p>
+                        <p className="text-[11px] text-gray-600 dark:text-gray-300">⏰ {formatTimeDisplay(ev.hora)} {ev.horaFin ? `– ${formatTimeDisplay(ev.horaFin)}` : ''} | Lugar: {ev.lugar}</p>
+                        <p className="text-[10px] text-blue-600 dark:text-blue-400 font-mono truncate">📍 {ev.ubicacionUrl}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                <MessageCircle className="h-4 w-4 text-emerald-600" />
+                Vista Previa del Mensaje (Formato Oficial):
+              </span>
+
+              <div className="p-4 rounded-xl bg-emerald-950/5 dark:bg-emerald-950/20 border border-emerald-500/20 font-sans text-xs text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap max-h-56 overflow-y-auto">
+                {generarTextoWhatsApp()}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={handleCopiarWhatsApp}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+              >
+                {copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-gray-500 dark:text-gray-400" />}
+                <span>{copiado ? '¡Copiado al Portapapeles!' : 'Copiar Texto'}</span>
+              </button>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsModalCompartirOpen(false)}
+                  className="px-4 py-2.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-lg"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCompartirWhatsAppDirecto}
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-[#0b8043] hover:bg-[#096e38] text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span>Enviar a WhatsApp Directo</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL GOOGLE CALENDAR */}
+      {isModalGCalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center border border-blue-200/80 dark:border-blue-900 shadow-2xs">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Google Calendar</h2>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Sincronización oficial bidireccional</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalGCalOpen(false)}
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold p-1 rounded-lg hover:bg-gray-100 dark:bg-gray-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            {gcalConnected ? (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                      Cuenta Conectada
+                    </span>
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">OAuth 2.0 Activo</span>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 font-mono truncate">{gcalEmail || 'Usuario Vinculado'}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Última sincronización: <span className="font-semibold text-gray-700 dark:text-gray-300">{lastSyncTime}</span>
+                  </p>
+                </div>
+
+                <div className="text-xs text-gray-600 dark:text-gray-300 space-y-1.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+                  <p className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    Sincronización automática activada:
+                  </p>
+                  <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                    <li>Los eventos creados en LegisLab se reflejan al instante en tu Google Calendar.</li>
+                    <li>Las modificaciones de hora, lugar y reagendado se actualizan en vivo.</li>
+                    <li>Los eventos eliminados se remueven de tu cuenta Google.</li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <button
+                    type="button"
+                    onClick={handleManualSyncGCal}
+                    disabled={isSyncingGCal}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#1a73e8] hover:bg-[#1557b0] disabled:opacity-60 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm transition-all cursor-pointer"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isSyncingGCal ? 'animate-spin' : ''}`} />
+                    <span>{isSyncingGCal ? 'Sincronizando eventos...' : 'Forzar Sincronización Ahora'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGCal}
+                    className="w-full inline-flex items-center justify-center gap-2 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 py-2 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Desconectar Google Calendar</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Conecta tu cuenta de Google Calendar para sincronizar tu agenda en tiempo real en todos tus dispositivos móviles y asistentes virtuales.
+                </p>
+                <a
+                  href="/api/auth/google-calendar"
+                  className="w-full inline-flex items-center justify-center gap-2.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-bold py-3 rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24">
+                    <path fill="#ffffff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#ffffff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#ffffff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#ffffff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  <span>Conectar Cuenta de Google Calendar</span>
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}
