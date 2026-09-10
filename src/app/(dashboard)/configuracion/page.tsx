@@ -7,7 +7,12 @@ import {
   getWhatsAppInstanceInfo
 } from '@/app/actions/whatsapp';
 import { getGoogleDriveStatusAction, disconnectGoogleDriveAction, updateGoogleDriveFolderAction } from '@/app/actions/drive';
-import { getGoogleCalendarStatusAction, disconnectGoogleCalendarAction } from '@/app/actions/agenda';
+import { 
+  getGoogleCalendarStatusAction, 
+  disconnectGoogleCalendarAction, 
+  getGoogleCalendarsListAction, 
+  setGoogleCalendarIdAction 
+} from '@/app/actions/agenda';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
@@ -190,6 +195,10 @@ function ConfiguracionContent() {
   const [driveFolderIdReal, setDriveFolderIdReal] = useState('');
   const [calendarConectado, setCalendarConectado] = useState(false);
   const [calendarEmail, setCalendarEmail] = useState('');
+  const [googleCalendarId, setGoogleCalendarId] = useState('primary');
+  const [googleCalendarsList, setGoogleCalendarsList] = useState<Array<{ id: string; summary: string; primary?: boolean }>>([]);
+  const [cargandoCalendarios, setCargandoCalendarios] = useState(false);
+  const [guardadoCalendarId, setGuardadoCalendarId] = useState(false);
 
   // WhatsApp Web Gateway QR Connector State
   const [whatsappConectado, setWhatsappConectado] = useState(false);
@@ -244,11 +253,21 @@ function ConfiguracionContent() {
     if (searchParams.get('gdrive_status') === 'connected') {
       setDriveConectado(true);
       localStorage.setItem('legislab_gdrive_connected', 'true');
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('gdrive_status');
+        window.history.replaceState({}, '', url.toString());
+      }
     }
 
     if (searchParams.get('gcal_status') === 'connected') {
       setCalendarConectado(true);
       localStorage.setItem('legislab_gcal_connected', 'true');
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('gcal_status');
+        window.history.replaceState({}, '', url.toString());
+      }
     }
 
     const refreshDriveAndCalendar = () => {
@@ -279,6 +298,19 @@ function ConfiguracionContent() {
             setCalendarEmail(res.email);
             localStorage.setItem('legislab_gcal_email', res.email);
           }
+          if (res.calendarId) {
+            setGoogleCalendarId(res.calendarId);
+          }
+          setCargandoCalendarios(true);
+          getGoogleCalendarsListAction().then(cRes => {
+            setCargandoCalendarios(false);
+            if (cRes.success && cRes.calendars && cRes.calendars.length > 0) {
+              setGoogleCalendarsList(cRes.calendars);
+              if (cRes.selectedCalendarId) {
+                setGoogleCalendarId(cRes.selectedCalendarId);
+              }
+            }
+          }).catch(() => setCargandoCalendarios(false));
         } else if (res.success && !res.connected && searchParams.get('gcal_status') !== 'connected') {
           setCalendarConectado(false);
           localStorage.setItem('legislab_gcal_connected', 'false');
@@ -474,15 +506,20 @@ function ConfiguracionContent() {
   const handleDisconnectDrive = async () => {
     if (!confirm('¿Deseas desconectar tu cuenta de Google Drive de este despacho?')) return;
     try {
-      const res = await disconnectGoogleDriveAction();
-      if (res.success) {
-        setDriveConectado(false);
-        setDriveEmail('');
-        setDriveFolderUrlReal('');
-        setDriveFolderIdReal('');
-        localStorage.setItem('legislab_gdrive_connected', 'false');
-        localStorage.removeItem('legislab_gdrive_email');
+      setDriveConectado(false);
+      setDriveEmail('');
+      setDriveFolderUrlReal('');
+      setDriveFolderIdReal('');
+      localStorage.setItem('legislab_gdrive_connected', 'false');
+      localStorage.removeItem('legislab_gdrive_email');
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('gdrive_status');
+        url.searchParams.delete('gdrive_error');
+        window.history.replaceState({}, '', url.toString());
       }
+      await fetch('/api/auth/google-drive/disconnect', { method: 'POST' }).catch(() => null);
+      await disconnectGoogleDriveAction().catch(() => null);
     } catch (e) {
       console.error(e);
     }
@@ -491,15 +528,37 @@ function ConfiguracionContent() {
   const handleDisconnectCalendar = async () => {
     if (!confirm('¿Deseas desconectar tu cuenta de Google Calendar de este despacho?')) return;
     try {
-      const res = await disconnectGoogleCalendarAction();
-      if (res.success) {
-        setCalendarConectado(false);
-        setCalendarEmail('');
-        localStorage.setItem('legislab_gcal_connected', 'false');
-        localStorage.removeItem('legislab_gcal_email');
+      setCalendarConectado(false);
+      setCalendarEmail('');
+      setGoogleCalendarsList([]);
+      localStorage.setItem('legislab_gcal_connected', 'false');
+      localStorage.removeItem('legislab_gcal_email');
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('gcal_status');
+        url.searchParams.delete('gcal_error');
+        window.history.replaceState({}, '', url.toString());
       }
+      await fetch('/api/auth/google-calendar/disconnect', { method: 'POST' }).catch(() => null);
+      await disconnectGoogleCalendarAction().catch(() => null);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleGuardarCalendarId = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await fetch('/api/auth/google-calendar/calendars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calendarId: googleCalendarId }),
+      }).catch(() => null);
+      await setGoogleCalendarIdAction(googleCalendarId).catch(() => null);
+      setGuardadoCalendarId(true);
+      setTimeout(() => setGuardadoCalendarId(false), 3000);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -982,14 +1041,66 @@ function ConfiguracionContent() {
             </div>
 
             {calendarConectado ? (
-              <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4 space-y-2">
-                <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs">
-                  <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
-                  <span>Sincronización bidireccional activa con la cuenta {calendarEmail}</span>
+              <div className="space-y-4">
+                <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                    <span>Sincronización bidireccional activa con la cuenta {calendarEmail || 'de Google'}</span>
+                  </div>
+                  <p className="text-[11px] text-blue-800 leading-relaxed">
+                    Cualquier evento creado en el módulo de Agenda de LegisLab se sincroniza automáticamente con tu Google Calendar y viceversa con zona horaria America/Mexico_City.
+                  </p>
                 </div>
-                <p className="text-[11px] text-blue-800 leading-relaxed">
-                  Cualquier evento creado en el módulo de Agenda de LegisLab se sincroniza automáticamente con tu Google Calendar y viceversa con zona horaria America/Mexico_City.
-                </p>
+
+                {/* Selector de Calendario */}
+                <form onSubmit={handleGuardarCalendarId} className="bg-blue-50/30 border border-blue-100 rounded-xl p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <label className="block text-xs font-bold text-gray-800">
+                        Calendario de Google a Sincronizar
+                      </label>
+                      <p className="text-[11px] text-gray-500">
+                        Selecciona el calendario de tu cuenta donde se registrarán las sesiones y audiencias.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={googleCalendarId}
+                        onChange={(e) => setGoogleCalendarId(e.target.value)}
+                        disabled={cargandoCalendarios}
+                        className="p-2 bg-white border border-gray-300 rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-blue-500 min-w-[200px]"
+                      >
+                        {cargandoCalendarios ? (
+                          <option value="primary">Cargando calendarios...</option>
+                        ) : googleCalendarsList.length > 0 ? (
+                          googleCalendarsList.map((cal) => (
+                            <option key={cal.id} value={cal.id}>
+                              {cal.summary} {cal.primary ? '(Principal)' : ''}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="primary">Calendario Principal</option>
+                        )}
+                      </select>
+
+                      <button
+                        type="submit"
+                        disabled={cargandoCalendarios}
+                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+                      >
+                        {guardadoCalendarId ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-white" />
+                            <span>¡Guardado!</span>
+                          </>
+                        ) : (
+                          <span>Guardar</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </form>
               </div>
             ) : (
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-xs text-gray-600 leading-relaxed">

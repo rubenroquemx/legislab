@@ -343,3 +343,47 @@ export async function fetchGoogleCalendarEvents(
     return [];
   }
 }
+
+/**
+ * Obtiene la lista de calendarios disponibles de la cuenta de Google del usuario
+ */
+export async function fetchUserCalendars(accessToken: string): Promise<
+  Array<{
+    id: string;
+    summary: string;
+    description?: string;
+    primary?: boolean;
+    backgroundColor?: string;
+  }>
+> {
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      console.warn('Error fetching Google calendar list:', await res.text());
+      return [{ id: 'primary', summary: 'Calendario Principal', primary: true }];
+    }
+
+    const data = await res.json();
+    const items = (data.items || []).map((cal: any) => ({
+      id: cal.id,
+      summary: cal.summary || cal.id,
+      description: cal.description || '',
+      primary: Boolean(cal.primary),
+      backgroundColor: cal.backgroundColor || '#0284c7',
+    }));
+
+    if (items.length === 0) {
+      return [{ id: 'primary', summary: 'Calendario Principal', primary: true }];
+    }
+
+    return items;
+  } catch (error) {
+    console.error('Error in fetchUserCalendars:', error);
+    return [{ id: 'primary', summary: 'Calendario Principal', primary: true }];
+  }
+}

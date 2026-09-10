@@ -17,12 +17,13 @@ import {
   insertGoogleCalendarEvent, 
   updateGoogleCalendarEvent, 
   deleteGoogleCalendarEvent,
-  fetchGoogleCalendarEvents 
+  fetchGoogleCalendarEvents,
+  fetchUserCalendars
 } from '@/lib/google-calendar';
 
 const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
 
-export const DEFAULT_TIPOS_EVENTOS = [
+const DEFAULT_TIPOS_EVENTOS = [
   'Comisión',
   'Pleno',
   'Solemne',
@@ -32,7 +33,7 @@ export const DEFAULT_TIPOS_EVENTOS = [
   'Reunión de Bancada',
 ];
 
-export const DEFAULT_SEDES_PARLAMENTARIAS = [
+const DEFAULT_SEDES_PARLAMENTARIAS = [
   {
     nombre: 'Congreso del Estado (Recinto Oficial de Sesiones)',
     ubicacionUrl: 'https://share.google/RSlrkI2maowYbwLnH',
@@ -341,11 +342,64 @@ export async function getGoogleCalendarStatusAction(officeId: string = DEFAULT_O
       success: true,
       connected: Boolean(office.googleCalendarConnected),
       email: office.googleCalendarEmail || '',
+      calendarId: office.googleCalendarId || 'primary',
       lastSync: office.googleCalendarLastSync || null,
     };
   } catch (error) {
     console.warn('Error checking Google Calendar status:', error);
     return { success: false, connected: false };
+  }
+}
+
+/**
+ * Obtiene la lista de todos los calendarios disponibles del usuario en Google Calendar
+ */
+export async function getGoogleCalendarsListAction(officeId: string = DEFAULT_OFFICE_ID) {
+  try {
+    const gcal = await getValidGoogleTokenForOffice(officeId);
+    if (!gcal) {
+      return { success: false, error: 'Google Calendar no está conectado', calendars: [] };
+    }
+
+    const calendars = await fetchUserCalendars(gcal.accessToken);
+    return {
+      success: true,
+      calendars,
+      selectedCalendarId: gcal.calendarId || 'primary',
+    };
+  } catch (error: any) {
+    console.error('Error in getGoogleCalendarsListAction:', error);
+    return { success: false, error: error?.message || 'Error al obtener calendarios', calendars: [] };
+  }
+}
+
+/**
+ * Guarda el calendario seleccionado por el usuario para sincronizar
+ */
+export async function setGoogleCalendarIdAction(
+  calendarId: string,
+  officeId: string = DEFAULT_OFFICE_ID
+) {
+  try {
+    const office = await resolveOffice(officeId);
+    if (!office) {
+      return { success: false, error: 'Despacho no encontrado' };
+    }
+
+    await db
+      .update(offices)
+      .set({
+        googleCalendarId: calendarId || 'primary',
+        updatedAt: new Date(),
+      })
+      .where(eq(offices.id, office.id));
+
+    revalidatePath('/agenda');
+    revalidatePath('/configuracion');
+    return { success: true, calendarId };
+  } catch (error: any) {
+    console.error('Error saving Google Calendar ID:', error);
+    return { success: false, error: error?.message || 'Error al guardar calendario' };
   }
 }
 
