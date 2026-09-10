@@ -48,7 +48,7 @@ import {
   Search
 } from 'lucide-react';
 
-export interface EventoLegislativo {
+interface EventoLegislativo {
   id: string;
   titulo: string;
   fecha: string;
@@ -61,7 +61,7 @@ export interface EventoLegislativo {
   incluirEnCompartir?: boolean;
 }
 
-export interface SedeFrecuente {
+interface SedeFrecuente {
   id: string;
   nombre: string;
   ubicacionUrl: string;
@@ -191,6 +191,109 @@ function formatTimeDisplay(timeStr: string): string {
   let h12 = h % 12;
   if (h12 === 0) h12 = 12;
   return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+const HOUR_ROW_HEIGHT = 48; // Altura en píxeles de cada franja de 1 hora (24h = 1152px)
+
+interface PositionedEvent {
+  event: EventoLegislativo;
+  top: number;
+  height: number;
+  leftPercent: number;
+  widthPercent: number;
+}
+
+function layoutDayEvents(events: EventoLegislativo[]): PositionedEvent[] {
+  if (!events || events.length === 0) return [];
+
+  const items = events.map((ev) => {
+    const startMins = parseTimeToMinutes(ev.hora);
+    let endMins = ev.horaFin ? parseTimeToMinutes(ev.horaFin) : startMins + 60;
+    if (endMins <= startMins) {
+      endMins = Math.min(startMins + 60, 1440);
+    }
+    const duration = Math.max(endMins - startMins, 15);
+    const top = (startMins / 60) * HOUR_ROW_HEIGHT;
+    const height = Math.max((duration / 60) * HOUR_ROW_HEIGHT, 26);
+    return {
+      event: ev,
+      startMins,
+      endMins,
+      top,
+      height,
+    };
+  });
+
+  // Ordenar por hora de inicio ascendente, luego duraciones más largas primero
+  items.sort((a, b) => a.startMins - b.startMins || (b.endMins - b.startMins) - (a.endMins - a.startMins));
+
+  // Agrupar en grupos o clusters de eventos que se solapan en el tiempo
+  const clusters: (typeof items)[] = [];
+  let currentCluster: typeof items = [];
+  let clusterEnd = -1;
+
+  for (const item of items) {
+    if (currentCluster.length === 0) {
+      currentCluster.push(item);
+      clusterEnd = item.endMins;
+    } else if (item.startMins < clusterEnd) {
+      currentCluster.push(item);
+      clusterEnd = Math.max(clusterEnd, item.endMins);
+    } else {
+      clusters.push(currentCluster);
+      currentCluster = [item];
+      clusterEnd = item.endMins;
+    }
+  }
+  if (currentCluster.length > 0) {
+    clusters.push(currentCluster);
+  }
+
+  const results: PositionedEvent[] = [];
+
+  for (const cluster of clusters) {
+    const columns: (typeof items)[] = [];
+    for (const item of cluster) {
+      let placed = false;
+      for (let i = 0; i < columns.length; i++) {
+        const lastInCol = columns[i][columns[i].length - 1];
+        if (lastInCol.endMins <= item.startMins) {
+          columns[i].push(item);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        columns.push([item]);
+      }
+    }
+
+    const totalCols = columns.length;
+    columns.forEach((col, colIdx) => {
+      const leftPercent = (colIdx / totalCols) * 100;
+      const widthPercent = (100 / totalCols) - (totalCols > 1 ? 1 : 0);
+      for (const item of col) {
+        results.push({
+          event: item.event,
+          top: item.top,
+          height: item.height,
+          leftPercent,
+          widthPercent,
+        });
+      }
+    });
+  }
+
+  return results;
+}
+
+function formatRelativeDate(dateStr: string, todayStr: string): string {
+  if (dateStr === todayStr) return 'Hoy';
+  const target = parseDate(dateStr);
+  const today = parseDate(todayStr);
+  const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 1) return 'Mañana';
+  return target.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: 'numeric', month: 'short' });
 }
 
 const HORAS_DEL_DIA_24 = Array.from({ length: 24 }, (_, i) => {
@@ -353,6 +456,20 @@ export default function AgendaPage() {
   const [vista, setVista] = useState<'mes' | 'semana' | 'dia'>('semana');
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(todayStr);
   const [miniCalDate, setMiniCalDate] = useState<Date>(() => parseDate(todayStr));
+
+  // Minutos actuales del día en curso (para la línea roja de hora actual)
+  const [nowMinutes, setNowMinutes] = useState<number>(() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setNowMinutes(now.getHours() * 60 + now.getMinutes());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Google Calendar live sync states & OAuth
   const [gcalConnected, setGcalConnected] = useState(false);
@@ -603,6 +720,12 @@ export default function AgendaPage() {
       (ev.descripcion && ev.descripcion.toLowerCase().includes(query))
     );
   });
+
+  // Los 3 eventos más próximos a partir de hoy (orden cronológico)
+  const proximosEventos = [...eventos]
+    .filter((e) => e.fecha >= todayStr)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || parseTimeToMinutes(a.hora) - parseTimeToMinutes(b.hora))
+    .slice(0, 3);
 
   const eventosDelDia = eventosFiltrados.filter((ev) => ev.fecha === fechaSeleccionada);
   const diaTieneEventos = eventosDelDia.length > 0;
@@ -1227,7 +1350,7 @@ export default function AgendaPage() {
       
       {/* SIDEBAR IZQUIERDA ESTILO GOOGLE CALENDAR */}
       <aside className="w-full lg:w-60 shrink-0 space-y-4">
-        {/* Botón + Crear Google */}
+        {/* Botón + Crear Google Monochrome */}
         <button
           type="button"
           onClick={() => {
@@ -1238,14 +1361,9 @@ export default function AgendaPage() {
             setCustomTipoInput('');
             setIsModalCrearOpen(true);
           }}
-          className="w-full sm:w-auto inline-flex items-center gap-3 bg-white dark:bg-[#121824] hover:bg-gray-50 dark:hover:bg-gray-800/60 text-gray-700 dark:text-gray-200 font-semibold px-5 py-3 rounded-full border border-gray-200/90 dark:border-gray-800 shadow-sm hover:shadow-md transition-all text-sm group cursor-pointer"
+          className="w-full sm:w-auto inline-flex items-center gap-2.5 bg-white dark:bg-[#121824] hover:bg-gray-50 dark:hover:bg-gray-800/80 text-gray-800 dark:text-gray-100 font-semibold px-5 py-2.5 rounded-full border border-gray-300/90 dark:border-gray-700 shadow-xs hover:shadow-sm transition-all text-sm group cursor-pointer"
         >
-          <svg className="w-6 h-6 shrink-0 transition-transform group-hover:scale-110" viewBox="0 0 36 36">
-            <path fill="#4285F4" d="M16 16v14h4V20z"/>
-            <path fill="#34A853" d="M30 16H20l-4 4h14z"/>
-            <path fill="#FBBC05" d="M6 16H16l4-4H6z"/>
-            <path fill="#EA4335" d="M20 16V6h-4v10z"/>
-          </svg>
+          <Plus className="w-4 h-4 text-gray-700 dark:text-gray-200 shrink-0" />
           <span className="font-bold text-gray-800 dark:text-gray-100 text-sm">Crear</span>
         </button>
 
@@ -1340,6 +1458,59 @@ export default function AgendaPage() {
             >
               ✕
             </button>
+          )}
+        </div>
+
+        {/* Próximos 3 Eventos Widget */}
+        <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 p-3.5 space-y-2.5 shadow-xs">
+          <div className="flex items-center justify-between px-0.5">
+            <span className="text-xs font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-[#1a73e8]" />
+              Próximos eventos
+            </span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#1a73e8] dark:text-blue-300">
+              {proximosEventos.length}
+            </span>
+          </div>
+
+          {proximosEventos.length > 0 ? (
+            <div className="space-y-2">
+              {proximosEventos.map((ev) => {
+                const style = getGoogleEventColor(ev.tipo);
+                const relDate = formatRelativeDate(ev.fecha, todayStr);
+                return (
+                  <div
+                    key={ev.id}
+                    onClick={() => {
+                      setFechaSeleccionada(ev.fecha);
+                      setMiniCalDate(parseDate(ev.fecha));
+                      setEventoDetalle(ev);
+                    }}
+                    className="p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-900 bg-gray-50/50 dark:bg-gray-800/30 hover:bg-white dark:hover:bg-gray-800 transition-all cursor-pointer space-y-1 group"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-bold text-[#1a73e8] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-1.5 py-0.5 rounded-md">
+                        {relDate}
+                      </span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${style.chip}`}>
+                        {ev.tipo}
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold text-gray-800 dark:text-gray-100 line-clamp-1 group-hover:text-[#1a73e8] transition-colors">
+                      {ev.titulo}
+                    </h4>
+                    <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 pt-0.5">
+                      <span className="font-mono">{formatTimeDisplay(ev.hora)}</span>
+                      <span className="truncate max-w-[100px] text-right">{ev.lugar}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 italic text-center py-2">
+              No hay eventos próximos agendados.
+            </p>
           )}
         </div>
       </aside>
@@ -1466,7 +1637,7 @@ export default function AgendaPage() {
           </div>
         </div>
 
-        {/* 1. VISTA DIARIA (24 HORAS) */}
+        {/* 1. VISTA DIARIA (24 HORAS CON DURACIÓN EXACTA) */}
         {vista === 'dia' && (
           <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden">
             <div className="p-2.5 sm:p-3 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-3 sm:px-4">
@@ -1479,128 +1650,159 @@ export default function AgendaPage() {
               <span className="text-[11px] text-gray-500 dark:text-gray-400 shrink-0">{eventosDelDia.length} eventos</span>
             </div>
 
-            <div className="divide-y divide-gray-100 dark:divide-gray-800/70 max-h-[75vh] overflow-y-auto">
-              {HORAS_DEL_DIA_24.map((slot) => {
-                const eventosEnHora = eventosDelDia.filter((ev) => getHourNumber(ev.hora) === slot.hourNumber);
-                const hasEvents = eventosEnHora.length > 0;
+            <div className="max-h-[75vh] overflow-y-auto flex relative">
+              {/* Columna de Horas a la izquierda */}
+              <div className="w-14 sm:w-20 md:w-24 shrink-0 border-r border-gray-100 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/20 select-none">
+                {HORAS_DEL_DIA_24.map((slot) => (
+                  <div
+                    key={slot.hourNumber}
+                    style={{ height: `${HOUR_ROW_HEIGHT}px` }}
+                    className="flex items-start justify-end pr-2 pt-1 border-b border-gray-100 dark:border-gray-800/50"
+                  >
+                    <span className="text-[10px] sm:text-[11px] font-mono text-gray-400 dark:text-gray-500">
+                      {slot.labelShort}
+                    </span>
+                  </div>
+                ))}
+              </div>
 
-                return (
-                  <div 
-                    key={slot.hourNumber} 
+              {/* Canvas de franjas y eventos posicionados absolutamente */}
+              <div
+                className="relative flex-1"
+                style={{ height: `${24 * HOUR_ROW_HEIGHT}px` }}
+              >
+                {/* Franjas horarias de fondo */}
+                {HORAS_DEL_DIA_24.map((slot) => (
+                  <div
+                    key={slot.hourNumber}
+                    style={{
+                      top: `${slot.hourNumber * HOUR_ROW_HEIGHT}px`,
+                      height: `${HOUR_ROW_HEIGHT}px`,
+                    }}
                     onClick={() => handleAbrirCrearEnHora(slot.defaultTimeInput, fechaSeleccionada)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, fechaSeleccionada, slot.defaultTimeInput)}
-                    className={`group flex transition-all cursor-pointer relative ${
-                      hasEvents 
-                        ? 'min-h-[72px] bg-white dark:bg-transparent hover:bg-blue-50/20' 
-                        : 'min-h-[36px] hover:bg-blue-50/30'
-                    }`}
+                    className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800/60 hover:bg-blue-50/20 dark:hover:bg-blue-950/20 cursor-pointer transition-colors group"
                   >
-                    <div className={`w-16 sm:w-24 md:w-28 border-r border-gray-100 dark:border-gray-800/70 flex items-center justify-end pr-2 sm:pr-3 shrink-0 select-none ${
-                      hasEvents ? 'items-start pt-3' : ''
-                    }`}>
-                      <div className="flex items-center gap-1 text-[11px] font-medium text-gray-400 dark:text-gray-500 group-hover:text-[#1a73e8] transition-colors">
-                        <span className="text-[10px] sm:text-[11px] font-mono">{slot.labelShort}</span>
-                      </div>
-                    </div>
+                    <span className="hidden group-hover:inline-block absolute right-3 top-2 text-[10px] font-medium text-[#1a73e8] bg-white dark:bg-gray-800 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-900 shadow-2xs">
+                      + Agendar a las {slot.labelShort}
+                    </span>
+                  </div>
+                ))}
 
-                    <div className={`flex-1 p-2 space-y-2 flex flex-col justify-center ${hasEvents ? 'justify-start' : ''}`}>
-                      {hasEvents ? (
-                        eventosEnHora.map((ev) => {
-                          const style = getGoogleEventColor(ev.tipo);
-                          return (
-                            <div
-                              key={ev.id}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, ev)}
+                {/* Línea roja de hora actual */}
+                {fechaSeleccionada === todayStr && (
+                  <div
+                    className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
+                    style={{ top: `${(nowMinutes / 60) * HOUR_ROW_HEIGHT}px` }}
+                  >
+                    <div className="h-2.5 w-2.5 rounded-full bg-red-500 -ml-1.5 shadow-xs shrink-0"></div>
+                    <div className="h-[2px] flex-1 bg-red-500"></div>
+                  </div>
+                )}
+
+                {/* Eventos con duración y posicionamiento real */}
+                {layoutDayEvents(eventosDelDia).map((item) => {
+                  const ev = item.event;
+                  const style = getGoogleEventColor(ev.tipo);
+                  return (
+                    <div
+                      key={ev.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, ev)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEventoDetalle(ev);
+                      }}
+                      style={{
+                        top: `${item.top}px`,
+                        height: `${item.height}px`,
+                        left: `${item.leftPercent}%`,
+                        width: `${item.widthPercent}%`,
+                      }}
+                      className={`absolute z-10 p-2 sm:p-2.5 rounded-xl ${style.bg} border-l-[4px] shadow-xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing overflow-hidden flex flex-col justify-between group/ev`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-start justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`h-2 w-2 rounded-full ${style.dot} shrink-0`}></span>
+                            <h3 className={`text-xs sm:text-sm font-bold ${style.text} truncate leading-tight`}>
+                              {ev.titulo}
+                            </h3>
+                          </div>
+
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover/ev:opacity-100 transition-opacity shrink-0 bg-white/80 dark:bg-gray-900/80 p-0.5 rounded-md">
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEventoDetalle(ev);
+                                handleAbrirEditar(ev);
                               }}
-                              className={`p-3 rounded-xl ${style.bg} transition-all space-y-1.5 cursor-grab active:cursor-grabbing relative shadow-xs hover:shadow-sm`}
+                              title="Editar evento"
+                              className="p-1 text-gray-600 dark:text-gray-300 hover:text-[#1a73e8] rounded hover:bg-blue-50 transition-colors"
                             >
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                                <div className="flex items-center gap-2 pr-6">
-                                  <GripVertical className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 shrink-0 cursor-grab" />
-                                  <span className={`h-2 w-2 rounded-full ${style.dot} shrink-0`}></span>
-                                  <h3 className={`text-xs sm:text-sm font-bold ${style.text} line-clamp-1`}>
-                                    {ev.titulo}
-                                  </h3>
-                                </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${style.chip}`}>
-                                    {ev.tipo}
-                                  </span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAbrirEditar(ev);
-                                    }}
-                                    title="Editar este evento"
-                                    className="p-1 text-gray-500 dark:text-gray-400 hover:text-[#1a73e8] hover:bg-blue-50 dark:hover:bg-gray-800 rounded-md transition-colors"
-                                  >
-                                    <Edit3 className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEventoAEliminar(ev);
-                                    }}
-                                    title="Eliminar"
-                                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-md transition-colors"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300 pt-0.5">
-                                <div className="flex items-center gap-1 font-semibold text-gray-700 dark:text-gray-200">
-                                  <Clock className="h-3 w-3 text-gray-400 dark:text-gray-500" />
-                                  <span>{formatTimeDisplay(ev.hora)} {ev.horaFin ? `– ${formatTimeDisplay(ev.horaFin)}` : ''}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Landmark className="h-3 w-3 text-gray-400 dark:text-gray-500" />
-                                  <span className="truncate">{ev.lugar}</span>
-                                </div>
-                                <a
-                                  href={ev.ubicacionUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1 text-[#1a73e8] hover:underline text-[11px] font-medium ml-auto"
-                                >
-                                  <MapPin className="h-3 w-3 text-red-500" />
-                                  <span>Ubicación</span>
-                                  <ExternalLink className="h-2.5 w-2.5" />
-                                </a>
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="h-full flex items-center justify-between pr-4">
-                          <span className="text-[10px] text-gray-300 dark:text-gray-700 italic group-hover:hidden select-none">Sin eventos</span>
-                          <div className="hidden group-hover:flex items-center gap-1 text-[11px] font-medium text-[#1a73e8] bg-white dark:bg-gray-800 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-900 shadow-2xs">
-                            <span>+ Agendar a las {slot.labelShort}</span>
+                              <Edit3 className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEventoAEliminar(ev);
+                              }}
+                              title="Eliminar evento"
+                              className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
                           </div>
+                        </div>
+
+                        {item.height >= 44 && (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-gray-600 dark:text-gray-300 pt-1 font-medium truncate">
+                            <span className="flex items-center gap-1 shrink-0 font-mono">
+                              <Clock className="h-3 w-3 text-gray-400" />
+                              {formatTimeDisplay(ev.hora)} {ev.horaFin ? `– ${formatTimeDisplay(ev.horaFin)}` : ''}
+                            </span>
+                            {ev.lugar && (
+                              <span className="flex items-center gap-1 truncate max-w-[180px]">
+                                <Landmark className="h-3 w-3 text-gray-400 shrink-0" />
+                                <span className="truncate">{ev.lugar}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {item.height >= 70 && (
+                        <div className="flex items-center justify-between pt-1 border-t border-gray-200/60 dark:border-gray-800/40 text-[10px]">
+                          <span className={`px-2 py-0.5 rounded-full font-bold ${style.chip}`}>
+                            {ev.tipo}
+                          </span>
+                          <a
+                            href={ev.ubicacionUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-[#1a73e8] hover:underline font-medium"
+                          >
+                            <MapPin className="h-3 w-3 text-red-500" />
+                            <span>Mapa</span>
+                          </a>
                         </div>
                       )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
 
-        {/* 2. VISTA SEMANAL (DOMINGO A SÁBADO ESTILO GOOGLE CALENDAR) */}
+        {/* 2. VISTA SEMANAL (7 DÍAS CON DURACIÓN CONTINUA GOOGLE CALENDAR) */}
         {vista === 'semana' && (
           <div className="space-y-2">
             <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-x-auto">
               <div className="min-w-[840px] sm:min-w-[960px]">
                 {/* Encabezado de columnas: GMT-06 y DOM a SÁB */}
-                <div className="grid grid-cols-8 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/40 text-center sticky top-0 z-10">
+                <div className="grid grid-cols-8 border-b border-gray-200/80 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/40 text-center sticky top-0 z-30">
                   <div className="p-3 border-r border-gray-200/80 dark:border-gray-800 flex items-center justify-center text-[10px] font-bold text-gray-400 dark:text-gray-500">
                     GMT-06
                   </div>
@@ -1633,93 +1835,123 @@ export default function AgendaPage() {
                   ))}
                 </div>
 
-                {/* Cuadrícula de 24 horas */}
-                <div className="divide-y divide-gray-100 dark:divide-gray-800/70 max-h-[75vh] overflow-y-auto">
-                  {HORAS_DEL_DIA_24.map((slot) => {
-                    const rowHasEvents = diasSemana.some((col) =>
-                      eventosFiltrados.some((e) => e.fecha === col.fecha && getHourNumber(e.hora) === slot.hourNumber)
-                    );
+                {/* Cuadrícula de 24 horas continua */}
+                <div className="max-h-[75vh] overflow-y-auto grid grid-cols-8 relative">
+                  {/* Columna 1: Horas */}
+                  <div className="border-r border-gray-100 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/20 select-none">
+                    {HORAS_DEL_DIA_24.map((slot) => (
+                      <div
+                        key={slot.hourNumber}
+                        style={{ height: `${HOUR_ROW_HEIGHT}px` }}
+                        className="flex items-start justify-end pr-2 pt-1 border-b border-gray-100 dark:border-gray-800/50"
+                      >
+                        <span className="text-[10px] sm:text-[11px] font-mono text-gray-400 dark:text-gray-500">
+                          {slot.labelShort}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Columnas 2 a 8: Días de la semana */}
+                  {diasSemana.map((col) => {
+                    const dayEvents = eventosFiltrados.filter((e) => e.fecha === col.fecha);
+                    const positionedDayEvents = layoutDayEvents(dayEvents);
 
                     return (
-                      <div 
-                        key={slot.hourNumber} 
-                        className={`grid grid-cols-8 transition-all ${
-                          rowHasEvents ? 'min-h-[76px]' : 'min-h-[38px] hover:bg-gray-50/50 dark:hover:bg-gray-800/20'
+                      <div
+                        key={col.fecha}
+                        className={`relative border-r border-gray-100 dark:border-gray-800 ${
+                          fechaSeleccionada === col.fecha ? 'bg-[#e8f0fe]/10 dark:bg-blue-950/10' : ''
                         }`}
+                        style={{ height: `${24 * HOUR_ROW_HEIGHT}px` }}
                       >
-                        <div className="p-1 border-r border-gray-100 dark:border-gray-800 text-right text-[10px] sm:text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-50/40 dark:bg-gray-800/20 select-none flex items-center justify-end pr-2">
-                          {slot.labelShort}
-                        </div>
-                        {diasSemana.map((col) => {
-                          const evs = eventosFiltrados.filter(
-                            (e) => e.fecha === col.fecha && getHourNumber(e.hora) === slot.hourNumber
-                          );
+                        {/* Franjas horarias de fondo */}
+                        {HORAS_DEL_DIA_24.map((slot) => (
+                          <div
+                            key={slot.hourNumber}
+                            style={{
+                              top: `${slot.hourNumber * HOUR_ROW_HEIGHT}px`,
+                              height: `${HOUR_ROW_HEIGHT}px`,
+                            }}
+                            onClick={() => {
+                              setFechaSeleccionada(col.fecha);
+                              handleAbrirCrearEnHora(slot.defaultTimeInput, col.fecha);
+                            }}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, col.fecha, slot.defaultTimeInput)}
+                            className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800/60 hover:bg-[#e8f0fe]/25 dark:hover:bg-blue-950/20 cursor-pointer transition-colors"
+                          />
+                        ))}
 
+                        {/* Línea de hora actual */}
+                        {col.esHoy && (
+                          <div
+                            className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
+                            style={{ top: `${(nowMinutes / 60) * HOUR_ROW_HEIGHT}px` }}
+                          >
+                            <div className="h-2 w-2 rounded-full bg-red-500 -ml-1 shadow-xs shrink-0"></div>
+                            <div className="h-[2px] flex-1 bg-red-500"></div>
+                          </div>
+                        )}
+
+                        {/* Eventos posicionados */}
+                        {positionedDayEvents.map((item) => {
+                          const ev = item.event;
+                          const style = getGoogleEventColor(ev.tipo);
                           return (
                             <div
-                              key={col.fecha}
-                              onDragOver={handleDragOver}
-                              onDrop={(e) => handleDrop(e, col.fecha, slot.defaultTimeInput)}
-                              onClick={() => {
-                                setFechaSeleccionada(col.fecha);
-                                handleAbrirCrearEnHora(slot.defaultTimeInput, col.fecha);
+                              key={ev.id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, ev)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEventoDetalle(ev);
                               }}
-                              className={`p-1 border-r border-gray-100 dark:border-gray-800 cursor-pointer transition-colors ${
-                                fechaSeleccionada === col.fecha ? 'bg-[#e8f0fe]/20 dark:bg-blue-950/20' : 'hover:bg-[#e8f0fe]/10'
-                              }`}
+                              style={{
+                                top: `${item.top}px`,
+                                height: `${item.height}px`,
+                                left: `${item.leftPercent}%`,
+                                width: `${item.widthPercent}%`,
+                              }}
+                              className={`absolute z-10 p-1 sm:p-1.5 rounded-lg ${style.bg} border-l-[3px] shadow-2xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing overflow-hidden group/week-ev`}
                             >
-                              {evs.map((ev) => {
-                                const style = getGoogleEventColor(ev.tipo);
-                                return (
-                                  <div
-                                    key={ev.id}
-                                    draggable
-                                    onDragStart={(e) => handleDragStart(e, ev)}
+                              <div className="flex items-start justify-between gap-0.5">
+                                <p className={`font-bold ${style.text} text-[10px] sm:text-[11px] truncate leading-tight`}>
+                                  {ev.titulo}
+                                </p>
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover/week-ev:opacity-100 transition-opacity shrink-0">
+                                  <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setEventoDetalle(ev);
+                                      handleAbrirEditar(ev);
                                     }}
-                                    className={`group/week-ev p-1.5 rounded-lg ${style.bg} text-[11px] shadow-2xs mb-1 hover:shadow-sm transition-all relative cursor-grab active:cursor-grabbing`}
+                                    title="Editar"
+                                    className="p-0.5 text-gray-500 hover:text-[#1a73e8] rounded hover:bg-blue-50"
                                   >
-                                    <div className="flex items-start justify-between gap-1">
-                                      <p className={`font-bold ${style.text} line-clamp-2 leading-tight`}>
-                                        {ev.titulo}
-                                      </p>
-                                      <div className="flex items-center gap-0.5 opacity-0 group-hover/week-ev:opacity-100 transition-all shrink-0">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleAbrirEditar(ev);
-                                          }}
-                                          title="Editar"
-                                          className="p-0.5 text-gray-500 dark:text-gray-400 hover:text-[#1a73e8] rounded"
-                                        >
-                                          <Edit3 className="h-3 w-3" />
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEventoAEliminar(ev);
-                                          }}
-                                          title="Eliminar"
-                                          className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-red-600 rounded"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                    <p className="text-[10px] text-gray-600 dark:text-gray-300 mt-0.5 truncate">{ev.lugar}</p>
-                                    <div className="flex items-center justify-between mt-1 pt-0.5 border-t border-gray-200/80 dark:border-gray-800/50">
-                                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${style.chip}`}>
-                                        {ev.tipo}
-                                      </span>
-                                      <span className="text-[9px] text-gray-500 dark:text-gray-400 font-mono">
-                                        {formatTimeDisplay(ev.hora)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                                    <Edit3 className="h-2.5 w-2.5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEventoAEliminar(ev);
+                                    }}
+                                    title="Eliminar"
+                                    className="p-0.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-2.5 w-2.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <p className="text-[9px] text-gray-500 dark:text-gray-400 font-mono mt-0.5 truncate">
+                                {formatTimeDisplay(ev.hora)} {ev.horaFin ? `– ${formatTimeDisplay(ev.horaFin)}` : ''}
+                              </p>
+
+                              {item.height >= 48 && ev.lugar && (
+                                <p className="text-[9px] text-gray-600 dark:text-gray-300 truncate mt-0.5">
+                                  {ev.lugar}
+                                </p>
+                              )}
                             </div>
                           );
                         })}
