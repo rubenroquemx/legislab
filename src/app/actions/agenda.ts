@@ -173,6 +173,11 @@ export async function createAgendaEvento(data: {
   try {
     const officeId = data.officeId || DEFAULT_OFFICE_ID;
 
+    // Validación de horas: horaFin debe ser posterior a horaInicio
+    if (data.horaFin && data.horaInicio && data.horaFin <= data.horaInicio) {
+      return { success: false, error: 'La hora de término debe ser posterior a la hora de inicio' };
+    }
+
     const newEntry: NewAgendaEvento = {
       officeId,
       titulo: data.titulo,
@@ -243,6 +248,11 @@ export async function updateAgendaEvento(
   officeId: string = DEFAULT_OFFICE_ID
 ) {
   try {
+    // Validación de horas si ambas están presentes
+    if (data.horaFin && data.horaInicio && data.horaFin <= data.horaInicio) {
+      return { success: false, error: 'La hora de término debe ser posterior a la hora de inicio' };
+    }
+
     const updated = await db
       .update(agendaEventos)
       .set(data)

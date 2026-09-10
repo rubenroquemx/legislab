@@ -181,9 +181,12 @@ export async function ensureDatabaseTables(connectionString: string) {
         lugar_url TEXT,
         color TEXT DEFAULT '#0284c7',
         notas TEXT,
+        google_event_id TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       )
     `;
+
+    await sql`ALTER TABLE agenda_eventos ADD COLUMN IF NOT EXISTS google_event_id TEXT`;
 
     await sql`
       CREATE TABLE IF NOT EXISTS agenda_sedes (
