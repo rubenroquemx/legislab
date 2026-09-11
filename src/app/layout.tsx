@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { AuthProvider } from '@/components/providers/auth-provider';
 
 export const metadata: Metadata = {
   title: 'LegisLab | Plataforma de Gestión Parlamentaria & Redacción con IA',
@@ -39,7 +40,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="LegisLab" />
       </head>
       <body className="h-full bg-slate-50 text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `
