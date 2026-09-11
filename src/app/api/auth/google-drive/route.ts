@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGoogleDriveOAuthUrl, getAppBaseUrl } from '@/lib/google-drive';
+import { getActiveOfficeId } from '@/lib/session-office';
 
 export async function GET(request: NextRequest) {
   try {
     const origin = getAppBaseUrl(request);
     const redirectUri = `${origin}/api/auth/google-drive/callback`;
     
-    const officeId = request.nextUrl.searchParams.get('officeId') || '00000000-0000-0000-0000-000000000001';
+    const paramOfficeId = request.nextUrl.searchParams.get('officeId');
+    const officeId = await getActiveOfficeId(paramOfficeId);
     
     const authUrl = getGoogleDriveOAuthUrl(redirectUri, officeId);
     return NextResponse.redirect(authUrl);

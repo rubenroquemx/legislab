@@ -15,32 +15,58 @@ import {
   type WhatsAppChat,
 } from '@/lib/evolution-api';
 import { db } from '@/db';
-import { gruposContactos, grupoMiembros, atencionMensajes } from '@/db/schema';
+import { gruposContactos, grupoMiembros, atencionMensajes, offices } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getFirstOfficeId } from './gestiones';
+import { getActiveOfficeId } from '@/lib/session-office';
 
 const DEFAULT_INSTANCE_NAME = process.env.WHATSAPP_INSTANCE_NAME || 'Legislab';
+
+async function resolveWhatsAppInstanceName(instanceName?: string): Promise<string> {
+  if (instanceName && typeof instanceName === 'string' && instanceName.trim() !== '' && instanceName !== 'undefined' && instanceName !== 'Legislab') {
+    return instanceName.trim();
+  }
+  try {
+    const activeOfficeId = await getActiveOfficeId();
+    const [office] = await db
+      .select({ whatsappInstanceName: offices.whatsappInstanceName, id: offices.id })
+      .from(offices)
+      .where(eq(offices.id, activeOfficeId))
+      .limit(1);
+
+    if (office?.whatsappInstanceName) {
+      return office.whatsappInstanceName;
+    }
+    if (office?.id) {
+      return `legislab_${office.id.slice(0, 8)}`;
+    }
+  } catch (e) {
+    console.warn('Error resolving whatsapp instance name:', e);
+  }
+  return DEFAULT_INSTANCE_NAME;
+}
 
 /**
  * Checks connection state with Evolution API
  */
-export async function getWhatsAppStatus(instanceName = DEFAULT_INSTANCE_NAME) {
+export async function getWhatsAppStatus(instanceName?: string) {
   try {
-    const res = await getConnectionState(instanceName);
+    const targetInstance = await resolveWhatsAppInstanceName(instanceName);
+    const res = await getConnectionState(targetInstance);
     if (res.success && res.data) {
       const state = res.data.instance?.state || 'close';
       return {
         success: true,
         isConnected: state === 'open',
         state,
-        instanceName,
+        instanceName: targetInstance,
       };
     }
     return {
       success: false,
       isConnected: false,
       state: 'close',
-      instanceName,
+      instanceName: targetInstance,
       error: res.error || 'No se pudo consultar el estado de Evolution API',
     };
   } catch (err: unknown) {
@@ -49,7 +75,7 @@ export async function getWhatsAppStatus(instanceName = DEFAULT_INSTANCE_NAME) {
       success: false,
       isConnected: false,
       state: 'close',
-      instanceName,
+      instanceName: instanceName || DEFAULT_INSTANCE_NAME,
       error: msg,
     };
   }
@@ -58,12 +84,13 @@ export async function getWhatsAppStatus(instanceName = DEFAULT_INSTANCE_NAME) {
 /**
  * Gets detailed instance info (connected phone, profile name, counts)
  */
-export async function getWhatsAppInstanceInfo(instanceName = DEFAULT_INSTANCE_NAME) {
+export async function getWhatsAppInstanceInfo(instanceName?: string) {
   try {
+    const targetInstance = await resolveWhatsAppInstanceName(instanceName);
     const res = await fetchInstances();
     if (res.success && res.data) {
       const instances = res.data as any[];
-      const inst = instances.find((i: any) => (i.name || i.instance?.instanceName) === instanceName);
+      const inst = instances.find((i: any) => (i.name || i.instance?.instanceName) === targetInstance);
       if (inst) {
         const isConnected = inst.connectionStatus === 'open';
         const ownerJid = inst.ownerJid || '';
@@ -82,7 +109,7 @@ export async function getWhatsAppInstanceInfo(instanceName = DEFAULT_INSTANCE_NA
         return {
           success: true,
           data: {
-            instanceName: inst.name || instanceName,
+            instanceName: inst.name || targetInstance,
             connectionStatus: inst.connectionStatus || 'close',
             isConnected,
             phone: formattedPhone,
@@ -106,19 +133,20 @@ export async function getWhatsAppInstanceInfo(instanceName = DEFAULT_INSTANCE_NA
 /**
  * Requests or regenerates the WhatsApp QR code from Evolution API
  */
-export async function generateWhatsAppQR(instanceName = DEFAULT_INSTANCE_NAME) {
+export async function generateWhatsAppQR(instanceName?: string) {
   try {
-    let connectRes = await connectInstance(instanceName);
+    const targetInstance = await resolveWhatsAppInstanceName(instanceName);
+    let connectRes = await connectInstance(targetInstance);
 
     if (!connectRes.success && (connectRes.status === 404 || connectRes.error?.toLowerCase().includes('not found') || connectRes.error?.toLowerCase().includes('não encontrada'))) {
-      const createRes = await createInstance(instanceName);
+      const createRes = await createInstance(targetInstance);
       if (!createRes.success) {
         return {
           success: false,
           error: createRes.error || 'Error al crear la instancia en Evolution API',
         };
       }
-      connectRes = await connectInstance(instanceName);
+      connectRes = await connectInstance(targetInstance);
     }
 
     if (connectRes.success && connectRes.data) {
@@ -127,7 +155,7 @@ export async function generateWhatsAppQR(instanceName = DEFAULT_INSTANCE_NAME) {
         qrCode: connectRes.data.code,
         qrBase64: connectRes.data.base64,
         pairingCode: connectRes.data.pairingCode,
-        instanceName,
+        instanceName: targetInstance,
       };
     }
 
@@ -147,9 +175,10 @@ export async function generateWhatsAppQR(instanceName = DEFAULT_INSTANCE_NAME) {
 /**
  * Disconnects / logs out the WhatsApp instance
  */
-export async function disconnectWhatsApp(instanceName = DEFAULT_INSTANCE_NAME) {
+export async function disconnectWhatsApp(instanceName?: string) {
   try {
-    const res = await logoutInstance(instanceName);
+    const targetInstance = await resolveWhatsAppInstanceName(instanceName);
+    const res = await logoutInstance(targetInstance);
     return {
       success: res.success,
       isConnected: false,

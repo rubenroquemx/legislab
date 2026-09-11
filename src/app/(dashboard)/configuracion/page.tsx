@@ -6,11 +6,20 @@ import {
   disconnectWhatsApp,
   getWhatsAppInstanceInfo
 } from '@/app/actions/whatsapp';
-import { getGoogleDriveStatusAction, disconnectGoogleDriveAction, updateGoogleDriveFolderAction } from '@/app/actions/drive';
+import { 
+  getGoogleDriveStatusAction, 
+  disconnectGoogleDriveAction, 
+  updateGoogleDriveFolderAction 
+} from '@/app/actions/drive';
 import { 
   getGoogleCalendarStatusAction, 
-  disconnectGoogleCalendarAction 
+  disconnectGoogleCalendarAction,
+  syncGoogleCalendarAction 
 } from '@/app/actions/agenda';
+import {
+  getOfficeConfigAction,
+  updateOfficeGeneralConfigAction
+} from '@/app/actions/configuracion';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
@@ -165,26 +174,24 @@ function ConfiguracionContent() {
 
   const [activeDocKey, setActiveDocKey] = useState<DocTypeKey>('gestiones');
 
+  // Multi-tenant Office State
+  const [officeId, setOfficeId] = useState<string>('');
+  const [loadingOffice, setLoadingOffice] = useState(true);
+
   // General States
-  const [nombreDespacho, setNombreDespacho] = useState('Despacho Parlamentario Dip. Ruben Roque');
-  const [distrito, setDistrito] = useState('Distrito 04 Federal (Centro, Tabasco)');
-  const [emailContacto, setEmailContacto] = useState('contacto@rubenroque.mx');
-  const [telefonoOficina, setTelefonoOficina] = useState('993 123 4567');
-  const [direccionEnlace, setDireccionEnlace] = useState('Av. 27 de Febrero #402, Col. Centro, Villahermosa, Tabasco');
+  const [nombreDespacho, setNombreDespacho] = useState('');
+  const [titularName, setTitularName] = useState('');
+  const [distrito, setDistrito] = useState('');
+  const [emailContacto, setEmailContacto] = useState('');
+  const [telefonoOficina, setTelefonoOficina] = useState('');
+  const [direccionEnlace, setDireccionEnlace] = useState('');
   const [guardadoGeneral, setGuardadoGeneral] = useState(false);
 
   // Conexiones States
-  const [googleCalendarUrl, setGoogleCalendarUrl] = useState(
-    'https://calendar.google.com/calendar/ical/diputado.rubenroque.tabasco%40gmail.com/private-9a8b7c6d5e4f3a2b1c/basic.ics'
-  );
-  const [googleDriveFolderUrl, setGoogleDriveFolderUrl] = useState(
-    'https://drive.google.com/drive/folders/1A2B3C4D5E6F7G8H9I0J-Expedientes-Distrito04'
-  );
-  const [syncActivo, setSyncActivo] = useState(true);
-  const [guardadoCalendar, setGuardadoCalendar] = useState(false);
+  const [googleDriveFolderUrl, setGoogleDriveFolderUrl] = useState('');
   const [guardadoDrive, setGuardadoDrive] = useState(false);
   const [probandoConexion, setProbandoConexion] = useState(false);
-  const [ultimaSync, setUltimaSync] = useState('Hace unos segundos');
+  const [ultimaSync, setUltimaSync] = useState('Hace unos momentos');
 
   // Google Drive & Google Calendar OAuth 2.0 Live States
   const [driveConectado, setDriveConectado] = useState(false);
@@ -212,28 +219,71 @@ function ConfiguracionContent() {
   const [docConfigs, setDocConfigs] = useState<Record<DocTypeKey, HeaderFooterConfig>>(DEFAULT_DOC_CONFIGS);
   const [guardadoDiseno, setGuardadoDiseno] = useState(false);
 
+  // Carga inicial y reactiva de los datos del despacho activo
+  async function loadOfficeData() {
+    try {
+      setLoadingOffice(true);
+      const res = await getOfficeConfigAction();
+      if (res.success && res.data) {
+        const off = res.data;
+        setOfficeId(off.id);
+        setNombreDespacho(off.name);
+        setTitularName(off.titularName);
+        setDistrito(off.district);
+        setEmailContacto(off.titularEmail);
+        setTelefonoOficina(off.titularPhone);
+        setInstanceName(off.whatsappInstanceName);
+        
+        // Drive status strictly from DB
+        setDriveConectado(Boolean(off.googleDriveConnected));
+        setDriveEmail(off.googleDriveEmail || '');
+        setDriveFolderUrlReal(off.googleDriveFolderUrl || '');
+        setDriveFolderIdReal(off.googleDriveFolderId || '');
+        setGoogleDriveFolderUrl(off.googleDriveFolderUrl || '');
+
+        // Calendar status strictly from DB
+        setCalendarConectado(Boolean(off.googleCalendarConnected));
+        setCalendarEmail(off.googleCalendarEmail || '');
+
+        // Verificar estado de WhatsApp para esta instancia específica
+        checkWhatsAppStatus(off.whatsappInstanceName);
+      }
+    } catch (e) {
+      console.warn('Error loading office config:', e);
+    } finally {
+      setLoadingOffice(false);
+    }
+  }
+
+  async function checkWhatsAppStatus(targetInstance: string) {
+    try {
+      const res = await getWhatsAppStatus(targetInstance);
+      if (res && res.success && res.isConnected) {
+        setWhatsappConectado(true);
+        const infoRes = await getWhatsAppInstanceInfo(targetInstance);
+        if (infoRes && infoRes.success && infoRes.data) {
+          const info = infoRes.data;
+          setConnectedPhone(info.phone);
+          setProfileName(info.profileName);
+          setMessageCount(info.messageCount || 0);
+          setContactCount(info.contactCount || 0);
+          setChatCount(info.chatCount || 0);
+        }
+      } else {
+        setWhatsappConectado(false);
+        setConnectedPhone(null);
+        setProfileName(null);
+        setMessageCount(0);
+        setContactCount(0);
+        setChatCount(0);
+      }
+    } catch (err) {
+      console.warn('Error checking WhatsApp status:', err);
+    }
+  }
+
   useEffect(() => {
-    const savedWhatsapp = localStorage.getItem('legislab_whatsapp_connected');
-    if (savedWhatsapp !== null) setWhatsappConectado(savedWhatsapp === 'true');
-
-    const savedDriveConn = localStorage.getItem('legislab_gdrive_connected');
-    if (savedDriveConn !== null) setDriveConectado(savedDriveConn === 'true');
-    const savedDriveEmail = localStorage.getItem('legislab_gdrive_email');
-    if (savedDriveEmail) setDriveEmail(savedDriveEmail);
-
-    const savedCalConn = localStorage.getItem('legislab_gcal_connected');
-    if (savedCalConn !== null) setCalendarConectado(savedCalConn === 'true');
-    const savedCalEmail = localStorage.getItem('legislab_gcal_email');
-    if (savedCalEmail) setCalendarEmail(savedCalEmail);
-
-    const savedUrl = localStorage.getItem('legislab_gcal_url');
-    if (savedUrl) setGoogleCalendarUrl(savedUrl);
-    
-    const savedDrive = localStorage.getItem('legislab_gdrive_folder');
-    if (savedDrive) setGoogleDriveFolderUrl(savedDrive);
-
-    const savedSync = localStorage.getItem('legislab_gcal_sync');
-    if (savedSync !== null) setSyncActivo(savedSync === 'true');
+    loadOfficeData();
 
     const savedDocConfigs = localStorage.getItem('legislab_doc_configs');
     if (savedDocConfigs) {
@@ -243,99 +293,7 @@ function ConfiguracionContent() {
         console.error('Error parsing doc configs', e);
       }
     }
-
-    if (searchParams.get('gdrive_status') === 'connected') {
-      setDriveConectado(true);
-      localStorage.setItem('legislab_gdrive_connected', 'true');
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('gdrive_status');
-        window.history.replaceState({}, '', url.toString());
-      }
-    }
-
-    if (searchParams.get('gcal_status') === 'connected') {
-      setCalendarConectado(true);
-      localStorage.setItem('legislab_gcal_connected', 'true');
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('gcal_status');
-        window.history.replaceState({}, '', url.toString());
-      }
-    }
-
-    const refreshDriveAndCalendar = () => {
-      getGoogleDriveStatusAction().then(res => {
-        if (res.success && res.connected) {
-          setDriveConectado(true);
-          localStorage.setItem('legislab_gdrive_connected', 'true');
-          if (res.email) {
-            setDriveEmail(res.email);
-            localStorage.setItem('legislab_gdrive_email', res.email);
-          }
-          if (res.folderUrl) {
-            setDriveFolderUrlReal(res.folderUrl);
-            setGoogleDriveFolderUrl(res.folderUrl);
-          }
-          if (res.folderId) setDriveFolderIdReal(res.folderId);
-        } else if (res.success && !res.connected && searchParams.get('gdrive_status') !== 'connected') {
-          setDriveConectado(false);
-          localStorage.setItem('legislab_gdrive_connected', 'false');
-        }
-      });
-
-      getGoogleCalendarStatusAction().then(res => {
-        if (res.success && res.connected) {
-          setCalendarConectado(true);
-          localStorage.setItem('legislab_gcal_connected', 'true');
-          if (res.email) {
-            setCalendarEmail(res.email);
-            localStorage.setItem('legislab_gcal_email', res.email);
-          }
-        } else if (res.success && !res.connected && searchParams.get('gcal_status') !== 'connected') {
-          setCalendarConectado(false);
-          localStorage.setItem('legislab_gcal_connected', 'false');
-        }
-      });
-    };
-
-    refreshDriveAndCalendar();
-  }, [tabFromQuery, searchParams, activeTab]);
-
-  // Verificar estado real de conexión con Evolution API al cargar
-  useEffect(() => {
-    async function checkStatus() {
-      try {
-        const apiRes = await fetch(`/api/whatsapp/status?instanceName=${encodeURIComponent(instanceName)}`).then(r => r.json()).catch(() => null);
-        const res = apiRes || (await getWhatsAppStatus(instanceName));
-        if (res && res.success && res.isConnected) {
-          setWhatsappConectado(true);
-          localStorage.setItem('legislab_whatsapp_connected', 'true');
-          const info = res.info;
-          if (info) {
-            setConnectedPhone(info.phone);
-            setProfileName(info.profileName);
-            setMessageCount(info.messageCount || 0);
-            setContactCount(info.contactCount || 0);
-            setChatCount(info.chatCount || 0);
-          }
-        } else {
-          setWhatsappConectado(false);
-          localStorage.setItem('legislab_whatsapp_connected', 'false');
-          setConnectedPhone(null);
-          setProfileName(null);
-          setMessageCount(0);
-          setContactCount(0);
-          setChatCount(0);
-        }
-      } catch (err) {
-        console.warn('Error verificando estado de WhatsApp:', err);
-      }
-    }
-    if (activeTab === 'conexiones') {
-      checkStatus();
-    }
-  }, [activeTab, instanceName]);
+  }, [tabFromQuery, searchParams]);
 
   // Polling para detectar cuando el usuario escanea el QR desde su celular
   useEffect(() => {
@@ -343,15 +301,14 @@ function ConfiguracionContent() {
     if (pollingActive && !whatsappConectado) {
       interval = setInterval(async () => {
         try {
-          const apiRes = await fetch(`/api/whatsapp/status?instanceName=${encodeURIComponent(instanceName)}`).then(r => r.json()).catch(() => null);
-          const res = apiRes || (await getWhatsAppStatus(instanceName));
+          const res = await getWhatsAppStatus(instanceName);
           if (res && res.success && res.isConnected) {
             setWhatsappConectado(true);
             setPollingActive(false);
             setQrBase64(null);
             setQrCodeString(null);
-            localStorage.setItem('legislab_whatsapp_connected', 'true');
-            setWhatsappFeedback('🎉 ¡WhatsApp vinculado y conectado exitosamente!');
+            setWhatsappFeedback('🎉 ¡WhatsApp vinculado y conectado exitosamente para este despacho!');
+            checkWhatsAppStatus(instanceName);
           }
         } catch (e) {
           console.error(e);
@@ -367,25 +324,13 @@ function ConfiguracionContent() {
 
     if (conectar) {
       try {
-        let res: any = null;
-        try {
-          const apiRes = await fetch(`/api/whatsapp/qr?instanceName=${encodeURIComponent(instanceName)}`);
-          if (apiRes.ok) {
-            res = await apiRes.json();
-          }
-        } catch {
-          // Fallback to Server Action
-        }
-
-        if (!res) {
-          res = await generateWhatsAppQR(instanceName);
-        }
+        const res = await generateWhatsAppQR(instanceName);
 
         if (res && res.success && (res.qrBase64 || res.qrCode)) {
           setQrBase64(res.qrBase64 || null);
           setQrCodeString(res.qrCode || null);
           setPollingActive(true);
-          setWhatsappFeedback('📱 Código QR generado en vivo desde Evolution API. Escanéalo en WhatsApp > Dispositivos Vinculados.');
+          setWhatsappFeedback(`📱 Código QR generado para la instancia "${instanceName}". Escanéalo en WhatsApp > Dispositivos Vinculados.`);
         } else {
           setWhatsappFeedback(res?.error || 'No se pudo obtener el código QR de Evolution API.');
         }
@@ -396,12 +341,7 @@ function ConfiguracionContent() {
       }
     } else {
       try {
-        await fetch('/api/whatsapp/disconnect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instanceName }),
-        }).catch(() => null);
-        await disconnectWhatsApp(instanceName).catch(() => null);
+        await disconnectWhatsApp(instanceName);
         setWhatsappConectado(false);
         setQrBase64(null);
         setQrCodeString(null);
@@ -411,16 +351,9 @@ function ConfiguracionContent() {
         setMessageCount(0);
         setContactCount(0);
         setChatCount(0);
-        localStorage.setItem('legislab_whatsapp_connected', 'false');
         setWhatsappFeedback('⚠️ WhatsApp desconectado.');
       } catch (err: unknown) {
         setWhatsappConectado(false);
-        setConnectedPhone(null);
-        setProfileName(null);
-        setMessageCount(0);
-        setContactCount(0);
-        setChatCount(0);
-        localStorage.setItem('legislab_whatsapp_connected', 'false');
       } finally {
         setGenerandoQR(false);
         setTimeout(() => setWhatsappFeedback(null), 3500);
@@ -428,10 +361,22 @@ function ConfiguracionContent() {
     }
   };
 
-  const handleGuardarGeneral = (e: React.FormEvent) => {
+  const handleGuardarGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
-    setGuardadoGeneral(true);
-    setTimeout(() => setGuardadoGeneral(false), 3000);
+    try {
+      await updateOfficeGeneralConfigAction({
+        name: nombreDespacho,
+        titularName: titularName || nombreDespacho,
+        titularEmail: emailContacto,
+        titularPhone: telefonoOficina,
+        district: distrito,
+        officeId,
+      });
+      setGuardadoGeneral(true);
+      setTimeout(() => setGuardadoGeneral(false), 3000);
+    } catch (err) {
+      console.error('Error saving general config:', err);
+    }
   };
 
   const currentConfig = docConfigs[activeDocKey];
@@ -454,25 +399,10 @@ function ConfiguracionContent() {
     setTimeout(() => setGuardadoDiseno(false), 3000);
   };
 
-  const handleGuardarCalendar = (e: React.FormEvent) => {
-    e.preventDefault();
-    setProbandoConexion(true);
-
-    setTimeout(() => {
-      localStorage.setItem('legislab_gcal_url', googleCalendarUrl);
-      localStorage.setItem('legislab_gcal_sync', syncActivo ? 'true' : 'false');
-      setProbandoConexion(false);
-      setGuardadoCalendar(true);
-      setUltimaSync('Recién sincronizado con Google Calendar');
-      setTimeout(() => setGuardadoCalendar(false), 3000);
-    }, 800);
-  };
-
   const handleGuardarDrive = async (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('legislab_gdrive_folder', googleDriveFolderUrl);
     try {
-      const res = await updateGoogleDriveFolderAction(googleDriveFolderUrl);
+      const res = await updateGoogleDriveFolderAction(googleDriveFolderUrl, undefined, officeId);
       if (res.success && res.folderUrl) {
         setDriveFolderUrlReal(res.folderUrl);
         if (res.folderId) setDriveFolderIdReal(res.folderId);
@@ -487,20 +417,17 @@ function ConfiguracionContent() {
   const handleDisconnectDrive = async () => {
     if (!confirm('¿Deseas desconectar tu cuenta de Google Drive de este despacho?')) return;
     try {
+      await disconnectGoogleDriveAction(officeId);
       setDriveConectado(false);
       setDriveEmail('');
       setDriveFolderUrlReal('');
       setDriveFolderIdReal('');
-      localStorage.setItem('legislab_gdrive_connected', 'false');
-      localStorage.removeItem('legislab_gdrive_email');
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.searchParams.delete('gdrive_status');
         url.searchParams.delete('gdrive_error');
         window.history.replaceState({}, '', url.toString());
       }
-      await fetch('/api/auth/google-drive/disconnect', { method: 'POST' }).catch(() => null);
-      await disconnectGoogleDriveAction().catch(() => null);
     } catch (e) {
       console.error(e);
     }
@@ -509,30 +436,34 @@ function ConfiguracionContent() {
   const handleDisconnectCalendar = async () => {
     if (!confirm('¿Deseas desconectar tu cuenta de Google Calendar de este despacho?')) return;
     try {
+      await disconnectGoogleCalendarAction(officeId);
       setCalendarConectado(false);
       setCalendarEmail('');
-      localStorage.setItem('legislab_gcal_connected', 'false');
-      localStorage.removeItem('legislab_gcal_email');
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.searchParams.delete('gcal_status');
         url.searchParams.delete('gcal_error');
         window.history.replaceState({}, '', url.toString());
       }
-      await fetch('/api/auth/google-calendar/disconnect', { method: 'POST' }).catch(() => null);
-      await disconnectGoogleCalendarAction().catch(() => null);
     } catch (e) {
       console.error(e);
     }
   };
 
-  const handleForzarSincronizacion = () => {
+  const handleForzarSincronizacion = async () => {
     setProbandoConexion(true);
-    setTimeout(() => {
+    try {
+      const res = await syncGoogleCalendarAction(officeId);
       setProbandoConexion(false);
-      setUltimaSync('Sincronizado ahora mismo');
-      alert('¡Sincronización en vivo completada con Google Calendar!');
-    }, 600);
+      if (res.success) {
+        setUltimaSync('Recién sincronizado con Google Calendar');
+        alert(res.message || '¡Sincronización completada exitosamente!');
+      } else {
+        alert(res.error || 'Error al sincronizar Google Calendar');
+      }
+    } catch (e) {
+      setProbandoConexion(false);
+    }
   };
 
   const getDocTypeMeta = (key: DocTypeKey) => {
@@ -548,10 +479,17 @@ function ConfiguracionContent() {
     }
   };
 
+  if (loadingOffice) {
+    return (
+      <div className="flex items-center justify-center p-16 text-zinc-400 text-xs">
+        <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+        <span>Cargando configuración del despacho activo...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto">
-
-
       {/* Main Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200 pb-2 overflow-x-auto scrollbar-none">
         <button
@@ -577,11 +515,10 @@ function ConfiguracionContent() {
           )}
         >
           <HardDrive className="h-4 w-4" />
-          <span>Conexiones (WhatsApp, Drive, Calendar)</span>
-          <span className={cn(
-            "h-2 w-2 rounded-full",
-            whatsappConectado ? "bg-emerald-400" : "bg-red-400"
-          )}></span>
+          <span>Conexiones</span>
+          {(driveConectado || calendarConectado || whatsappConectado) && (
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+          )}
         </button>
 
         <button
@@ -593,8 +530,8 @@ function ConfiguracionContent() {
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
           )}
         >
-          <Layers className="h-4 w-4" />
-          <span>Diseño de Documentos (Membretes)</span>
+          <Palette className="h-4 w-4" />
+          <span>Diseño de Membretes</span>
         </button>
       </div>
 
@@ -610,11 +547,20 @@ function ConfiguracionContent() {
             <form onSubmit={handleGuardarGeneral} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Nombre Oficial del Despacho / Diputado</label>
+                  <label className="block font-semibold text-gray-700 mb-1">Nombre Oficial del Despacho</label>
                   <input
                     type="text"
                     value={nombreDespacho}
                     onChange={(e) => setNombreDespacho(e.target.value)}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Diputado Titular</label>
+                  <input
+                    type="text"
+                    value={titularName}
+                    onChange={(e) => setTitularName(e.target.value)}
                     className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:border-blue-500 focus:outline-none"
                   />
                 </div>
@@ -645,13 +591,13 @@ function ConfiguracionContent() {
                     className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:border-blue-500 focus:outline-none"
                   />
                 </div>
-                <div className="sm:col-span-2">
-                  <label className="block font-semibold text-gray-700 mb-1">Dirección de la Casa de Enlace Parlamentario</label>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Instancia WhatsApp Asignada</label>
                   <input
                     type="text"
-                    value={direccionEnlace}
-                    onChange={(e) => setDireccionEnlace(e.target.value)}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:border-blue-500 focus:outline-none"
+                    disabled
+                    value={instanceName}
+                    className="w-full p-2.5 bg-gray-100 border border-gray-200 rounded-xl text-gray-600 font-mono text-[11px]"
                   />
                 </div>
               </div>
@@ -659,7 +605,7 @@ function ConfiguracionContent() {
               <div className="flex items-center justify-end pt-2">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   {guardadoGeneral ? (
                     <>
@@ -700,7 +646,7 @@ function ConfiguracionContent() {
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Habilita la <strong>sincronización automática de grupos</strong> y activa la <strong>Bandeja Multiusuario de Atención Ciudadana</strong> para el equipo.
+                    Instancia propia del despacho: <span className="font-mono text-zinc-700 font-bold">{instanceName}</span>
                   </p>
                 </div>
               </div>
@@ -711,7 +657,7 @@ function ConfiguracionContent() {
                   onClick={() => handleToggleWhatsapp(!whatsappConectado)}
                   disabled={generandoQR}
                   className={cn(
-                    "inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-2xs",
+                    "inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-2xs cursor-pointer",
                     whatsappConectado
                       ? "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
                       : "bg-green-600 hover:bg-green-700 text-white"
@@ -748,125 +694,40 @@ function ConfiguracionContent() {
               <div className="p-5 bg-gradient-to-r from-emerald-50/70 via-green-50/40 to-slate-50 rounded-2xl border border-emerald-200/80 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-xs">
-                      <Smartphone className="h-5 w-5" />
+                    <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                      WA
                     </div>
                     <div>
-                      <p className="text-xs font-black text-emerald-950">
-                        Número Vinculado: {connectedPhone || '+52 (993) 220-0146'} {profileName ? `(${profileName})` : ''}
-                      </p>
-                      <p className="text-[11px] text-emerald-700">Dispositivo: WhatsApp Web (Multi-Device Gateway) • Instancia: {instanceName}</p>
+                      <p className="text-xs font-bold text-gray-900">{profileName || nombreDespacho}</p>
+                      <p className="text-[11px] font-mono text-emerald-800 font-semibold">{connectedPhone || "Número Conectado"}</p>
                     </div>
                   </div>
 
-                  <span className="text-[10px] font-bold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
-                    Sincronización de Grupos & Webhooks: Activa
+                  <span className="text-[10px] font-mono px-2 py-1 bg-white border border-emerald-200 rounded-lg text-emerald-800">
+                    Instancia: {instanceName}
                   </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
-                  <div className="p-3 bg-white rounded-xl border border-emerald-200 shadow-2xs">
-                    <span className="text-[10px] text-gray-500 font-semibold block">Contactos Detectados</span>
-                    <span className="font-bold text-gray-900 mt-0.5 block">{contactCount > 0 ? `${contactCount.toLocaleString()} Contactos` : '2,857 Contactos'}</span>
-                  </div>
-                  <div className="p-3 bg-white rounded-xl border border-emerald-200 shadow-2xs">
-                    <span className="text-[10px] text-gray-500 font-semibold block">Chats & Mensajes</span>
-                    <span className="font-bold text-gray-900 mt-0.5 block">{messageCount > 0 ? `${messageCount.toLocaleString()} Mensajes` : '24,385 Mensajes'}</span>
-                  </div>
-                  <div className="p-3 bg-white rounded-xl border border-emerald-200 shadow-2xs">
-                    <span className="text-[10px] text-gray-500 font-semibold block">Estado de Conexión</span>
-                    <span className="font-bold text-emerald-600 mt-0.5 block">En línea (Open)</span>
-                  </div>
                 </div>
               </div>
             ) : (
-              <div className="p-6 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="space-y-3 max-w-md">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-red-500"></span>
-                    <h3 className="text-sm font-bold text-gray-900">Escanea el Código QR para Vincular WhatsApp</h3>
+              qrBase64 && (
+                <div className="p-6 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col items-center justify-center space-y-4 text-center">
+                  <p className="text-xs font-bold text-gray-800">Escanea este código QR con WhatsApp en tu celular:</p>
+                  <div className="p-3 bg-white border border-gray-300 rounded-2xl shadow-md">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qrBase64.startsWith('data:') ? qrBase64 : `data:image/png;base64,${qrBase64}`}
+                      alt="WhatsApp QR Code"
+                      className="w-56 h-56 object-contain"
+                    />
                   </div>
-                  <ol className="list-decimal list-inside text-xs text-gray-600 space-y-1.5 leading-relaxed">
-                    <li>Abre <strong>WhatsApp</strong> en tu teléfono.</li>
-                    <li>Toca en <strong>Menú (tres puntos)</strong> o <strong>Configuración</strong> y selecciona <strong>Dispositivos vinculados</strong>.</li>
-                    <li>Toca en <strong>Vincular un dispositivo</strong> y apunta tu cámara hacia este código.</li>
-                  </ol>
-                  <p className="text-[11px] text-gray-500">
-                    La vinculación se mantendrá activa de forma permanente en segundo plano.
-                  </p>
-                </div>
-
-                {/* Live Evolution API QR Box */}
-                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-md text-center space-y-3 min-w-[240px]">
-                  <div className="h-48 w-48 bg-white border border-gray-100 p-2 rounded-xl flex items-center justify-center relative overflow-hidden mx-auto shadow-inner">
-                    {qrBase64 ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={qrBase64.startsWith('data:') ? qrBase64 : `data:image/png;base64,${qrBase64}`}
-                        alt="Código QR WhatsApp"
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-center p-3 space-y-2">
-                        <QrCode className="h-10 w-10 text-gray-400" />
-                        <span className="text-[11px] text-gray-500 font-medium">Presiona el botón para generar el QR en vivo</span>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-green-600" />
+                    <span>Esperando escaneo desde la aplicación de WhatsApp...</span>
                   </div>
-
-                  {pollingActive && (
-                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-emerald-600 font-semibold animate-pulse">
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                      <span>Esperando escaneo en vivo...</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => handleToggleWhatsapp(true)}
-                    disabled={generandoQR}
-                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-2"
-                  >
-                    <RefreshCw className={cn("h-3.5 w-3.5", generandoQR && "animate-spin")} />
-                    <span>{qrBase64 ? "Refrescar Código QR" : "Generar Código QR en Vivo"}</span>
-                  </button>
                 </div>
-              </div>
+              )
             )}
           </div>
-
-          {/* NOTIFICACIONES DE ÉXITO DE OAUTH */}
-          {searchParams.get('gdrive_status') === 'connected' && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-800 text-xs font-semibold shadow-xs">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                <span>¡Google Drive conectado exitosamente! Se ha creado la carpeta oficial del despacho.</span>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => router.replace('/configuracion?tab=conexiones')} 
-                className="text-emerald-700 hover:text-emerald-900 text-xs underline"
-              >
-                Entendido
-              </button>
-            </div>
-          )}
-
-          {searchParams.get('gcal_status') === 'connected' && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-800 text-xs font-semibold shadow-xs">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                <span>¡Google Calendar conectado exitosamente! La agenda se sincronizará en tiempo real.</span>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => router.replace('/configuracion?tab=conexiones')} 
-                className="text-emerald-700 hover:text-emerald-900 text-xs underline"
-              >
-                Entendido
-              </button>
-            </div>
-          )}
 
           {/* CONEXIÓN 2: GOOGLE DRIVE */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
@@ -912,14 +773,14 @@ function ConfiguracionContent() {
                   <button
                     type="button"
                     onClick={handleDisconnectDrive}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl transition-colors cursor-pointer"
                   >
                     Desconectar Drive
                   </button>
                 </div>
               ) : (
                 <a
-                  href="/api/auth/google-drive"
+                  href={`/api/auth/google-drive${officeId ? `?officeId=${officeId}` : ''}`}
                   className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs transition-colors"
                 >
                   <HardDrive className="h-4 w-4" />
@@ -930,19 +791,17 @@ function ConfiguracionContent() {
 
             {driveConectado ? (
               <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4 space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
-                    <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>Carpeta Oficial Activa: LegisLab - Despacho Parlamentario</span>
-                  </div>
+                <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
+                  <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Carpeta Oficial Activa: LegisLab - {nombreDespacho}</span>
                 </div>
                 <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Cada vez que registras una nueva gestión o petición ciudadana, LegisLab genera automáticamente una subcarpeta con formato <span className="font-mono bg-amber-100/70 px-1 py-0.5 rounded">/GES-XXXX - Nombre Ciudadano/</span> dentro de esta unidad.
+                  Cada vez que registras una nueva gestión, LegisLab genera automáticamente una subcarpeta dentro de esta unidad.
                 </p>
               </div>
             ) : (
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-xs text-gray-600 leading-relaxed">
-                Al conectar Google Drive con un solo clic, se autorizará de forma segura mediante OAuth 2.0 y se creará la carpeta oficial <span className="font-semibold text-gray-800">&quot;LegisLab - Despacho Parlamentario&quot;</span> en tu cuenta para organizar y resguardar automáticamente los expedientes de todo tu equipo.
+                Al conectar Google Drive con un solo clic, se autorizará de forma segura mediante OAuth 2.0 y se creará la carpeta oficial en tu cuenta para organizar y resguardar automáticamente los expedientes de este despacho.
               </div>
             )}
           </div>
@@ -980,7 +839,7 @@ function ConfiguracionContent() {
                     type="button"
                     onClick={handleForzarSincronizacion}
                     disabled={probandoConexion}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-xl transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-xl transition-colors cursor-pointer"
                   >
                     <RefreshCw className={cn("h-3.5 w-3.5 text-blue-600", probandoConexion && "animate-spin")} />
                     <span>Sincronizar Ahora</span>
@@ -988,14 +847,14 @@ function ConfiguracionContent() {
                   <button
                     type="button"
                     onClick={handleDisconnectCalendar}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl transition-colors cursor-pointer"
                   >
                     Desconectar Calendar
                   </button>
                 </div>
               ) : (
                 <a
-                  href="/api/auth/google-calendar"
+                  href={`/api/auth/google-calendar${officeId ? `?officeId=${officeId}` : ''}`}
                   className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors"
                 >
                   <Calendar className="h-4 w-4" />
@@ -1005,21 +864,18 @@ function ConfiguracionContent() {
             </div>
 
             {calendarConectado ? (
-              <div className="space-y-4">
-                <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
-                    <span>Sincronización bidireccional activa con la cuenta {calendarEmail || 'de Google'}</span>
-                  </div>
-                  <p className="text-[11px] text-blue-800 leading-relaxed">
-                    Cualquier evento creado en el módulo de Agenda de LegisLab se sincroniza automáticamente con tu Google Calendar y viceversa con zona horaria America/Mexico_City.
-                  </p>
+              <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs">
+                  <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                  <span>Sincronización bidireccional activa con la cuenta {calendarEmail || 'de Google'}</span>
                 </div>
-
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  Cualquier evento creado en el módulo de Agenda de LegisLab se sincroniza automáticamente con tu Google Calendar y viceversa.
+                </p>
               </div>
             ) : (
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-xs text-gray-600 leading-relaxed">
-                Al conectar Google Calendar con un solo clic mediante OAuth 2.0, las sesiones ordinarias, reuniones de comisión y audiencias ciudadanas de LegisLab se sincronizarán en tiempo real con tu calendario personal o institucional.
+                Al conectar Google Calendar con un solo clic mediante OAuth 2.0, las sesiones ordinarias, reuniones de comisión y audiencias ciudadanas de LegisLab se sincronizarán en tiempo real con tu calendario para este despacho.
               </div>
             )}
           </div>
@@ -1043,230 +899,64 @@ function ConfiguracionContent() {
                     type="button"
                     onClick={() => setActiveDocKey(key)}
                     className={cn(
-                      "p-3.5 rounded-2xl border text-left transition-all space-y-1",
+                      "p-3.5 rounded-2xl border text-left transition-all space-y-1 cursor-pointer",
                       isSelected
                         ? "bg-white border-blue-600 ring-2 ring-blue-600/10 shadow-xs"
                         : "bg-gray-50 border-gray-200 hover:bg-white hover:border-gray-300"
                     )}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className={cn("p-1.5 rounded-lg border", meta.color)}>
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      {isSelected && <span className="h-2 w-2 rounded-full bg-blue-600"></span>}
+                    <div className="flex items-center gap-2">
+                      <Icon className={cn("h-4 w-4", isSelected ? "text-blue-600" : "text-gray-500")} />
+                      <span className={cn("text-xs font-bold", isSelected ? "text-blue-900" : "text-gray-700")}>{meta.label}</span>
                     </div>
-                    <p className="text-xs font-bold text-gray-900">{meta.label}</p>
-                    <p className="text-[10px] text-gray-500 line-clamp-1">{meta.desc}</p>
+                    <p className="text-[10px] text-gray-500 line-clamp-2 leading-tight">{meta.desc}</p>
                   </button>
                 );
               })}
             </div>
 
-            {/* Config & Preview Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Form Controls */}
-              <div className="space-y-5">
-                {/* 1. ENCABEZADO */}
-                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-blue-600" />
-                      <span>Encabezado Institucional</span>
-                    </h3>
-
-                    <div className="flex items-center bg-gray-100 p-1 rounded-lg text-xs font-semibold">
-                      <button
-                        type="button"
-                        onClick={() => updateCurrentConfig({ headerType: 'texto' })}
-                        className={cn(
-                          "flex items-center gap-1 px-2.5 py-1 rounded-md transition-all",
-                          currentConfig.headerType === 'texto' ? 'bg-white text-blue-600 shadow-xs font-bold' : 'text-gray-600'
-                        )}
-                      >
-                        <Type className="h-3 w-3" />
-                        <span>Texto / WYSIWYG</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateCurrentConfig({ headerType: 'imagen' })}
-                        className={cn(
-                          "flex items-center gap-1 px-2.5 py-1 rounded-md transition-all",
-                          currentConfig.headerType === 'imagen' ? 'bg-white text-blue-600 shadow-xs font-bold' : 'text-gray-600'
-                        )}
-                      >
-                        <ImageIcon className="h-3 w-3" />
-                        <span>Logo / Imagen</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {currentConfig.headerType === 'imagen' ? (
-                    <div className="space-y-3">
-                      <label className="block text-xs font-semibold text-gray-700">
-                        Enlace o URL de la Imagen de Encabezado (Logo / Membrete Superior)
-                      </label>
-                      <input
-                        type="url"
-                        value={currentConfig.headerImageUrl}
-                        onChange={(e) => updateCurrentConfig({ headerImageUrl: e.target.value })}
-                        placeholder="https://tudominio.com/logo-oficial-congreso.png"
-                        className="w-full p-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl text-blue-700 font-mono focus:bg-white focus:outline-none"
-                      />
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <textarea
-                        rows={4}
-                        value={currentConfig.headerText}
-                        onChange={(e) => updateCurrentConfig({ headerText: e.target.value })}
-                        placeholder="Escribe las líneas institucionales del membrete..."
-                        className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white text-gray-800 leading-relaxed font-sans"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. PIE DE PÁGINA */}
-                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-purple-600" />
-                      <span>Pie de Página del Documento</span>
-                    </h3>
-
-                    <div className="flex items-center bg-gray-100 p-1 rounded-lg text-xs font-semibold">
-                      <button
-                        type="button"
-                        onClick={() => updateCurrentConfig({ footerType: 'texto' })}
-                        className={cn(
-                          "flex items-center gap-1 px-2.5 py-1 rounded-md transition-all",
-                          currentConfig.footerType === 'texto' ? 'bg-white text-blue-600 shadow-xs font-bold' : 'text-gray-600'
-                        )}
-                      >
-                        <Type className="h-3 w-3" />
-                        <span>Texto / Contacto</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateCurrentConfig({ footerType: 'imagen' })}
-                        className={cn(
-                          "flex items-center gap-1 px-2.5 py-1 rounded-md transition-all",
-                          currentConfig.footerType === 'imagen' ? 'bg-white text-blue-600 shadow-xs font-bold' : 'text-gray-600'
-                        )}
-                      >
-                        <ImageIcon className="h-3 w-3" />
-                        <span>Imagen / Faldón</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {currentConfig.footerType === 'imagen' ? (
-                    <div className="space-y-3">
-                      <label className="block text-xs font-semibold text-gray-700">
-                        Enlace o URL de la Imagen de Pie de Página (Faldón Inferior)
-                      </label>
-                      <input
-                        type="url"
-                        value={currentConfig.footerImageUrl}
-                        onChange={(e) => updateCurrentConfig({ footerImageUrl: e.target.value })}
-                        placeholder="https://tudominio.com/faldon-inferior-oficial.png"
-                        className="w-full p-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl text-blue-700 font-mono focus:bg-white focus:outline-none"
-                      />
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <textarea
-                        rows={3}
-                        value={currentConfig.footerText}
-                        onChange={(e) => updateCurrentConfig({ footerText: e.target.value })}
-                        placeholder="Dirección, teléfonos de contacto, correo institucional..."
-                        className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white text-gray-800 leading-relaxed font-sans"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-end">
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-6 py-3 rounded-xl shadow-md shadow-blue-600/20 transition-all"
-                  >
-                    {guardadoDiseno ? (
-                      <>
-                        <Check className="h-4 w-4" />
-                        <span>¡Diseño Guardado Exitosamente!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        <span>Guardar Configuración de Membrete</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+            {/* Configuración de Encabezado */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
+              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Encabezado Oficial</h3>
+              <div className="space-y-3 text-xs">
+                <textarea
+                  rows={4}
+                  value={currentConfig.headerText}
+                  onChange={(e) => updateCurrentConfig({ headerText: e.target.value })}
+                  placeholder="Texto oficial del encabezado..."
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-mono text-xs focus:bg-white focus:border-blue-500 focus:outline-none"
+                />
               </div>
+            </div>
 
-              {/* Live Virtual Sheet Preview */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                    <Eye className="h-4 w-4 text-blue-600" />
-                    <span>Vista Previa en Vivo (Hoja Oficial Membretada):</span>
-                  </span>
-                  <span className="text-[10px] text-gray-400 font-mono">Formato Carta / A4</span>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-gray-300 shadow-lg p-8 min-h-[580px] flex flex-col justify-between relative overflow-hidden">
-                  <div className="border-b border-gray-200 pb-4">
-                    {currentConfig.headerType === 'imagen' ? (
-                      currentConfig.headerImageUrl ? (
-                        <div className="flex justify-center">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={currentConfig.headerImageUrl}
-                            alt="Encabezado Oficial"
-                            className="max-h-20 object-contain"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-14 bg-gray-100 border border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-xs italic">
-                          [Inserta la URL del logo de encabezado]
-                        </div>
-                      )
-                    ) : (
-                      <div className="text-gray-900 text-center leading-tight whitespace-pre-wrap font-bold text-xs">
-                        {currentConfig.headerText || 'Encabezado del documento'}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="py-6 space-y-3 text-xs text-gray-500 font-serif leading-relaxed flex-1">
-                    <div className="text-right text-[11px] text-gray-400 font-mono">
-                      Villahermosa, Tabasco; a 06 de Septiembre de 2026.
-                    </div>
-                    <div className="font-bold text-gray-800">
-                      ASUNTO: {activeDocKey === 'gestiones' ? 'Canalización de Gestión Ciudadana y Petición Social.' :
-                               activeDocKey === 'iniciativas' ? 'Iniciativa con Proyecto de Decreto en Materia de Fortalecimiento Municipal.' :
-                               activeDocKey === 'discursos' ? 'Intervención en Tribuna / Posicionamiento de la Fracción Parlamentaria.' :
-                               'Boletín de Prensa No. 042 / Actividades Legislativas y de Territorio.'}
-                    </div>
-                    <p className="text-justify leading-relaxed text-gray-600">
-                      Por medio del presente documento oficial, en cumplimiento de los deberes parlamentarios y constitucionales de la LXVI Legislatura, se hace constar el presente instrumento registrado en el sistema del Despacho Parlamentario...
-                    </p>
-                    <div className="pt-6 text-center text-gray-700">
-                      <div className="w-44 border-t border-slate-400 mx-auto mb-1"></div>
-                      <span className="font-bold text-xs block text-gray-900">DIP. RUBEN ROQUE</span>
-                      <span className="text-[10px] text-gray-500 block">DIPUTADO LOCAL — LXVI LEGISLATURA</span>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-200 pt-3 mt-4">
-                    <div className="text-gray-600 text-center text-[10px] whitespace-pre-wrap">
-                      {currentConfig.footerText || 'Pie de página del documento'}
-                    </div>
-                  </div>
-                </div>
+            {/* Configuración de Pie de Página */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
+              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Pie de Página Institucional</h3>
+              <div className="space-y-3 text-xs">
+                <textarea
+                  rows={3}
+                  value={currentConfig.footerText}
+                  onChange={(e) => updateCurrentConfig({ footerText: e.target.value })}
+                  placeholder="Datos de contacto, dirección de casa de enlace y teléfonos..."
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-mono text-xs focus:bg-white focus:border-blue-500 focus:outline-none"
+                />
               </div>
+            </div>
+
+            <div className="flex items-center justify-end">
+              <button
+                type="submit"
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                {guardadoDiseno ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span>¡Membretes Guardados!</span>
+                  </>
+                ) : (
+                  <span>Guardar Plantilla de Membretes</span>
+                )}
+              </button>
             </div>
           </form>
         </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForDriveTokens, getOrCreateRootDriveFolder, getAppBaseUrl } from '@/lib/google-drive';
 import { db, offices } from '@/db';
 import { eq } from 'drizzle-orm';
+import { getActiveOfficeId } from '@/lib/session-office';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -21,59 +22,35 @@ export async function GET(request: NextRequest) {
 
   try {
     const tokens = await exchangeCodeForDriveTokens(code, redirectUri);
-    const officeId = state || '00000000-0000-0000-0000-000000000001';
+    const targetOfficeId = await getActiveOfficeId(state);
     const expiryDate = new Date(Date.now() + (tokens.expiresIn || 3600) * 1000);
+
+    let [targetOffice] = await db.select().from(offices).where(eq(offices.id, targetOfficeId)).limit(1);
+
+    const folderName = targetOffice?.name ? `LegisLab - ${targetOffice.name}` : 'LegisLab - Despacho Parlamentario';
 
     // Obtener o crear carpeta raíz en Google Drive
     let rootFolder = { folderId: '', folderUrl: '' };
     try {
-      rootFolder = await getOrCreateRootDriveFolder(tokens.accessToken, 'LegisLab - Despacho Parlamentario');
+      rootFolder = await getOrCreateRootDriveFolder(tokens.accessToken, folderName);
     } catch (fErr) {
       console.warn('Could not create root Drive folder automatically:', fErr);
     }
 
-    // Resolver el ID real del despacho en la base de datos o crearlo si no existe
-    let targetOffice = (await db.select().from(offices).where(eq(offices.id, officeId)))[0];
-    if (!targetOffice) {
-      targetOffice = (await db.select().from(offices).limit(1))[0];
-    }
-
-    try {
-      if (!targetOffice) {
-        const [inserted] = await db.insert(offices).values({
-          id: '00000000-0000-0000-0000-000000000001',
-          name: 'Despacho Parlamentario Dip. Ruben Roque',
-          titularName: 'Dip. Ruben Roque',
-          legislature: 'LXVI Legislatura',
-          district: 'Distrito 04 Federal',
-          state: 'Tabasco',
-          party: 'MORENA',
+    if (targetOffice) {
+      await db
+        .update(offices)
+        .set({
           googleDriveConnected: true,
           googleDriveEmail: tokens.email || 'Conectado',
           googleDriveAccessToken: tokens.accessToken,
-          googleDriveRefreshToken: tokens.refreshToken || null,
+          googleDriveRefreshToken: tokens.refreshToken || targetOffice.googleDriveRefreshToken || null,
           googleDriveTokenExpiry: expiryDate,
-          googleDriveFolderId: rootFolder.folderId || null,
-          googleDriveFolderUrl: rootFolder.folderUrl || null,
-        }).returning();
-        targetOffice = inserted;
-      } else {
-        await db
-          .update(offices)
-          .set({
-            googleDriveConnected: true,
-            googleDriveEmail: tokens.email || 'Conectado',
-            googleDriveAccessToken: tokens.accessToken,
-            googleDriveRefreshToken: tokens.refreshToken || null,
-            googleDriveTokenExpiry: expiryDate,
-            googleDriveFolderId: rootFolder.folderId || null,
-            googleDriveFolderUrl: rootFolder.folderUrl || null,
-            updatedAt: new Date(),
-          })
-          .where(eq(offices.id, targetOffice.id));
-      }
-    } catch (dbErr) {
-      console.warn('Database save warning during Google Drive callback:', dbErr);
+          googleDriveFolderId: rootFolder.folderId || targetOffice.googleDriveFolderId || null,
+          googleDriveFolderUrl: rootFolder.folderUrl || targetOffice.googleDriveFolderUrl || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(offices.id, targetOffice.id));
     }
 
     return NextResponse.redirect(new URL('/configuracion?tab=conexiones&gdrive_status=connected', origin));

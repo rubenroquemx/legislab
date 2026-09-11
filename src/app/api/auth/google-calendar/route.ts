@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGoogleOAuthUrl, getAppBaseUrl } from '@/lib/google-calendar';
+import { getActiveOfficeId } from '@/lib/session-office';
 
 export async function GET(request: NextRequest) {
   try {
     const origin = getAppBaseUrl(request);
     const redirectUri = `${origin}/api/auth/google-calendar/callback`;
     
-    // Obtener officeId o usuario de params o cookies si existe
-    const officeId = request.nextUrl.searchParams.get('officeId') || '00000000-0000-0000-0000-000000000001';
+    const paramOfficeId = request.nextUrl.searchParams.get('officeId');
+    const officeId = await getActiveOfficeId(paramOfficeId);
     
     const authUrl = getGoogleOAuthUrl(redirectUri, officeId);
     return NextResponse.redirect(authUrl);
