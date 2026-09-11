@@ -14,24 +14,18 @@ export async function getOfficeConfigAction(officeId?: string) {
     let [office] = await db.select().from(offices).where(eq(offices.id, activeOfficeId)).limit(1);
 
     if (!office) {
-      // Si no existe, crear o buscar el primero
-      const anyOffice = await db.select().from(offices).limit(1);
-      if (anyOffice.length > 0) {
-        office = anyOffice[0];
-      } else {
-        const [created] = await db.insert(offices).values({
-          id: activeOfficeId,
-          name: 'Despacho Parlamentario Dip. Ruben Roque',
-          titularName: 'Dip. Ruben Roque',
-          titularEmail: 'contacto@rubenroque.mx',
-          legislature: 'LXVI Legislatura',
-          district: 'Distrito 04 Federal',
-          state: 'Tabasco',
-          party: 'MORENA',
-          whatsappInstanceName: 'Legislab',
-        }).returning();
-        office = created;
-      }
+      const [created] = await db.insert(offices).values({
+        id: activeOfficeId,
+        name: 'Despacho Parlamentario',
+        titularName: 'Diputado',
+        titularEmail: '',
+        legislature: 'LXVI Legislatura',
+        district: 'Distrito 04 Federal',
+        state: 'Tabasco',
+        party: 'MORENA',
+        whatsappInstanceName: `legislab_${activeOfficeId.slice(0, 8)}`,
+      }).returning();
+      office = created;
     }
 
     const defaultInstanceName = office.whatsappInstanceName || `legislab_${office.id.slice(0, 8)}`;

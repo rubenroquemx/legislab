@@ -535,7 +535,7 @@ export default function AgendaPage() {
           getAgendaTipos(),
         ]);
 
-        if (res.success && res.data && res.data.length > 0) {
+        if (res.success && Array.isArray(res.data)) {
           const mapped: EventoLegislativo[] = res.data.map((d: any) => ({
             id: d.id,
             titulo: d.titulo,
@@ -549,41 +549,27 @@ export default function AgendaPage() {
             incluirEnCompartir: true,
           }));
           setEventos(mapped);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('legislab_agenda_eventos', JSON.stringify(mapped));
-          }
-        } else if (typeof window !== 'undefined') {
-          const cached = localStorage.getItem('legislab_agenda_eventos');
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setEventos(parsed);
-            }
-          }
+        } else {
+          setEventos([]);
         }
 
-        if (resSedes.success && resSedes.data && resSedes.data.length > 0) {
+        if (resSedes.success && Array.isArray(resSedes.data)) {
           const mappedSedes: SedeFrecuente[] = resSedes.data.map((s: any) => ({
             id: s.id,
             nombre: s.nombre,
             ubicacionUrl: s.ubicacionUrl,
             referencia: s.referencia || undefined,
           }));
-          setSedesFrecuentes(mappedSedes);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(mappedSedes));
-          }
+          setSedesFrecuentes(mappedSedes.length > 0 ? mappedSedes : SEDES_PREDETERMINADAS);
         }
 
-        if (resTipos.success && resTipos.data && resTipos.data.length > 0) {
+        if (resTipos.success && Array.isArray(resTipos.data)) {
           const mappedTipos = resTipos.data.map((t: any) => t.nombre);
-          setTiposEventos(mappedTipos);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('legislab_tipos_eventos', JSON.stringify(mappedTipos));
-          }
+          setTiposEventos(mappedTipos.length > 0 ? mappedTipos : TIPOS_BASE);
         }
       } catch (err) {
         console.warn('Error loading agenda data:', err);
+        setEventos([]);
       } finally {
         setLoading(false);
       }
@@ -592,15 +578,7 @@ export default function AgendaPage() {
         const gcalRes = await getGoogleCalendarStatusAction();
         if (gcalRes.success) {
           setGcalConnected(gcalRes.connected);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('legislab_gcal_connected', gcalRes.connected ? 'true' : 'false');
-          }
-          if (gcalRes.email) {
-            setGcalEmail(gcalRes.email);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('legislab_gcal_email', gcalRes.email);
-            }
-          }
+          setGcalEmail(gcalRes.connected && gcalRes.email ? gcalRes.email : '');
           if (gcalRes.lastSync) {
             setLastSyncTime(
               new Date(gcalRes.lastSync).toLocaleTimeString('es-MX', {
@@ -610,17 +588,24 @@ export default function AgendaPage() {
               })
             );
           }
+        } else {
+          setGcalConnected(false);
+          setGcalEmail('');
         }
       } catch (gcalErr) {
         console.warn('Error loading gcal status:', gcalErr);
+        setGcalConnected(false);
+        setGcalEmail('');
       }
     }
 
+    // Clean up any stale legacy browser cache
     if (typeof window !== 'undefined') {
-      const savedCal = localStorage.getItem('legislab_gcal_connected');
-      if (savedCal !== null) setGcalConnected(savedCal === 'true');
-      const savedEmail = localStorage.getItem('legislab_gcal_email');
-      if (savedEmail) setGcalEmail(savedEmail);
+      localStorage.removeItem('legislab_agenda_eventos');
+      localStorage.removeItem('legislab_sedes_frecuentes');
+      localStorage.removeItem('legislab_tipos_eventos');
+      localStorage.removeItem('legislab_gcal_connected');
+      localStorage.removeItem('legislab_gcal_email');
     }
 
     load();
@@ -630,7 +615,6 @@ export default function AgendaPage() {
       if (params.get('gcal_status') === 'connected') {
         setToastMessage('✅ ¡Cuenta de Google Calendar conectada exitosamente!');
         setGcalConnected(true);
-        localStorage.setItem('legislab_gcal_connected', 'true');
         setTimeout(() => setToastMessage(null), 5000);
         window.history.replaceState({}, '', window.location.pathname);
       } else if (params.get('gcal_error')) {
@@ -934,9 +918,6 @@ export default function AgendaPage() {
     });
 
     setEventos(updatedEvents);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('legislab_agenda_eventos', JSON.stringify(updatedEvents));
-    }
 
     if (eventoDetalle && eventoDetalle.id === evento.id) {
       setEventoDetalle({
@@ -1018,9 +999,6 @@ export default function AgendaPage() {
     const toDeleteId = eventoAEliminar.id;
     const updated = eventos.filter((e) => e.id !== toDeleteId);
     setEventos(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('legislab_agenda_eventos', JSON.stringify(updated));
-    }
     if (eventoDetalle && eventoDetalle.id === toDeleteId) {
       setEventoDetalle(null);
     }
@@ -1039,9 +1017,6 @@ export default function AgendaPage() {
     const toDelete = sedeAEliminar;
     const updated = sedesFrecuentes.filter((s) => s.id !== toDelete.id);
     setSedesFrecuentes(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(updated));
-    }
     if (sedeSeleccionadaId === toDelete.id) setSedeSeleccionadaId('');
     if (editSedeSeleccionadaId === toDelete.id) setEditSedeSeleccionadaId('personalizada');
     setSedeAEliminar(null);
@@ -1058,9 +1033,6 @@ export default function AgendaPage() {
     const toDelete = tipoAEliminar;
     const updated = tiposEventos.filter((t) => t !== toDelete);
     setTiposEventos(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('legislab_tipos_eventos', JSON.stringify(updated));
-    }
     if (nuevoTipo === toDelete) setNuevoTipo(updated[0] || 'Comisión');
     if (editTipo === toDelete) setEditTipo(updated[0] || 'Comisión');
     setTipoAEliminar(null);
@@ -1101,9 +1073,6 @@ export default function AgendaPage() {
       if (!tiposEventos.includes(tipoFinal)) {
         const updatedTipos = [...tiposEventos, tipoFinal];
         setTiposEventos(updatedTipos);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('legislab_tipos_eventos', JSON.stringify(updatedTipos));
-        }
 
         try {
           createAgendaTipo({ nombre: tipoFinal });
@@ -1127,9 +1096,6 @@ export default function AgendaPage() {
         };
         const updatedSedes = [...sedesFrecuentes, newSedeObj];
         setSedesFrecuentes(updatedSedes);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('legislab_sedes_frecuentes', JSON.stringify(updatedSedes));
-        }
 
         try {
           createAgendaSede({
@@ -1174,9 +1140,6 @@ export default function AgendaPage() {
 
     const nextEvents = [...eventos, nuevo];
     setEventos(nextEvents);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('legislab_agenda_eventos', JSON.stringify(nextEvents));
-    }
     setFechaSeleccionada(nuevaFecha);
     setMiniCalDate(parseDate(nuevaFecha));
     setNuevoTitulo('');
@@ -1241,9 +1204,6 @@ export default function AgendaPage() {
       if (!tiposEventos.includes(tipoFinal)) {
         const updatedTipos = [...tiposEventos, tipoFinal];
         setTiposEventos(updatedTipos);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('legislab_tipos_eventos', JSON.stringify(updatedTipos));
-        }
 
         try {
           createAgendaTipo({ nombre: tipoFinal });
@@ -1267,9 +1227,6 @@ export default function AgendaPage() {
 
     const nextEvents = eventos.map((ev) => (ev.id === eventoAEditar.id ? updatedEvent : ev));
     setEventos(nextEvents);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('legislab_agenda_eventos', JSON.stringify(nextEvents));
-    }
     setEventoDetalle(updatedEvent);
     setEventoAEditar(null);
     triggerGoogleCalendarSync();

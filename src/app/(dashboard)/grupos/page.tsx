@@ -83,11 +83,6 @@ export default function GruposPage() {
 
   // Auto-sync grupos from Evolution API on mount
   useEffect(() => {
-    const saved = localStorage.getItem('legislab_whatsapp_connected');
-    if (saved !== null) {
-      setIsWhatsappConnected(saved === 'true');
-    }
-
     async function loadLiveGroups() {
       try {
         setIsLoading(true);
@@ -95,13 +90,11 @@ export default function GruposPage() {
         if (res.success && res.isConnected !== false && res.data && res.data.length > 0) {
           setGrupos(res.data as ContactGroup[]);
           setIsWhatsappConnected(true);
-          localStorage.setItem('legislab_whatsapp_connected', 'true');
           if (res.data[0]) setSelectedGroup(res.data[0] as ContactGroup);
         } else {
           setGrupos([]);
           setSelectedGroup(null);
           setIsWhatsappConnected(false);
-          localStorage.setItem('legislab_whatsapp_connected', 'false');
         }
       } catch (err) {
         console.warn('Error loading live groups:', err);

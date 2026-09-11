@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { getGestiones, createGestion } from '@/app/actions/gestiones';
-import { createGestionDriveFolderAction } from '@/app/actions/drive';
+import { createGestionDriveFolderAction, getGoogleDriveStatusAction } from '@/app/actions/drive';
 import { getCurrentTimeMexicoCity, MEXICO_TIMEZONE } from '@/lib/date-utils';
 import { 
   FolderKanban, 
@@ -274,11 +274,20 @@ export default function GestionesPage() {
   const [draggedGestionId, setDraggedGestionId] = useState<string | null>(null);
 
   // Google Drive base folder
-  const [googleDriveBaseUrl, setGoogleDriveBaseUrl] = useState('https://drive.google.com/drive/folders/legislab-expedientes-distrito-04');
+  const [googleDriveBaseUrl, setGoogleDriveBaseUrl] = useState('');
 
   useEffect(() => {
-    const savedDrive = localStorage.getItem('legislab_gdrive_folder');
-    if (savedDrive) setGoogleDriveBaseUrl(savedDrive);
+    async function loadDriveStatus() {
+      try {
+        const res = await getGoogleDriveStatusAction();
+        if (res.success && res.folderUrl) {
+          setGoogleDriveBaseUrl(res.folderUrl);
+        }
+      } catch (err) {
+        console.warn('Error loading drive status in gestiones:', err);
+      }
+    }
+    loadDriveStatus();
   }, []);
 
   useEffect(() => {

@@ -121,24 +121,13 @@ export default function AtencionCiudadanaPage() {
 
   // Cargar conversaciones reales y estado de WhatsApp al iniciar
   useEffect(() => {
-    // Cargar notas guardadas en localStorage
-    const savedNotas = localStorage.getItem('legislab_notas_internas');
-    if (savedNotas) {
-      try {
-        setNotasRapidas(JSON.parse(savedNotas));
-      } catch (e) {
-        console.warn('Error parsing notas:', e);
-      }
-    }
-
     async function checkAndLoad() {
       try {
         setIsLoading(true);
-        const statusRes = await getWhatsAppStatus('Legislab');
+        const statusRes = await getWhatsAppStatus();
         if (statusRes.success && statusRes.isConnected) {
           setIsWhatsappConnected(true);
-          localStorage.setItem('legislab_whatsapp_connected', 'true');
-          const infoRes = await getWhatsAppInstanceInfo('Legislab');
+          const infoRes = await getWhatsAppInstanceInfo();
           if (infoRes.success && infoRes.data?.phone) {
             setConnectedPhone(infoRes.data.phone);
           }
@@ -152,7 +141,6 @@ export default function AtencionCiudadanaPage() {
           }
         } else {
           setIsWhatsappConnected(false);
-          localStorage.setItem('legislab_whatsapp_connected', 'false');
           setConnectedPhone(null);
           setConversaciones([]);
           setSelectedConvId('');

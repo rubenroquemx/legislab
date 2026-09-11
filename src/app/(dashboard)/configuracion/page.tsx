@@ -245,6 +245,15 @@ function ConfiguracionContent() {
         setCalendarConectado(Boolean(off.googleCalendarConnected));
         setCalendarEmail(off.googleCalendarEmail || '');
 
+        const savedDocConfigs = off.id ? localStorage.getItem(`legislab_doc_configs_${off.id}`) : null;
+        if (savedDocConfigs) {
+          try {
+            setDocConfigs(JSON.parse(savedDocConfigs));
+          } catch (e) {
+            console.error('Error parsing doc configs', e);
+          }
+        }
+
         // Verificar estado de WhatsApp para esta instancia específica
         checkWhatsAppStatus(off.whatsappInstanceName);
       }
@@ -284,15 +293,6 @@ function ConfiguracionContent() {
 
   useEffect(() => {
     loadOfficeData();
-
-    const savedDocConfigs = localStorage.getItem('legislab_doc_configs');
-    if (savedDocConfigs) {
-      try {
-        setDocConfigs(JSON.parse(savedDocConfigs));
-      } catch (e) {
-        console.error('Error parsing doc configs', e);
-      }
-    }
   }, [tabFromQuery, searchParams]);
 
   // Polling para detectar cuando el usuario escanea el QR desde su celular
@@ -394,7 +394,9 @@ function ConfiguracionContent() {
 
   const handleGuardarDiseno = (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('legislab_doc_configs', JSON.stringify(docConfigs));
+    if (officeId) {
+      localStorage.setItem(`legislab_doc_configs_${officeId}`, JSON.stringify(docConfigs));
+    }
     setGuardadoDiseno(true);
     setTimeout(() => setGuardadoDiseno(false), 3000);
   };

@@ -71,16 +71,14 @@ const DEFAULT_SEDES_PARLAMENTARIAS = [
 async function resolveOffice(officeId?: string) {
   try {
     const targetId = await getActiveOfficeId(officeId);
-    const officeList = await db.select().from(offices).where(eq(offices.id, targetId));
-    if (officeList.length > 0) return officeList[0];
-    const anyOffice = await db.select().from(offices).limit(1);
-    if (anyOffice.length > 0) return anyOffice[0];
+    const [office] = await db.select().from(offices).where(eq(offices.id, targetId)).limit(1);
+    if (office) return office;
 
     const [created] = await db.insert(offices).values({
       id: targetId,
-      name: 'Despacho Parlamentario Dip. Ruben Roque',
-      titularName: 'Dip. Ruben Roque',
-      titularEmail: 'contacto@rubenroque.mx',
+      name: 'Despacho Parlamentario',
+      titularName: 'Diputado',
+      titularEmail: '',
       legislature: 'LXVI Legislatura',
       district: 'Distrito 04 Federal',
       state: 'Tabasco',
