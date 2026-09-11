@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Sparkles
 } from 'lucide-react';
+import { SUPERADMIN_EMAIL } from '@/lib/auth-constants';
 
 function LoginFormContent() {
   const router = useRouter();
@@ -33,8 +34,12 @@ function LoginFormContent() {
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      if (session.user.isSuperAdmin) {
-        router.push('/dashboard');
+      const isSuper = Boolean(
+        session.user.isSuperAdmin || 
+        session.user.email?.toLowerCase() === SUPERADMIN_EMAIL
+      );
+      if (isSuper) {
+        router.push('/admin');
       } else {
         router.push('/dashboard');
       }
@@ -57,8 +62,9 @@ function LoginFormContent() {
     setLoading(true);
 
     try {
+      const cleanEmail = email.trim().toLowerCase();
       const res = await signIn('credentials', {
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
         redirect: false,
       });
@@ -71,7 +77,8 @@ function LoginFormContent() {
           : 'Credenciales inválidas. Verifica tu correo y contraseña.');
         setLoading(false);
       } else if (res?.ok) {
-        router.push('/dashboard');
+        const isSuper = cleanEmail === SUPERADMIN_EMAIL;
+        router.push(isSuper ? '/admin' : '/dashboard');
         router.refresh();
       }
     } catch (err) {
@@ -82,7 +89,7 @@ function LoginFormContent() {
 
   const handleGoogleLogin = () => {
     setLoading(true);
-    signIn('google', { callbackUrl: '/dashboard' });
+    signIn('google', { callbackUrl: '/login' });
   };
 
   return (
