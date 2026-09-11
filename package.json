@@ -11,6 +11,7 @@
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
     "@google/genai": "^2.19.0",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "docx": "^9.7.1",
     "dotenv": "^17.4.2",
@@ -25,6 +26,7 @@
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

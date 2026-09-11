@@ -22,6 +22,9 @@ import {
   ALL_AVAILABLE_MODULES,
   PLAN_CONFIGS,
 } from '@/lib/saas-config';
+import bcrypt from 'bcryptjs';
+import { SUPERADMIN_EMAIL } from '@/lib/auth-constants';
+import { revalidatePath } from 'next/cache';
 
 // Fallback seed offices for local preview when DB is initializing
 const MOCK_OFFICES = [
@@ -721,7 +724,26 @@ export async function getSaasUsersAction(params?: {
   try {
     let dbUsers: any[] = [];
     try {
-      dbUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+      const usersQuery = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          cargo: users.cargo,
+          role: users.role,
+          phone: users.phone,
+          status: users.status,
+          isSuperAdmin: users.isSuperAdmin,
+          officeId: users.officeId,
+          lastLoginAt: users.lastLoginAt,
+          createdAt: users.createdAt,
+          officeName: offices.name,
+        })
+        .from(users)
+        .leftJoin(offices, eq(users.officeId, offices.id))
+        .orderBy(desc(users.createdAt));
+
+      dbUsers = usersQuery;
     } catch (e) {
       console.warn('DB getSaasUsersAction error:', e);
     }
@@ -734,6 +756,8 @@ export async function getSaasUsersAction(params?: {
         cargo: 'Diputado Titular (Usuario Principal)',
         role: 'diputado',
         phone: '+52 (993) 220-0146',
+        status: 'active',
+        isSuperAdmin: true,
         officeName: 'Despacho Dip. Ruben Roque',
         createdAt: new Date('2026-01-15'),
       },
@@ -744,18 +768,10 @@ export async function getSaasUsersAction(params?: {
         cargo: 'Coordinadora de Atención (Usuario Extra 1)',
         role: 'secretario_tecnico',
         phone: '+52 (993) 111-2233',
+        status: 'active',
+        isSuperAdmin: false,
         officeName: 'Despacho Dip. Ruben Roque',
         createdAt: new Date('2026-01-16'),
-      },
-      {
-        id: 'u-3',
-        name: 'Ing. Carlos Mendoza',
-        email: 'carlos.mendoza@rubenroque.mx',
-        cargo: 'Gestor Territorial (Usuario Extra 2)',
-        role: 'coordinador_territorial',
-        phone: '+52 (993) 333-4455',
-        officeName: 'Despacho Dip. Ruben Roque',
-        createdAt: new Date('2026-01-18'),
       },
     ];
 
@@ -767,12 +783,17 @@ export async function getSaasUsersAction(params?: {
         (u) =>
           u.name?.toLowerCase().includes(q) ||
           u.email?.toLowerCase().includes(q) ||
-          u.cargo?.toLowerCase().includes(q)
+          u.cargo?.toLowerCase().includes(q) ||
+          u.officeName?.toLowerCase().includes(q)
       );
     }
 
     if (params?.role && params.role !== 'all') {
       list = list.filter((u) => u.role === params.role);
+    }
+
+    if (params?.officeId && params.officeId !== 'all') {
+      list = list.filter((u) => u.officeId === params.officeId);
     }
 
     return {
@@ -786,6 +807,229 @@ export async function getSaasUsersAction(params?: {
       error: msg,
       data: [],
     };
+  }
+}
+
+/**
+ * Cambia el estado de un usuario (Activo / Suspendido)
+ */
+export async function updateSaasUserStatusAction(userId: string, newStatus: 'active' | 'suspended') {
+  try {
+    const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!target) {
+      return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    if (target.email.toLowerCase() === SUPERADMIN_EMAIL) {
+      return { success: false, error: 'No se puede suspender al Superadmin maestro principal.' };
+    }
+
+    await db.update(users).set({ status: newStatus, updatedAt: new Date() }).where(eq(users.id, userId));
+    await db.insert(auditLogs).values({
+      action: `user.status_${newStatus}`,
+      description: `El estado del usuario ${target.email} fue modificado a ${newStatus}`,
+    });
+
+    revalidatePath('/admin/usuarios');
+    revalidatePath('/usuarios');
+    return { success: true, message: `Usuario ${newStatus === 'active' ? 'activado' : 'suspendido'} exitosamente` };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Error al actualizar estado del usuario' };
+  }
+}
+
+/**
+ * Resetea la contraseña de cualquier usuario desde el panel SaaS Superadmin
+ */
+export async function resetSaasUserPasswordAction(userId: string, newPassword: string) {
+  try {
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: 'La nueva contraseña debe tener al menos 6 caracteres' };
+    }
+
+    const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!target) {
+      return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, userId));
+    await db.insert(auditLogs).values({
+      action: 'user.password_reset',
+      description: `Se restableció la contraseña del usuario ${target.email}`,
+    });
+
+    revalidatePath('/admin/usuarios');
+    return { success: true, message: 'Contraseña restablecida exitosamente' };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Error al restablecer contraseña' };
+  }
+}
+
+/**
+ * Reasigna un usuario a otro despacho
+ */
+export async function reassignSaasUserOfficeAction(userId: string, targetOfficeId: string) {
+  try {
+    const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!target) {
+      return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    const [targetOffice] = await db.select().from(offices).where(eq(offices.id, targetOfficeId)).limit(1);
+    if (!targetOffice) {
+      return { success: false, error: 'Despacho de destino no encontrado' };
+    }
+
+    // Validar cuota del despacho destino
+    const currentUsers = await db.select({ id: users.id }).from(users).where(eq(users.officeId, targetOfficeId));
+    const maxAllowed = targetOffice.maxUsers || 2;
+    if (currentUsers.length >= maxAllowed) {
+      return { success: false, error: `El despacho destino ya alcanzó su límite máximo de ${maxAllowed} usuarios.` };
+    }
+
+    await db.update(users).set({ officeId: targetOfficeId, updatedAt: new Date() }).where(eq(users.id, userId));
+    await db.insert(auditLogs).values({
+      action: 'user.office_reassigned',
+      description: `Usuario ${target.email} reasignado al despacho ${targetOffice.name}`,
+    });
+
+    revalidatePath('/admin/usuarios');
+    revalidatePath('/admin/despachos');
+    return { success: true, message: `Usuario reasignado exitosamente a ${targetOffice.name}` };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Error al reasignar usuario' };
+  }
+}
+
+/**
+ * Cambia el Diputado Titular / Usuario Principal de un despacho
+ */
+export async function changeSaasOfficeTitularAction(
+  officeId: string,
+  newTitularEmail: string,
+  newTitularName: string,
+  newTitularPhone?: string
+) {
+  try {
+    const [office] = await db.select().from(offices).where(eq(offices.id, officeId)).limit(1);
+    if (!office) {
+      return { success: false, error: 'Despacho no encontrado' };
+    }
+
+    const cleanEmail = newTitularEmail.toLowerCase().trim();
+    if (!cleanEmail || !newTitularName.trim()) {
+      return { success: false, error: 'Nombre y correo del nuevo titular son obligatorios' };
+    }
+
+    // Actualizar datos del despacho
+    await db
+      .update(offices)
+      .set({
+        titularName: newTitularName.trim(),
+        titularEmail: cleanEmail,
+        titularPhone: newTitularPhone?.trim() || office.titularPhone,
+        updatedAt: new Date(),
+      })
+      .where(eq(offices.id, officeId));
+
+    // Buscar si ya existe el usuario con ese email
+    const [existingUser] = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
+    if (existingUser) {
+      await db
+        .update(users)
+        .set({
+          role: 'diputado',
+          cargo: 'Diputado Titular (Usuario Principal)',
+          officeId: officeId,
+          name: newTitularName.trim(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existingUser.id));
+    } else {
+      // Crear nuevo usuario titular
+      const passwordHash = await bcrypt.hash('legislab2026', 10);
+      await db.insert(users).values({
+        name: newTitularName.trim(),
+        email: cleanEmail,
+        phone: newTitularPhone?.trim() || null,
+        cargo: 'Diputado Titular (Usuario Principal)',
+        role: 'diputado',
+        officeId: officeId,
+        status: 'active',
+        passwordHash,
+      });
+    }
+
+    await db.insert(auditLogs).values({
+      action: 'office.titular_changed',
+      description: `Se asignó a ${newTitularName} (${cleanEmail}) como nuevo Titular del despacho ${office.name}`,
+    });
+
+    revalidatePath('/admin/despachos');
+    revalidatePath(`/admin/despachos/${officeId}`);
+    revalidatePath('/admin/usuarios');
+    return { success: true, message: 'Titular del despacho actualizado exitosamente' };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Error al cambiar titular del despacho' };
+  }
+}
+
+/**
+ * Otorga o revoca permisos de Superadmin (con protección para usrubenroque@gmail.com)
+ */
+export async function toggleSuperAdminRoleAction(userId: string, isSuperAdmin: boolean) {
+  try {
+    const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!target) {
+      return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    if (target.email.toLowerCase() === SUPERADMIN_EMAIL) {
+      return { success: false, error: 'El Superadmin maestro principal no puede ser modificado ni degradado.' };
+    }
+
+    await db
+      .update(users)
+      .set({ isSuperAdmin, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+
+    await db.insert(auditLogs).values({
+      action: isSuperAdmin ? 'admin.superadmin_granted' : 'admin.superadmin_revoked',
+      description: `Privilegios de Superadmin ${isSuperAdmin ? 'otorgados a' : 'revocados de'} ${target.email}`,
+    });
+
+    revalidatePath('/admin/usuarios');
+    return { success: true, message: `Privilegios de Superadmin ${isSuperAdmin ? 'otorgados' : 'revocados'} con éxito` };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Error al modificar permisos de Superadmin' };
+  }
+}
+
+/**
+ * Elimina un usuario desde el panel Superadmin (con protección para usrubenroque@gmail.com)
+ */
+export async function deleteSaasUserAction(userId: string) {
+  try {
+    const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!target) {
+      return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    if (target.email.toLowerCase() === SUPERADMIN_EMAIL) {
+      return { success: false, error: 'El Superadmin maestro principal está protegido contra eliminación.' };
+    }
+
+    await db.delete(users).where(eq(users.id, userId));
+    await db.insert(auditLogs).values({
+      action: 'user.deleted',
+      description: `Usuario ${target.email} eliminado del sistema por Superadmin`,
+    });
+
+    revalidatePath('/admin/usuarios');
+    return { success: true, message: 'Usuario eliminado exitosamente' };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Error al eliminar usuario' };
   }
 }
 
@@ -819,7 +1063,7 @@ export async function getSaasAuditLogsAction() {
       {
         id: 'log-3',
         action: 'office.created',
-        description: 'Nuevo despacho "Despacho Dip. Carlos Armenta" registrado para usuario principal carlos.armenta@congresotabasco.gob.mx en Plan Starter (3 usuarios, gestiones ilimitadas)',
+        description: 'Nuevo despacho registrado para usuario principal en Plan Starter (2 usuarios, gestiones ilimitadas)',
         ipAddress: '187.189.90.34',
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
       },

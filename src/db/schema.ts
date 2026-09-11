@@ -52,7 +52,7 @@ export const offices = pgTable('offices', {
   plan: text('plan').notNull().default('starter'), // 'starter' | 'professional' | 'parliamentary' | 'enterprise'
   whatsappInstanceName: text('whatsapp_instance_name'),
   whatsappPhone: text('whatsapp_phone'),
-  maxUsers: integer('max_users').notNull().default(3), // Starter: 1 principal + 2 extras = 3
+  maxUsers: integer('max_users').notNull().default(2), // Starter: 1 principal + 1 extra = 2
   
   // Promociones y Descuentos del Superadmin
   trialEndsAt: timestamp('trial_ends_at', { mode: 'date' }),
@@ -116,12 +116,21 @@ export const users = pgTable('users', {
   name: text('name'),
   email: text('email').unique().notNull(),
   emailVerified: timestamp('emailVerified', { mode: 'date' }),
+  passwordHash: text('password_hash'),
   image: text('image'),
   cargo: text('cargo').default('Asesor Legislativo'),
   officeId: uuid('office_id').references(() => offices.id, { onDelete: 'cascade' }),
   role: text('role').notNull().default('asesor_a'),
+  status: text('status').notNull().default('active'), // 'active' | 'invited' | 'suspended'
+  isSuperAdmin: boolean('is_super_admin').notNull().default(false),
+  permissions: text('permissions'), // Matriz granular de permisos JSON
+  activationToken: text('activation_token'),
+  activationTokenExpiry: timestamp('activation_token_expiry', { mode: 'date' }),
+  invitedBy: text('invited_by'),
   phone: text('phone'),
+  lastLoginAt: timestamp('last_login_at', { mode: 'date' }),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
 export const accounts = pgTable(

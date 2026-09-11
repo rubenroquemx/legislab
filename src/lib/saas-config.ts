@@ -28,20 +28,20 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   starter: {
     name: 'Starter (Inicial)',
     price: 1999,
-    maxUsers: 3, // 1 principal + 2 extras
-    description: '1 Usuario Principal + 2 Usuarios adicionales (3 en total) • Gestiones Ilimitadas',
+    maxUsers: 2, // 1 principal + 1 extra
+    description: '1 Titular + 1 Usuario adicional (2 en total) • Gestiones Ilimitadas',
   },
   professional: {
     name: 'Professional',
     price: 4999,
-    maxUsers: 8, // 1 principal + 7 extras
-    description: '1 Usuario Principal + 7 Usuarios adicionales (8 en total) • Gestiones Ilimitadas',
+    maxUsers: 5, // 1 principal + 4 extras
+    description: '1 Titular + 4 Usuarios adicionales (5 en total) • Gestiones Ilimitadas',
   },
   parliamentary: {
     name: 'Parlamentario',
     price: 12999,
-    maxUsers: 20, // 1 principal + 19 extras
-    description: '1 Usuario Principal + 19 Usuarios adicionales (20 en total) • Gestiones Ilimitadas',
+    maxUsers: 8, // 1 principal + 7 extras
+    description: '1 Titular + 7 Usuarios adicionales (8 en total) • Gestiones Ilimitadas',
   },
   enterprise: {
     name: 'Enterprise',
