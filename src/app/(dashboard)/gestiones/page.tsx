@@ -46,9 +46,11 @@ import {
   Trash2,
   CheckCheck,
   Smile,
-  Paperclip
+  Paperclip,
+  ArrowUpDown
 } from 'lucide-react';
 import { generateDocxBlob, downloadBlob } from '@/lib/export/docx-exporter';
+import { ImportExportModal } from '@/components/configuracion/import-export-tab';
 
 export type EstadoGestion = 'Recibida' | 'En Revisión' | 'En Trámite con Dependencia' | 'Resuelta';
 
@@ -166,42 +168,45 @@ export default function GestionesPage() {
   const [gestiones, setGestiones] = useState<GestionCiudadana[]>(INITIAL_GESTIONES);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await getGestiones();
-        if (res.success && res.data && res.data.length > 0) {
-          const mapped: GestionCiudadana[] = res.data.map((d: any) => ({
-            id: d.id,
-            folio: d.folio,
-            nombre: d.solicitante,
-            avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-            telefono: d.telefono || '993 000 0000',
-            municipio: d.municipio || 'Centro',
-            curp: '',
-            direccion: '',
-            colonia: d.colonia || '',
-            seccionElectoral: '',
-            tipo: d.categoria || 'General',
-            descripcion: d.asunto || '',
-            estatus: (d.estatus as any) || 'En Trámite con Dependencia',
-            prioridad: (d.prioridad as any) || 'Media',
-            dependenciaDestino: d.dependenciaCanalizada || 'General',
-            fecha: d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-MX', { timeZone: MEXICO_TIMEZONE, day: '2-digit', month: 'short', year: 'numeric' }) : 'Hoy',
-            driveFolderUrl: '',
-            documentos: [],
-            oficios: [],
-            notas: [],
-          }));
-          setGestiones(mapped);
-        }
-      } catch (err) {
-        console.warn('Error loading gestiones:', err);
-      } finally {
-        setLoading(false);
+  const [isModalImportExportOpen, setIsModalImportExportOpen] = useState(false);
+
+  const loadGestiones = async () => {
+    try {
+      const res = await getGestiones();
+      if (res.success && res.data && res.data.length > 0) {
+        const mapped: GestionCiudadana[] = res.data.map((d: any) => ({
+          id: d.id,
+          folio: d.folio,
+          nombre: d.solicitante,
+          avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+          telefono: d.telefono || '993 000 0000',
+          municipio: d.municipio || 'Centro',
+          curp: '',
+          direccion: '',
+          colonia: d.colonia || '',
+          seccionElectoral: '',
+          tipo: d.categoria || 'General',
+          descripcion: d.asunto || '',
+          estatus: (d.estatus as any) || 'En Trámite con Dependencia',
+          prioridad: (d.prioridad as any) || 'Media',
+          dependenciaDestino: d.dependenciaCanalizada || 'General',
+          fecha: d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-MX', { timeZone: MEXICO_TIMEZONE, day: '2-digit', month: 'short', year: 'numeric' }) : 'Hoy',
+          driveFolderUrl: '',
+          documentos: [],
+          oficios: [],
+          notas: [],
+        }));
+        setGestiones(mapped);
       }
+    } catch (err) {
+      console.warn('Error loading gestiones:', err);
+    } finally {
+      setLoading(false);
     }
-    load();
+  };
+
+  useEffect(() => {
+    loadGestiones();
   }, []);
   const [tiposGestion, setTiposGestion] = useState<string[]>(TIPOS_GESTION_BASE);
   const [plantillasOficios, setPlantillasOficios] = useState<PlantillaOficio[]>(PLANTILLAS_PREDETERMINADAS);
@@ -711,13 +716,21 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
       {/* Action Bar */}
       <div className="flex flex-wrap items-center justify-end gap-2.5">
         <button
+          onClick={() => setIsModalImportExportOpen(true)}
+          className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs sm:text-sm font-semibold px-3.5 py-1.5 rounded-xl shadow-2xs transition-all cursor-pointer"
+        >
+          <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+          <span>Importar / Exportar</span>
+        </button>
+
+        <button
           onClick={() => {
             setIsOcrProcessing(false);
             setOcrSuccess(false);
             setAvatarUrl('');
             setIsModalCrearOpen(true);
           }}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-1.5 rounded-xl shadow-xs transition-all"
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Nueva Gestión Ciudadana</span>
@@ -1809,6 +1822,16 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
           </div>
         </div>
       )}
+
+      {/* MODAL IMPORTAR Y EXPORTAR GESTIONES */}
+      <ImportExportModal
+        isOpen={isModalImportExportOpen}
+        onClose={() => setIsModalImportExportOpen(false)}
+        initialModule="gestiones"
+        onImportSuccess={() => {
+          loadGestiones();
+        }}
+      />
     </div>
   );
 }

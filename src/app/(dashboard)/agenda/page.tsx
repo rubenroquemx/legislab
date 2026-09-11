@@ -49,6 +49,7 @@ import {
   Search
 } from 'lucide-react';
 import Link from 'next/link';
+import { ImportExportModal } from '@/components/configuracion/import-export-tab';
 
 interface EventoLegislativo {
   id: string;
@@ -484,6 +485,7 @@ export default function AgendaPage() {
   // Modals & Active selections
   const [isModalCrearOpen, setIsModalCrearOpen] = useState(false);
   const [isModalCompartirOpen, setIsModalCompartirOpen] = useState(false);
+  const [isModalImportExportOpen, setIsModalImportExportOpen] = useState(false);
   const [eventoDetalle, setEventoDetalle] = useState<EventoLegislativo | null>(null);
   const [eventoAEditar, setEventoAEditar] = useState<EventoLegislativo | null>(null);
   const [eventoAEliminar, setEventoAEliminar] = useState<EventoLegislativo | null>(null);
@@ -528,54 +530,58 @@ export default function AgendaPage() {
   const [eventosSeleccionadosIds, setEventosSeleccionadosIds] = useState<string[]>([]);
   const [copiado, setCopiado] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [res, resSedes, resTipos] = await Promise.all([
-          getAgendaEventos(),
-          getAgendaSedes(),
-          getAgendaTipos(),
-        ]);
+  const loadAgendaData = async () => {
+    try {
+      const [res, resSedes, resTipos] = await Promise.all([
+        getAgendaEventos(),
+        getAgendaSedes(),
+        getAgendaTipos(),
+      ]);
 
-        if (res.success && Array.isArray(res.data)) {
-          const mapped: EventoLegislativo[] = res.data.map((d: any) => ({
-            id: d.id,
-            titulo: d.titulo,
-            fecha: d.fecha,
-            hora: d.horaInicio,
-            horaFin: d.horaFin,
-            lugar: d.lugarNombre,
-            ubicacionUrl: d.lugarUrl || 'https://maps.google.com',
-            tipo: d.tipo || 'Comisión',
-            descripcion: d.notas || '',
-            incluirEnCompartir: true,
-          }));
-          setEventos(mapped);
-        } else {
-          setEventos([]);
-        }
-
-        if (resSedes.success && Array.isArray(resSedes.data)) {
-          const mappedSedes: SedeFrecuente[] = resSedes.data.map((s: any) => ({
-            id: s.id,
-            nombre: s.nombre,
-            ubicacionUrl: s.ubicacionUrl,
-            referencia: s.referencia || undefined,
-          }));
-          setSedesFrecuentes(mappedSedes.length > 0 ? mappedSedes : SEDES_PREDETERMINADAS);
-        }
-
-        if (resTipos.success && Array.isArray(resTipos.data)) {
-          const mappedTipos = resTipos.data.map((t: any) => t.nombre);
-          setTiposEventos(mappedTipos.length > 0 ? mappedTipos : TIPOS_BASE);
-        }
-      } catch (err) {
-        console.warn('Error loading agenda data:', err);
+      if (res.success && Array.isArray(res.data)) {
+        const mapped: EventoLegislativo[] = res.data.map((d: any) => ({
+          id: d.id,
+          titulo: d.titulo,
+          fecha: d.fecha,
+          hora: d.horaInicio,
+          horaFin: d.horaFin,
+          lugar: d.lugarNombre,
+          ubicacionUrl: d.lugarUrl || 'https://maps.google.com',
+          tipo: d.tipo || 'Comisión',
+          descripcion: d.notas || '',
+          incluirEnCompartir: true,
+        }));
+        setEventos(mapped);
+      } else {
         setEventos([]);
-      } finally {
-        setLoading(false);
       }
 
+      if (resSedes.success && Array.isArray(resSedes.data)) {
+        const mappedSedes: SedeFrecuente[] = resSedes.data.map((s: any) => ({
+          id: s.id,
+          nombre: s.nombre,
+          ubicacionUrl: s.ubicacionUrl,
+          referencia: s.referencia || undefined,
+        }));
+        setSedesFrecuentes(mappedSedes.length > 0 ? mappedSedes : SEDES_PREDETERMINADAS);
+      }
+
+      if (resTipos.success && Array.isArray(resTipos.data)) {
+        const mappedTipos = resTipos.data.map((t: any) => t.nombre);
+        setTiposEventos(mappedTipos.length > 0 ? mappedTipos : TIPOS_BASE);
+      }
+    } catch (err) {
+      console.warn('Error loading agenda data:', err);
+      setEventos([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAgendaData();
+
+    async function loadGCal() {
       try {
         const gcalRes = await getGoogleCalendarStatusAction();
         if (gcalRes.success) {
@@ -601,6 +607,8 @@ export default function AgendaPage() {
       }
     }
 
+    loadGCal();
+
     // Clean up any stale legacy browser cache
     if (typeof window !== 'undefined') {
       localStorage.removeItem('legislab_agenda_eventos');
@@ -609,8 +617,6 @@ export default function AgendaPage() {
       localStorage.removeItem('legislab_gcal_connected');
       localStorage.removeItem('legislab_gcal_email');
     }
-
-    load();
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -1593,14 +1599,14 @@ export default function AgendaPage() {
               </button>
             )}
 
-            <Link
-              href="/configuracion?tab=import-export"
+            <button
+              onClick={() => setIsModalImportExportOpen(true)}
               title="Importar y Exportar eventos de Agenda"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-[11px] font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-2xs"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-[11px] font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-2xs cursor-pointer"
             >
               <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
               <span>Importar / Exportar</span>
-            </Link>
+            </button>
 
             <button
               onClick={handleOpenCompartir}
@@ -3168,6 +3174,18 @@ export default function AgendaPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL IMPORTAR Y EXPORTAR AGENDA */}
+      <ImportExportModal
+        isOpen={isModalImportExportOpen}
+        onClose={() => setIsModalImportExportOpen(false)}
+        initialModule="agenda"
+        onImportSuccess={() => {
+          loadAgendaData();
+          setToastMessage('✅ ¡Eventos importados exitosamente a la Agenda!');
+          setTimeout(() => setToastMessage(null), 5000);
+        }}
+      />
 
       {/* FLOATING TOAST NOTIFICATION BANNER */}
       {toastMessage && (

@@ -30,9 +30,12 @@ import {
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
-interface ImportExportTabProps {
+export interface ImportExportTabProps {
   officeId?: string;
   officeName?: string;
+  initialModule?: ModuleType;
+  hideModuleSelector?: boolean;
+  onImportSuccess?: () => void;
 }
 
 type ModuleType = 'agenda' | 'gestiones';
@@ -71,8 +74,14 @@ const GESTIONES_FIELDS: Omit<ColumnMapping, 'fileColumn'>[] = [
   { fieldKey: 'notasInternas', fieldLabel: 'Notas Internas', required: false, description: 'Observaciones del equipo de enlace' },
 ];
 
-export function ImportExportTab({ officeId, officeName }: ImportExportTabProps) {
-  const [selectedModule, setSelectedModule] = useState<ModuleType>('agenda');
+export function ImportExportTab({ 
+  officeId, 
+  officeName, 
+  initialModule = 'agenda', 
+  hideModuleSelector = false,
+  onImportSuccess 
+}: ImportExportTabProps) {
+  const [selectedModule, setSelectedModule] = useState<ModuleType>(initialModule);
   
   // Export states
   const [exportFormat, setExportFormat] = useState<ExportFormat>('excel');
@@ -287,6 +296,7 @@ export function ImportExportTab({ officeId, officeName }: ImportExportTabProps) 
             message: res.message || 'Importación completada',
           });
           setImportStep('success');
+          onImportSuccess?.();
         } else {
           alert(res.error || 'Error al importar eventos');
         }
@@ -313,6 +323,7 @@ export function ImportExportTab({ officeId, officeName }: ImportExportTabProps) 
             message: res.message || 'Importación completada',
           });
           setImportStep('success');
+          onImportSuccess?.();
         } else {
           alert(res.error || 'Error al importar gestiones');
         }
@@ -534,41 +545,43 @@ export function ImportExportTab({ officeId, officeName }: ImportExportTabProps) 
           </div>
 
           {/* Module Selector */}
-          <div className="bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/80 flex items-center gap-1 shrink-0 self-start md:self-auto">
-            <button
-              onClick={() => {
-                setSelectedModule('agenda');
-                setImportStep('upload');
-                setImportFile(null);
-              }}
-              className={cn(
-                "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all",
-                selectedModule === 'agenda'
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
-                  : "text-slate-400 hover:text-white"
-              )}
-            >
-              <Calendar className="w-4 h-4" />
-              <span>Agenda Parlamentaria</span>
-            </button>
+          {!hideModuleSelector && (
+            <div className="bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/80 flex items-center gap-1 shrink-0 self-start md:self-auto">
+              <button
+                onClick={() => {
+                  setSelectedModule('agenda');
+                  setImportStep('upload');
+                  setImportFile(null);
+                }}
+                className={cn(
+                  "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all",
+                  selectedModule === 'agenda'
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
+                    : "text-slate-400 hover:text-white"
+                )}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Agenda Parlamentaria</span>
+              </button>
 
-            <button
-              onClick={() => {
-                setSelectedModule('gestiones');
-                setImportStep('upload');
-                setImportFile(null);
-              }}
-              className={cn(
-                "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all",
-                selectedModule === 'gestiones'
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
-                  : "text-slate-400 hover:text-white"
-              )}
-            >
-              <FolderOpen className="w-4 h-4" />
-              <span>Gestiones & Distrito</span>
-            </button>
-          </div>
+              <button
+                onClick={() => {
+                  setSelectedModule('gestiones');
+                  setImportStep('upload');
+                  setImportFile(null);
+                }}
+                className={cn(
+                  "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all",
+                  selectedModule === 'gestiones'
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
+                    : "text-slate-400 hover:text-white"
+                )}
+              >
+                <FolderOpen className="w-4 h-4" />
+                <span>Gestiones & Distrito</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1021,6 +1034,64 @@ export function ImportExportTab({ officeId, officeName }: ImportExportTabProps) 
               </div>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ImportExportModal({
+  isOpen,
+  onClose,
+  initialModule = 'agenda',
+  officeId,
+  officeName,
+  onImportSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  initialModule?: ModuleType;
+  officeId?: string;
+  officeName?: string;
+  onImportSuccess?: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 my-8 max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-gray-50/90 dark:bg-slate-900/90 backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+              <ArrowUpDown className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                Importar y Exportar {initialModule === 'agenda' ? 'Agenda Parlamentaria' : 'Gestiones Ciudadanas'}
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Descarga masiva multiformato o importación desde Excel con mapeo de columnas
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
+          <ImportExportTab
+            officeId={officeId}
+            officeName={officeName}
+            initialModule={initialModule}
+            hideModuleSelector={false}
+            onImportSuccess={() => {
+              onImportSuccess?.();
+            }}
+          />
         </div>
       </div>
     </div>
