@@ -27,8 +27,10 @@ import {
   PartyPopper,
   Calendar,
   Share2,
-  PhoneCall
+  PhoneCall,
+  ArrowUpDown
 } from 'lucide-react';
+import { ImportExportModal } from '@/components/configuracion/import-export-tab';
 
 export interface ObservacionContacto {
   id: string;
@@ -76,36 +78,38 @@ const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 export default function DirectorioPage() {
   const [contactos, setContactos] = useState<ContactoDirectorio[]>(INITIAL_CONTACTOS);
   const [loading, setLoading] = useState(true);
+  const [isModalImportExportOpen, setIsModalImportExportOpen] = useState(false);
+
+  const loadContactos = async () => {
+    try {
+      const res = await getContactos();
+      if (res.success && res.data && res.data.length > 0) {
+        const mapped: ContactoDirectorio[] = res.data.map((d: any) => ({
+          id: d.id,
+          nombre: d.nombre,
+          telefono: d.telefono,
+          cargo: d.cargo,
+          organizacion: d.organizacion,
+          correos: d.email ? [d.email] : [],
+          domicilio: d.direccion || '',
+          colonia: '',
+          municipio: 'Centro',
+          fechaCumpleanos: d.fechaNacimiento || '',
+          tipoContacto: (d.categoria as any) || 'Funcionario Estatal',
+          avatarUrl: d.foto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          observaciones: [],
+        }));
+        setContactos(mapped);
+      }
+    } catch (err) {
+      console.warn('Error loading contactos:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await getContactos();
-        if (res.success && res.data && res.data.length > 0) {
-          const mapped: ContactoDirectorio[] = res.data.map((d: any) => ({
-            id: d.id,
-            nombre: d.nombre,
-            telefono: d.telefono,
-            cargo: d.cargo,
-            organizacion: d.organizacion,
-            correos: d.email ? [d.email] : [],
-            domicilio: d.direccion || '',
-            colonia: '',
-            municipio: 'Centro',
-            fechaCumpleanos: d.fechaNacimiento || '',
-            tipoContacto: (d.categoria as any) || 'Funcionario Estatal',
-            avatarUrl: d.foto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-            observaciones: [],
-          }));
-          setContactos(mapped);
-        }
-      } catch (err) {
-        console.warn('Error loading contactos:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    loadContactos();
   }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('Todos');
@@ -372,6 +376,14 @@ export default function DirectorioPage() {
             <span>🎂 {cumpleanerosCount} Cumpleaños Hoy</span>
           </button>
         )}
+
+        <button
+          onClick={() => setIsModalImportExportOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-2xs cursor-pointer"
+        >
+          <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+          <span>Importar / Exportar</span>
+        </button>
 
         <button
           onClick={handleOpenCrearModal}
@@ -1066,6 +1078,14 @@ export default function DirectorioPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL: IMPORTAR / EXPORTAR */}
+      <ImportExportModal
+        isOpen={isModalImportExportOpen}
+        onClose={() => setIsModalImportExportOpen(false)}
+        initialModule="directorio"
+        onImportSuccess={() => loadContactos()}
+      />
     </div>
   );
 }

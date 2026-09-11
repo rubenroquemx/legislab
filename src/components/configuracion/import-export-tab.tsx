@@ -5,8 +5,10 @@ import * as XLSX from 'xlsx';
 import { 
   getAgendaExportDataAction, 
   getGestionesExportDataAction,
+  getDirectorioExportDataAction,
   importAgendaEventsAction, 
-  importGestionesAction 
+  importGestionesAction,
+  importDirectorioAction
 } from '@/app/actions/import-export';
 import { 
   FileSpreadsheet, 
@@ -25,7 +27,9 @@ import {
   ArrowUpDown,
   FileCheck,
   X,
-  ExternalLink
+  ExternalLink,
+  BookOpen,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -38,7 +42,7 @@ export interface ImportExportTabProps {
   onImportSuccess?: () => void;
 }
 
-type ModuleType = 'agenda' | 'gestiones';
+type ModuleType = 'agenda' | 'gestiones' | 'directorio';
 type ExportFormat = 'excel' | 'csv' | 'json' | 'ics';
 
 interface ColumnMapping {
@@ -74,6 +78,17 @@ const GESTIONES_FIELDS: Omit<ColumnMapping, 'fileColumn'>[] = [
   { fieldKey: 'notasInternas', fieldLabel: 'Notas Internas', required: false, description: 'Observaciones del equipo de enlace' },
 ];
 
+const DIRECTORIO_FIELDS: Omit<ColumnMapping, 'fileColumn'>[] = [
+  { fieldKey: 'nombre', fieldLabel: 'Nombre Completo', required: true, description: 'Nombre del funcionario, líder o contacto' },
+  { fieldKey: 'cargo', fieldLabel: 'Cargo / Puesto', required: false, description: 'Ej: Secretario, Diputado, Alcaldesa, Director' },
+  { fieldKey: 'organizacion', fieldLabel: 'Organización / Dependencia', required: false, description: 'Secretaría, H. Ayuntamiento, Congreso, etc.' },
+  { fieldKey: 'categoria', fieldLabel: 'Categoría de Contacto', required: false, description: 'Funcionario Estatal, Alcalde / Municipal, etc.' },
+  { fieldKey: 'telefono', fieldLabel: 'Teléfono / Celular', required: false, description: 'Teléfono a 10 dígitos' },
+  { fieldKey: 'email', fieldLabel: 'Correo Electrónico', required: false, description: 'Correo institucional o personal' },
+  { fieldKey: 'fechaNacimiento', fieldLabel: 'Fecha de Cumpleaños', required: false, description: 'Ej: 15 de Mayo o YYYY-MM-DD' },
+  { fieldKey: 'direccion', fieldLabel: 'Dirección / Oficina', required: false, description: 'Ubicación física de la oficina' },
+];
+
 export function ImportExportTab({ 
   officeId, 
   officeName, 
@@ -105,7 +120,7 @@ export function ImportExportTab({
 
   // Auto match file columns with target fields
   const autoMapColumns = (headers: string[], moduleType: ModuleType) => {
-    const fields = moduleType === 'agenda' ? AGENDA_FIELDS : GESTIONES_FIELDS;
+    const fields = moduleType === 'agenda' ? AGENDA_FIELDS : moduleType === 'gestiones' ? GESTIONES_FIELDS : DIRECTORIO_FIELDS;
     const mappings: Record<string, string> = {};
 
     fields.forEach((field) => {
@@ -124,11 +139,16 @@ export function ImportExportTab({
         if (cleanKey === 'notas' && (cleanHeader.includes('nota') || cleanHeader.includes('descri') || cleanHeader.includes('detalle'))) return true;
         if (cleanKey === 'asunto' && (cleanHeader.includes('asunto') || cleanHeader.includes('peticion') || cleanHeader.includes('solicitud'))) return true;
         if (cleanKey === 'solicitante' && (cleanHeader.includes('solicitante') || cleanHeader.includes('ciudadano') || cleanHeader.includes('nombre'))) return true;
+        if (cleanKey === 'nombre' && (cleanHeader.includes('nombre') || cleanHeader.includes('contacto') || cleanHeader.includes('funcionario') || cleanHeader.includes('persona') || cleanHeader.includes('titular'))) return true;
+        if (cleanKey === 'cargo' && (cleanHeader.includes('cargo') || cleanHeader.includes('puesto') || cleanHeader.includes('funcion') || cleanHeader.includes('posicion'))) return true;
+        if (cleanKey === 'organizacion' && (cleanHeader.includes('organi') || cleanHeader.includes('depend') || cleanHeader.includes('instituc') || cleanHeader.includes('secretar') || cleanHeader.includes('empresa'))) return true;
+        if (cleanKey === 'fechanacimiento' && (cleanHeader.includes('cumple') || cleanHeader.includes('nacim') || cleanHeader.includes('aniversario') || cleanHeader.includes('birth'))) return true;
+        if (cleanKey === 'direccion' && (cleanHeader.includes('direcc') || cleanHeader.includes('domicil') || cleanHeader.includes('oficina') || cleanHeader.includes('address'))) return true;
         if (cleanKey === 'colonia' && cleanHeader.includes('colon')) return true;
         if (cleanKey === 'municipio' && cleanHeader.includes('municip')) return true;
-        if (cleanKey === 'telefono' && (cleanHeader.includes('tel') || cleanHeader.includes('cel') || cleanHeader.includes('whats'))) return true;
+        if (cleanKey === 'telefono' && (cleanHeader.includes('tel') || cleanHeader.includes('cel') || cleanHeader.includes('whats') || cleanHeader.includes('phone'))) return true;
         if (cleanKey === 'email' && (cleanHeader.includes('mail') || cleanHeader.includes('correo'))) return true;
-        if (cleanKey === 'categoria' && (cleanHeader.includes('cat') || cleanHeader.includes('rubro'))) return true;
+        if (cleanKey === 'categoria' && (cleanHeader.includes('cat') || cleanHeader.includes('rubro') || cleanHeader.includes('tipo'))) return true;
         if (cleanKey === 'prioridad' && cleanHeader.includes('priorid')) return true;
         if (cleanKey === 'estatus' && (cleanHeader.includes('estat') || cleanHeader.includes('estad'))) return true;
 
@@ -255,13 +275,14 @@ export function ImportExportTab({
 
   // Execute Import
   const handleExecuteImport = async () => {
+    if (!importFile || rawFileRows.length === 0) return;
     setIsImporting(true);
     try {
-      const fields = selectedModule === 'agenda' ? AGENDA_FIELDS : GESTIONES_FIELDS;
+      const activeFields = selectedModule === 'agenda' ? AGENDA_FIELDS : selectedModule === 'gestiones' ? GESTIONES_FIELDS : DIRECTORIO_FIELDS;
 
       const parsedRows = rawFileRows.map((row) => {
         const item: Record<string, string> = {};
-        fields.forEach((f) => {
+        activeFields.forEach((f) => {
           const colHeader = columnMappings[f.fieldKey];
           if (colHeader) {
             const colIdx = rawFileColumns.indexOf(colHeader);
@@ -300,7 +321,7 @@ export function ImportExportTab({
         } else {
           alert(res.error || 'Error al importar eventos');
         }
-      } else {
+      } else if (selectedModule === 'gestiones') {
         const gestionesItems = parsedRows.map((r) => ({
           asunto: r.asunto || '',
           solicitante: r.solicitante || '',
@@ -327,6 +348,30 @@ export function ImportExportTab({
         } else {
           alert(res.error || 'Error al importar gestiones');
         }
+      } else {
+        const directorioItems = parsedRows.map((r) => ({
+          nombre: r.nombre || '',
+          cargo: r.cargo || 'Titular / Funcionario',
+          organizacion: r.organizacion || 'Gobierno del Estado',
+          categoria: r.categoria || 'Funcionario Estatal',
+          telefono: r.telefono || '993 000 0000',
+          email: r.email || '',
+          fechaNacimiento: r.fechaNacimiento || '',
+          direccion: r.direccion || '',
+        }));
+
+        const res = await importDirectorioAction(directorioItems, officeId);
+        if (res.success) {
+          setImportResult({
+            count: res.insertedCount || 0,
+            skipped: res.skippedCount || 0,
+            message: res.message || 'Importación completada',
+          });
+          setImportStep('success');
+          onImportSuccess?.();
+        } else {
+          alert(res.error || 'Error al importar directorio');
+        }
       }
     } catch (err: any) {
       console.error('Error during import execution:', err);
@@ -338,73 +383,117 @@ export function ImportExportTab({
 
   // Download Sample Template
   const handleDownloadSampleTemplate = () => {
-    const isAgenda = selectedModule === 'agenda';
-    const sampleData = isAgenda
-      ? [
-          {
-            'Título del Evento': 'Sesión Ordinaria de Pleno',
-            'Fecha': '2026-09-15',
-            'Hora Inicio': '09:00',
-            'Hora Fin': '13:00',
-            'Tipo': 'Pleno',
-            'Lugar / Sede': 'Recinto Oficial de Sesiones (Congreso del Estado)',
-            'Enlace Google Maps': 'https://maps.app.goo.gl/shareTabasco',
-            'Notas / Orden del Día': 'Presentación de iniciativa de reforma al Código Civil.',
-          },
-          {
-            'Título del Evento': 'Comisión de Gobernación y Puntos Constitucionales',
-            'Fecha': '2026-09-16',
-            'Hora Inicio': '11:00',
-            'Hora Fin': '12:30',
-            'Tipo': 'Comisión',
-            'Lugar / Sede': 'Sala de Usos Múltiples',
-            'Enlace Google Maps': 'https://maps.app.goo.gl/shareTabasco',
-            'Notas / Orden del Día': 'Dictamen de proyectos de ley.',
-          },
-          {
-            'Título del Evento': 'Audiencia con Líderes Comunitarios del Distrito',
-            'Fecha': '2026-09-18',
-            'Hora Inicio': '16:00',
-            'Hora Fin': '18:00',
-            'Tipo': 'Distrito',
-            'Lugar / Sede': 'Casa de Enlace Legislativo',
-            'Enlace Google Maps': 'https://maps.app.goo.gl/shareTabascoDistrito',
-            'Notas / Orden del Día': 'Revisión de solicitudes de pavimentación y agua potable.',
-          },
-        ]
-      : [
-          {
-            'Asunto / Solicitud': 'Apoyo para medicamento especializado oncológico',
-            'Nombre del Solicitante': 'María del Carmen Ramos Morales',
-            'Colonia': 'Col. Atasta de Serra',
-            'Municipio': 'Centro',
-            'Teléfono': '9931234567',
-            'Correo': 'carmen.ramos@gmail.com',
-            'Categoría': 'Gestión Médica',
-            'Prioridad': 'Alta',
-            'Estatus': 'En Trámite',
-            'Dependencia': 'Secretaría de Salud del Estado',
-            'Notas': 'Se entregó receta médica original y constancia de no derechohabiencia.',
-          },
-          {
-            'Asunto / Solicitud': 'Rehabilitación de luminarias y alumbrado público',
-            'Nombre del Solicitante': 'Lic. Fernando Gutiérrez Peña',
-            'Colonia': 'Fracc. Carrizal',
-            'Municipio': 'Centro',
-            'Teléfono': '9937654321',
-            'Correo': 'fgutierrez@comunidad.mx',
-            'Categoría': 'Obras Públicas',
-            'Prioridad': 'Media',
-            'Estatus': 'Recibido',
-            'Dependencia': 'Ayuntamiento de Centro (Obras Públicas)',
-            'Notas': 'Comité vecinal solicita atención prioritaria en 4 calles principales.',
-          },
-        ];
+    let sampleData: any[] = [];
+    let sheetTitle = 'Plantilla';
+    let fileName = 'Plantilla';
+
+    if (selectedModule === 'agenda') {
+      sheetTitle = 'Plantilla_Agenda';
+      fileName = 'Plantilla_Importacion_Agenda_LegisLab.xlsx';
+      sampleData = [
+        {
+          'Título del Evento': 'Sesión Ordinaria de Pleno',
+          'Fecha': '2026-09-15',
+          'Hora Inicio': '09:00',
+          'Hora Fin': '13:00',
+          'Tipo': 'Pleno',
+          'Lugar / Sede': 'Recinto Oficial de Sesiones (Congreso del Estado)',
+          'Enlace Google Maps': 'https://maps.app.goo.gl/shareTabasco',
+          'Notas / Orden del Día': 'Presentación de iniciativa de reforma al Código Civil.',
+        },
+        {
+          'Título del Evento': 'Comisión de Gobernación y Puntos Constitucionales',
+          'Fecha': '2026-09-16',
+          'Hora Inicio': '11:00',
+          'Hora Fin': '12:30',
+          'Tipo': 'Comisión',
+          'Lugar / Sede': 'Sala de Usos Múltiples',
+          'Enlace Google Maps': 'https://maps.app.goo.gl/shareTabasco',
+          'Notas / Orden del Día': 'Dictamen de proyectos de ley.',
+        },
+        {
+          'Título del Evento': 'Audiencia con Líderes Comunitarios del Distrito',
+          'Fecha': '2026-09-18',
+          'Hora Inicio': '16:00',
+          'Hora Fin': '18:00',
+          'Tipo': 'Distrito',
+          'Lugar / Sede': 'Casa de Enlace Legislativo',
+          'Enlace Google Maps': 'https://maps.app.goo.gl/shareTabascoDistrito',
+          'Notas / Orden del Día': 'Revisión de solicitudes de pavimentación y agua potable.',
+        },
+      ];
+    } else if (selectedModule === 'gestiones') {
+      sheetTitle = 'Plantilla_Gestiones';
+      fileName = 'Plantilla_Importacion_Gestiones_LegisLab.xlsx';
+      sampleData = [
+        {
+          'Asunto / Solicitud': 'Apoyo para medicamento especializado oncológico',
+          'Nombre del Solicitante': 'María del Carmen Ramos Morales',
+          'Colonia': 'Col. Atasta de Serra',
+          'Municipio': 'Centro',
+          'Teléfono': '9931234567',
+          'Correo': 'carmen.ramos@gmail.com',
+          'Categoría': 'Gestión Médica',
+          'Prioridad': 'Alta',
+          'Estatus': 'En Trámite',
+          'Dependencia': 'Secretaría de Salud del Estado',
+          'Notas': 'Se entregó receta médica original y constancia de no derechohabiencia.',
+        },
+        {
+          'Asunto / Solicitud': 'Rehabilitación de luminarias y alumbrado público',
+          'Nombre del Solicitante': 'Lic. Fernando Gutiérrez Peña',
+          'Colonia': 'Fracc. Carrizal',
+          'Municipio': 'Centro',
+          'Teléfono': '9937654321',
+          'Correo': 'fgutierrez@comunidad.mx',
+          'Categoría': 'Obras Públicas',
+          'Prioridad': 'Media',
+          'Estatus': 'Recibido',
+          'Dependencia': 'Ayuntamiento de Centro (Obras Públicas)',
+          'Notas': 'Comité vecinal solicita atención prioritaria en 4 calles principales.',
+        },
+      ];
+    } else {
+      sheetTitle = 'Plantilla_Directorio';
+      fileName = 'Plantilla_Importacion_Directorio_LegisLab.xlsx';
+      sampleData = [
+        {
+          'Nombre Completo': 'Lic. Carlos Manuel Merino Campos',
+          'Cargo / Puesto': 'Gobernador Constitucional del Estado',
+          'Organización / Dependencia': 'Poder Ejecutivo del Estado de Tabasco',
+          'Categoría': 'Funcionario Estatal',
+          'Teléfono': '9933100000',
+          'Correo Electrónico': 'gobernador@tabasco.gob.mx',
+          'Fecha de Cumpleaños': '15 de Mayo',
+          'Dirección / Oficina': 'Palacio de Gobierno, Plaza de Armas s/n, Col. Centro',
+        },
+        {
+          'Nombre Completo': 'Lic. Yolanda Osuna Huerta',
+          'Cargo / Puesto': 'Presidenta Municipal',
+          'Organización / Dependencia': 'H. Ayuntamiento de Centro',
+          'Categoría': 'Alcalde / Municipal',
+          'Teléfono': '9933160000',
+          'Correo Electrónico': 'presidencia@villahermosa.gob.mx',
+          'Fecha de Cumpleaños': '22 de Noviembre',
+          'Dirección / Oficina': 'Palacio Municipal, Paseo Tabasco 1401, Tabasco 2000',
+        },
+        {
+          'Nombre Completo': 'Lic. Mario Llergo Latournerie',
+          'Cargo / Puesto': 'Diputado Federal',
+          'Organización / Dependencia': 'Cámara de Diputados - Congreso de la Unión',
+          'Categoría': 'Legislador / Diputado',
+          'Teléfono': '9932101010',
+          'Correo Electrónico': 'mario.llergo@diputados.gob.mx',
+          'Fecha de Cumpleaños': '04 de Abril',
+          'Dirección / Oficina': 'San Lázaro, Edificio B, Nivel 3, CDMX',
+        }
+      ];
+    }
 
     const worksheet = XLSX.utils.json_to_sheet(sampleData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, isAgenda ? 'Plantilla_Agenda' : 'Plantilla_Gestiones');
-    XLSX.writeFile(workbook, `Plantilla_Importacion_${isAgenda ? 'Agenda' : 'Gestiones'}_LegisLab.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetTitle);
+    XLSX.writeFile(workbook, fileName);
   };
 
   // Execute Export
@@ -472,7 +561,7 @@ export function ImportExportTab({
           a.download = `Agenda_${new Date().toISOString().split('T')[0]}.ics`;
           a.click();
         }
-      } else {
+      } else if (selectedModule === 'gestiones') {
         const res = await getGestionesExportDataAction({
           estatus: exportEstatus,
           officeId,
@@ -514,6 +603,43 @@ export function ImportExportTab({
           a.download = `Gestiones_${new Date().toISOString().split('T')[0]}.json`;
           a.click();
         }
+      } else {
+        const res = await getDirectorioExportDataAction({
+          categoria: exportTipo !== 'Todos' ? exportTipo : undefined,
+          officeId,
+        });
+
+        if (!res.success || !res.data || res.data.length === 0) {
+          alert('No se encontraron contactos en el directorio para exportar.');
+          setIsExporting(false);
+          return;
+        }
+
+        const formatted = res.data.map((c) => ({
+          'Nombre Completo': c.nombre,
+          'Cargo / Puesto': c.cargo,
+          'Organización / Dependencia': c.organizacion,
+          'Categoría': c.categoria,
+          'Teléfono': c.telefono,
+          'Correo Electrónico': c.email,
+          'Fecha Cumpleaños': c.fechaNacimiento,
+          'Dirección': c.direccion,
+        }));
+
+        if (exportFormat === 'excel' || exportFormat === 'csv' || exportFormat === 'ics') {
+          const ws = XLSX.utils.json_to_sheet(formatted);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Directorio');
+          const ext = exportFormat === 'excel' || exportFormat === 'ics' ? 'xlsx' : 'csv';
+          XLSX.writeFile(wb, `Directorio_Institucional_${officeName ? officeName.replace(/\s+/g, '_') : 'Despacho'}_${new Date().toISOString().split('T')[0]}.${ext}`);
+        } else if (exportFormat === 'json') {
+          const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Directorio_${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+        }
       }
     } catch (err) {
       console.error('Export error:', err);
@@ -523,7 +649,7 @@ export function ImportExportTab({
     }
   };
 
-  const currentFields = selectedModule === 'agenda' ? AGENDA_FIELDS : GESTIONES_FIELDS;
+  const currentFields = selectedModule === 'agenda' ? AGENDA_FIELDS : selectedModule === 'gestiones' ? GESTIONES_FIELDS : DIRECTORIO_FIELDS;
   const previewRows = getMappedPreviewData();
 
   return (
@@ -540,13 +666,13 @@ export function ImportExportTab({
               Importar y Exportar Datos
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Descarga copias de seguridad de tus eventos y expedientes, o importa masivamente registros desde hojas de cálculo de Excel (.xlsx) y CSV con mapeo visual de columnas.
+              Descarga copias de seguridad de tus eventos, contactos y expedientes, o importa masivamente registros desde hojas de cálculo de Excel (.xlsx) y CSV con mapeo visual de columnas.
             </p>
           </div>
 
           {/* Module Selector */}
           {!hideModuleSelector && (
-            <div className="bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/80 flex items-center gap-1 shrink-0 self-start md:self-auto">
+            <div className="bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/80 flex flex-wrap items-center gap-1 shrink-0 self-start md:self-auto">
               <button
                 onClick={() => {
                   setSelectedModule('agenda');
@@ -580,6 +706,23 @@ export function ImportExportTab({
                 <FolderOpen className="w-4 h-4" />
                 <span>Gestiones & Distrito</span>
               </button>
+
+              <button
+                onClick={() => {
+                  setSelectedModule('directorio');
+                  setImportStep('upload');
+                  setImportFile(null);
+                }}
+                className={cn(
+                  "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all",
+                  selectedModule === 'directorio'
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
+                    : "text-slate-400 hover:text-white"
+                )}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>Directorio Institucional</span>
+              </button>
             </div>
           )}
         </div>
@@ -596,7 +739,7 @@ export function ImportExportTab({
               </div>
               <div>
                 <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                  Exportar {selectedModule === 'agenda' ? 'Agenda' : 'Gestiones'}
+                  Exportar {selectedModule === 'agenda' ? 'Agenda' : selectedModule === 'gestiones' ? 'Gestiones' : 'Directorio'}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Genera reportes y copias en formatos estándar
@@ -706,7 +849,7 @@ export function ImportExportTab({
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : selectedModule === 'gestiones' ? (
               <div className="space-y-3 pt-2">
                 <div className="space-y-1">
                   <label className="text-[11px] font-medium text-gray-600 dark:text-gray-400">Filtrar por Estatus</label>
@@ -720,6 +863,25 @@ export function ImportExportTab({
                     <option value="En Trámite">En Trámite</option>
                     <option value="Concluido">Concluido</option>
                     <option value="Urgente">Urgente</option>
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-gray-600 dark:text-gray-400">Filtrar por Categoría</label>
+                  <select
+                    value={exportTipo}
+                    onChange={(e) => setExportTipo(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"
+                  >
+                    <option value="Todos">Todas las Categorías</option>
+                    <option value="Funcionario Estatal">Funcionario Estatal / Gabinete</option>
+                    <option value="Alcalde / Municipal">Alcalde / Municipal</option>
+                    <option value="Legislador / Diputado">Legislador / Diputado</option>
+                    <option value="Líder Comunitario">Líder Comunitario</option>
+                    <option value="Medio de Comunicación">Medio de Comunicación</option>
+                    <option value="Empresarial">Empresarial / Iniciativa Privada</option>
                   </select>
                 </div>
               </div>
@@ -1013,10 +1175,10 @@ export function ImportExportTab({
 
                 <div className="flex items-center justify-center gap-3 pt-4">
                   <Link
-                    href={selectedModule === 'agenda' ? '/agenda' : '/gestiones'}
+                    href={selectedModule === 'agenda' ? '/agenda' : selectedModule === 'gestiones' ? '/gestiones' : '/directorio'}
                     className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition-all shadow-md shadow-blue-600/20"
                   >
-                    <span>Ir a {selectedModule === 'agenda' ? 'la Agenda' : 'las Gestiones'}</span>
+                    <span>Ir a {selectedModule === 'agenda' ? 'la Agenda' : selectedModule === 'gestiones' ? 'las Gestiones' : 'el Directorio'}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </Link>
 
@@ -1067,7 +1229,7 @@ export function ImportExportModal({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                Importar y Exportar {initialModule === 'agenda' ? 'Agenda Parlamentaria' : 'Gestiones Ciudadanas'}
+                Importar y Exportar {initialModule === 'agenda' ? 'Agenda Parlamentaria' : initialModule === 'gestiones' ? 'Gestiones Ciudadanas' : 'Directorio Institucional'}
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Descarga masiva multiformato o importación desde Excel con mapeo de columnas

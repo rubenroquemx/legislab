@@ -1,6 +1,6 @@
 'use server';
 
-import { db, agendaEventos, gestiones, type NewAgendaEvento, type NewGestion } from '@/db';
+import { db, agendaEventos, gestiones, directorioContactos, type NewAgendaEvento, type NewGestion, type NewDirectorioContacto } from '@/db';
 import { eq, desc, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getActiveOfficeId } from '@/lib/session-office';
@@ -33,6 +33,18 @@ export interface GestionesExportRecord {
   dependenciaCanalizada: string;
   notasInternas: string;
   fechaCreacion: string;
+}
+
+export interface DirectorioExportRecord {
+  id: string;
+  nombre: string;
+  cargo: string;
+  organizacion: string;
+  categoria: string;
+  telefono: string;
+  email: string;
+  fechaNacimiento: string;
+  direccion: string;
 }
 
 /**
@@ -332,5 +344,128 @@ export async function importGestionesAction(
   } catch (error: any) {
     console.error('Error in importGestionesAction:', error);
     return { success: false, error: error?.message || 'Error durante la importación de gestiones' };
+  }
+}
+
+/**
+ * Obtiene los contactos del directorio institucional listos para exportación
+ */
+export async function getDirectorioExportDataAction(filters?: {
+  categoria?: string;
+  officeId?: string;
+}) {
+  try {
+    const activeOfficeId = await getActiveOfficeId(filters?.officeId);
+    const rows = await db
+      .select()
+      .from(directorioContactos)
+      .where(eq(directorioContactos.officeId, activeOfficeId))
+      .orderBy(asc(directorioContactos.nombre));
+
+    let filtered = rows;
+    if (filters?.categoria && filters.categoria !== 'Todos') {
+      filtered = filtered.filter((r) => r.categoria === filters.categoria);
+    }
+
+    const data: DirectorioExportRecord[] = filtered.map((r) => ({
+      id: r.id,
+      nombre: r.nombre,
+      cargo: r.cargo,
+      organizacion: r.organizacion,
+      categoria: r.categoria || 'Gabinete Estatal',
+      telefono: r.telefono,
+      email: r.email || '',
+      fechaNacimiento: r.fechaNacimiento || '',
+      direccion: r.direccion || '',
+    }));
+
+    return {
+      success: true,
+      data,
+      count: data.length,
+    };
+  } catch (error: any) {
+    console.error('Error in getDirectorioExportDataAction:', error);
+    return { success: false, error: error?.message || 'Error al exportar directorio', data: [], count: 0 };
+  }
+}
+
+/**
+ * Importa en lote contactos del directorio institucional desde Excel o CSV
+ */
+export async function importDirectorioAction(
+  items: Array<{
+    nombre: string;
+    cargo?: string;
+    organizacion?: string;
+    categoria?: string;
+    telefono?: string;
+    email?: string;
+    fechaNacimiento?: string;
+    direccion?: string;
+  }>,
+  officeId?: string
+) {
+  try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
+    if (!items || items.length === 0) {
+      return { success: false, error: 'No se recibieron contactos para importar' };
+    }
+
+    const validInserts: NewDirectorioContacto[] = [];
+    let skipped = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const nombre = (item.nombre || '').trim();
+
+      if (!nombre) {
+        skipped++;
+        continue;
+      }
+
+      validInserts.push({
+        officeId: activeOfficeId,
+        nombre,
+        cargo: item.cargo?.trim() || 'Titular / Funcionario',
+        organizacion: item.organizacion?.trim() || 'Gobierno del Estado',
+        categoria: item.categoria?.trim() || 'Gabinete Estatal',
+        telefono: item.telefono?.trim() || '993 000 0000',
+        email: item.email?.trim() || null,
+        foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        fechaNacimiento: item.fechaNacimiento?.trim() || null,
+        direccion: item.direccion?.trim() || null,
+      });
+    }
+
+    if (validInserts.length === 0) {
+      return {
+        success: false,
+        error: 'Ninguna de las filas procesadas contiene el Nombre del contacto requerido.',
+      };
+    }
+
+    const batchSize = 50;
+    let insertedCount = 0;
+
+    for (let i = 0; i < validInserts.length; i += batchSize) {
+      const chunk = validInserts.slice(i, i + batchSize);
+      await db.insert(directorioContactos).values(chunk);
+      insertedCount += chunk.length;
+    }
+
+    revalidatePath('/directorio');
+    revalidatePath('/dashboard');
+    revalidatePath('/configuracion');
+
+    return {
+      success: true,
+      insertedCount,
+      skippedCount: skipped,
+      message: 'Se importaron ' + insertedCount + ' contactos exitosamente' + (skipped > 0 ? ' (' + skipped + ' filas omitidas por datos incompletos)' : '') + '.',
+    };
+  } catch (error: any) {
+    console.error('Error in importDirectorioAction:', error);
+    return { success: false, error: error?.message || 'Error durante la importación del directorio' };
   }
 }
