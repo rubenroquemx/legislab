@@ -3,15 +3,15 @@
 import { db, tareas, type NewTarea } from '@/db';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { getActiveOfficeId } from '@/lib/session-office';
 
-const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
-
-export async function getTareas(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getTareas(officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     const data = await db
       .select()
       .from(tareas)
-      .where(eq(tareas.officeId, officeId))
+      .where(eq(tareas.officeId, activeOfficeId))
       .orderBy(desc(tareas.createdAt));
 
     return { success: true, data };
@@ -37,7 +37,7 @@ export async function createTarea(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
 
     const newEntry: NewTarea = {
       officeId,

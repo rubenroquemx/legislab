@@ -10,9 +10,20 @@ import {
   FolderKanban, 
   Calendar, 
   Cake,
-  Smartphone
+  Smartphone,
+  Building2,
+  ChevronDown,
+  Check,
+  ShieldCheck,
+  LogOut,
+  User,
+  Settings,
+  Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { getActiveOfficeInfoAction, setActiveOfficeAction } from '@/lib/session-office';
 import { cn } from '@/lib/utils';
 
 interface NavbarProps {
@@ -71,11 +82,44 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCollapsed }: NavbarProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  // Active Office state
+  const [activeOffice, setActiveOffice] = useState<any>(null);
+  const [allOffices, setAllOffices] = useState<any[]>([]);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [officeDropdownOpen, setOfficeDropdownOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [switchingOffice, setSwitchingOffice] = useState(false);
+
+  // Notifications state
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [permissionState, setPermissionState] = useState<NotificationPermission>('default');
   const [testSent, setTestSent] = useState(false);
+
   const popoverRef = useRef<HTMLDivElement>(null);
+  const officeDropdownRef = useRef<HTMLDivElement>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load Active Office Info
+  async function loadOfficeInfo() {
+    try {
+      const res = await getActiveOfficeInfoAction();
+      if (res.success) {
+        setActiveOffice(res.activeOffice);
+        setIsSuperAdmin(res.isSuperAdmin);
+        setAllOffices(res.allOffices || []);
+      }
+    } catch (e) {
+      console.warn('Error loading active office info:', e);
+    }
+  }
+
+  useEffect(() => {
+    loadOfficeInfo();
+  }, [session]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -83,13 +127,36 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
     }
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (popoverRef.current && !popoverRef.current.contains(target)) {
         setNotificationsOpen(false);
+      }
+      if (officeDropdownRef.current && !officeDropdownRef.current.contains(target)) {
+        setOfficeDropdownOpen(false);
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(target)) {
+        setProfileDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleSelectOffice = async (officeId: string) => {
+    if (activeOffice?.id === officeId) {
+      setOfficeDropdownOpen(false);
+      return;
+    }
+    setSwitchingOffice(true);
+    try {
+      await setActiveOfficeAction(officeId);
+      setOfficeDropdownOpen(false);
+      window.location.reload();
+    } catch (e) {
+      console.error('Error switching office:', e);
+      setSwitchingOffice(false);
+    }
+  };
 
   const handleRequestPermission = async () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -130,11 +197,14 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const user = session?.user;
+  const userName = user?.name || activeOffice?.titularName || 'Usuario';
+  const userCargo = user?.cargo || (user?.isSuperAdmin ? 'Super Administrador SaaS' : 'Integrante de Despacho');
 
   return (
     <header className="h-14 bg-white/80 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
-      {/* Left: Desktop Sidebar Collapse Toggle + Mobile Toggle & Quick Search */}
-      <div className="flex items-center gap-2 sm:gap-3 max-w-md w-full">
+      {/* Left: Mobile Toggle & Sidebar Collapse & Active Office Switcher */}
+      <div className="flex items-center gap-2 sm:gap-3 max-w-xl">
         <button
           type="button"
           onClick={onOpenMobileMenu}
@@ -155,21 +225,105 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
           </button>
         )}
 
-        <div className="relative w-full hidden sm:block">
+        {/* OFFICE SWITCHER (FOR SUPERADMIN) OR OFFICE BADGE (FOR MEMBERS) */}
+        <div className="relative" ref={officeDropdownRef}>
+          {isSuperAdmin && allOffices.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setOfficeDropdownOpen(!officeDropdownOpen)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-zinc-100 hover:bg-zinc-200/80 text-zinc-900 rounded-lg border border-zinc-200/80 transition-colors shadow-2xs group max-w-[220px] sm:max-w-xs truncate"
+              title="Cambiar despacho activo"
+            >
+              <Building2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="truncate">{activeOffice?.name || 'Seleccionar Despacho'}</span>
+              <ChevronDown className="w-3 h-3 text-zinc-400 group-hover:text-zinc-700 shrink-0" />
+            </button>
+          ) : (
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-zinc-50 text-zinc-800 rounded-lg border border-zinc-200/70 max-w-[240px] truncate">
+              <Building2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+              <span className="truncate">{activeOffice?.name || 'Despacho Parlamentario'}</span>
+            </div>
+          )}
+
+          {/* OFFICE SWITCHER DROPDOWN */}
+          {officeDropdownOpen && isSuperAdmin && (
+            <div className="absolute left-0 mt-2 w-80 bg-white rounded-2xl border border-zinc-200 shadow-xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95">
+              <div className="px-3 py-2 border-b border-zinc-100 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-zinc-900">Despachos Registrados</p>
+                  <p className="text-[10px] text-zinc-400">Modo Superadmin Multi-tenant</p>
+                </div>
+                <Link
+                  href="/admin/despachos"
+                  onClick={() => setOfficeDropdownOpen(false)}
+                  className="text-[10px] font-semibold text-indigo-600 hover:underline"
+                >
+                  Gestionar todos
+                </Link>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto divide-y divide-zinc-50 py-1">
+                {allOffices.map((off) => {
+                  const isCurrent = off.id === activeOffice?.id;
+                  return (
+                    <button
+                      key={off.id}
+                      type="button"
+                      disabled={switchingOffice}
+                      onClick={() => handleSelectOffice(off.id)}
+                      className={cn(
+                        "w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors",
+                        isCurrent
+                          ? "bg-indigo-50/80 text-indigo-950 font-semibold"
+                          : "hover:bg-zinc-50 text-zinc-700"
+                      )}
+                    >
+                      <div className="min-w-0 flex-1 pr-2">
+                        <p className="text-xs truncate">{off.name}</p>
+                        <p className="text-[10px] text-zinc-400 truncate">{off.titularName} • {off.district || off.state}</p>
+                      </div>
+                      {isCurrent ? (
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 shrink-0 bg-indigo-100/70 px-1.5 py-0.5 rounded">
+                          <Check className="w-3 h-3" />
+                          <span>Activo</span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-zinc-400 uppercase font-mono">{off.plan}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="pt-1.5 border-t border-zinc-100">
+                <Link
+                  href="/admin/despachos?action=new"
+                  onClick={() => setOfficeDropdownOpen(false)}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>+ Registrar Nuevo Despacho</span>
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Search */}
+        <div className="relative w-full hidden md:block max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
           <input
             type="text"
-            placeholder="Buscar en el despacho o teclear comando..."
-            className="w-full pl-8 pr-12 py-1.5 text-xs bg-zinc-50 border border-zinc-200/80 rounded-lg focus:outline-none focus:border-zinc-400 focus:bg-white transition-all text-zinc-800 placeholder:text-zinc-400"
+            placeholder="Buscar en el despacho..."
+            className="w-full pl-8 pr-10 py-1 text-xs bg-zinc-50 border border-zinc-200/80 rounded-lg focus:outline-none focus:border-zinc-400 focus:bg-white transition-all text-zinc-800 placeholder:text-zinc-400"
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[10px] font-mono text-zinc-400 bg-white border border-zinc-200 px-1 py-0.2 rounded">
-            <span>⌘</span>
-            <span>K</span>
+            <span>⌘K</span>
           </div>
         </div>
       </div>
 
-      {/* Right: Notifications & User (Redactar button removed) */}
+      {/* Right: Notifications & User Profile */}
       <div className="flex items-center gap-2 sm:gap-3 relative">
         
         {/* NOTIFICATIONS BELL BUTTON */}
@@ -294,18 +448,83 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
           )}
         </div>
 
-        {/* Profile Pill */}
-        <div className="flex items-center gap-2.5 pl-2 border-l border-zinc-200">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-            alt="Dip. Ruben Roque"
-            className="h-7 w-7 rounded-full object-cover border border-zinc-200"
-          />
-          <div className="hidden sm:block text-left">
-            <p className="text-xs font-semibold text-zinc-900 leading-tight">Dip. Ruben Roque</p>
-            <p className="text-[10px] text-zinc-400 leading-tight">Distrito 04 Federal</p>
-          </div>
+        {/* Profile Pill & Dropdown */}
+        <div className="relative" ref={profileDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+            className="flex items-center gap-2 pl-2 border-l border-zinc-200 hover:opacity-80 transition-opacity text-left"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={user?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"}
+              alt={userName}
+              className="h-7 w-7 rounded-full object-cover border border-zinc-200 shrink-0"
+            />
+            <div className="hidden sm:block text-left">
+              <div className="flex items-center gap-1">
+                <p className="text-xs font-semibold text-zinc-900 leading-tight truncate max-w-[120px]">{userName}</p>
+                {user?.isSuperAdmin && (
+                  <span className="text-[9px] font-bold bg-indigo-100 text-indigo-700 px-1 rounded">Super</span>
+                )}
+              </div>
+              <p className="text-[10px] text-zinc-400 leading-tight truncate max-w-[120px]">{userCargo}</p>
+            </div>
+            <ChevronDown className="w-3 h-3 text-zinc-400 hidden sm:block" />
+          </button>
+
+          {/* PROFILE DROPDOWN */}
+          {profileDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-zinc-200 shadow-xl z-50 p-3 space-y-2 animate-in fade-in zoom-in-95">
+              <div className="border-b border-zinc-100 pb-2.5">
+                <p className="text-xs font-bold text-zinc-900">{userName}</p>
+                <p className="text-[11px] text-zinc-500 truncate">{user?.email || 'usuario@congreso.gob.mx'}</p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">{activeOffice?.name}</p>
+              </div>
+
+              <div className="space-y-1">
+                {user?.isSuperAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setProfileDropdownOpen(false)}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>Consola Superadmin SaaS</span>
+                  </Link>
+                )}
+
+                <Link
+                  href="/configuracion"
+                  onClick={() => setProfileDropdownOpen(false)}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition-colors"
+                >
+                  <Settings className="w-4 h-4 text-zinc-500 shrink-0" />
+                  <span>Configuración del Despacho</span>
+                </Link>
+
+                <Link
+                  href="/usuarios"
+                  onClick={() => setProfileDropdownOpen(false)}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition-colors"
+                >
+                  <User className="w-4 h-4 text-zinc-500 shrink-0" />
+                  <span>Equipo y Usuarios</span>
+                </Link>
+              </div>
+
+              <div className="border-t border-zinc-100 pt-1.5">
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span>Cerrar Sesión</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

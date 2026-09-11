@@ -3,15 +3,15 @@
 import { db, directorioContactos, type NewDirectorioContacto } from '@/db';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { getActiveOfficeId } from '@/lib/session-office';
 
-const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
-
-export async function getContactos(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getContactos(officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     const data = await db
       .select()
       .from(directorioContactos)
-      .where(eq(directorioContactos.officeId, officeId))
+      .where(eq(directorioContactos.officeId, activeOfficeId))
       .orderBy(desc(directorioContactos.nombre));
 
     return { success: true, data };
@@ -34,7 +34,7 @@ export async function createContacto(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
 
     const newEntry: NewDirectorioContacto = {
       officeId,

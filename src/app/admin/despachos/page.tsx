@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Building2,
   Search,
@@ -25,17 +25,20 @@ import {
   Mail,
   Phone,
   UserCheck,
-  UserPlus
+  UserPlus,
+  LogIn
 } from 'lucide-react';
 import {
   getSaasOfficesAction,
   createSaasOfficeAction,
   toggleOfficeStatusAction,
 } from '@/app/actions/saas-admin';
+import { setActiveOfficeAction } from '@/lib/session-office';
 import { PLAN_CONFIGS } from '@/lib/saas-config';
 import { cn } from '@/lib/utils';
 
 function SaasDespachosContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [officesList, setOfficesList] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,6 +46,7 @@ function SaasDespachosContent() {
   const [filterPlan, setFilterPlan] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [enteringOfficeId, setEnteringOfficeId] = useState<string | null>(null);
 
   // Modal New Office / Principal User
   const [showNewModal, setShowNewModal] = useState(false);
@@ -90,6 +94,17 @@ function SaasDespachosContent() {
     }
   }, [searchParams]);
 
+  const handleEnterOffice = async (officeId: string) => {
+    setEnteringOfficeId(officeId);
+    try {
+      await setActiveOfficeAction(officeId);
+      router.push('/dashboard');
+    } catch (e) {
+      console.error('Error entering office:', e);
+      setEnteringOfficeId(null);
+    }
+  };
+
   const handleCreateOffice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitular || !formEmail || !formDistrict) return;
@@ -126,7 +141,11 @@ function SaasDespachosContent() {
         setFormPromoNotes('');
         setFormDiscount(0);
         setFormInstanceName('');
-        loadOffices();
+        await loadOffices();
+        if (res.officeId) {
+          // Activar inmediatamente el nuevo despacho para el superadmin
+          await setActiveOfficeAction(res.officeId);
+        }
         setTimeout(() => setFeedback(null), 4000);
       } else {
         setFeedback(res.error || 'Error al crear el despacho');
@@ -317,26 +336,39 @@ function SaasDespachosContent() {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 border-t border-zinc-100 flex items-center justify-between gap-2">
+              <div className="pt-3 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-2">
                 <button
-                  onClick={() => handleToggleStatus(office.id, office.status)}
-                  className={cn(
-                    'text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors',
-                    isSuspended
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                      : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                  )}
+                  type="button"
+                  onClick={() => handleEnterOffice(office.id)}
+                  disabled={enteringOfficeId === office.id}
+                  className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
                 >
-                  {isSuspended ? 'Reactivar' : 'Suspender'}
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>{enteringOfficeId === office.id ? 'Accediendo...' : '⚡ Entrar al Despacho'}</span>
                 </button>
 
-                <Link
-                  href={`/admin/despachos/${office.id}`}
-                  className="text-xs font-semibold text-zinc-800 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                >
-                  <span>Administrar / Promociones</span>
-                  <ExternalLink className="w-3 h-3 text-zinc-500" />
-                </Link>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleStatus(office.id, office.status)}
+                    className={cn(
+                      'text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors',
+                      isSuspended
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                        : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                    )}
+                  >
+                    {isSuspended ? 'Reactivar' : 'Suspender'}
+                  </button>
+
+                  <Link
+                    href={`/admin/despachos/${office.id}`}
+                    className="text-xs font-semibold text-zinc-800 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <span>Config</span>
+                    <ExternalLink className="w-3 h-3 text-zinc-500" />
+                  </Link>
+                </div>
               </div>
             </div>
           );

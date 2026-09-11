@@ -383,13 +383,29 @@ export async function createSaasOfficeAction(formData: {
       }
 
       // Automatically register the Principal User (Propietario / Diputado)
+      const defaultPermissions = JSON.stringify({
+        Agenda: { ver: true, crear: true, editar: true, eliminar: true },
+        Gestiones: { ver: true, crear: true, editar: true, eliminar: true },
+        Iniciativas: { ver: true, crear: true, editar: true, eliminar: true },
+        Discursos: { ver: true, crear: true, editar: true, eliminar: true },
+        Boletines: { ver: true, crear: true, editar: true, eliminar: true },
+        Medios: { ver: true, crear: true, editar: true, eliminar: true },
+        Usuarios: { ver: true, crear: true, editar: true, eliminar: true },
+        Configuración: { ver: true, crear: true, editar: true, eliminar: true },
+      });
+
+      const initialHash = await bcrypt.hash('legislab2026', 10);
+
       await db.insert(users).values({
         name: formData.titularName,
-        email: formData.titularEmail,
+        email: formData.titularEmail.toLowerCase().trim(),
         cargo: 'Diputado Titular (Propietario del Despacho)',
         role: 'diputado',
         phone: formData.titularPhone || '',
         officeId: newOfficeId,
+        status: 'active',
+        passwordHash: initialHash,
+        permissions: defaultPermissions,
       });
     } catch (dbErr) {
       console.warn('DB insert office skipped (preview/fallback):', dbErr);

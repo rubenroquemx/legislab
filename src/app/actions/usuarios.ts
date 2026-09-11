@@ -7,12 +7,12 @@ import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { PLAN_CONFIGS } from '@/lib/saas-config';
 import { SUPERADMIN_EMAIL } from '@/lib/auth-constants';
+import { getActiveOfficeId } from '@/lib/session-office';
 
-const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
-
-async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
+async function resolveOffice(officeId?: string) {
   try {
-    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
+    const targetId = await getActiveOfficeId(officeId);
+    const officeList = await db.select().from(offices).where(eq(offices.id, targetId));
     if (officeList.length > 0) return officeList[0];
     const anyOffice = await db.select().from(offices).limit(1);
     if (anyOffice.length > 0) return anyOffice[0];
@@ -20,7 +20,7 @@ async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
     const [created] = await db
       .insert(offices)
       .values({
-        id: DEFAULT_OFFICE_ID,
+        id: targetId,
         name: 'Despacho Parlamentario Dip. Ruben Roque',
         titularName: 'Dip. Ruben Roque',
         titularEmail: 'ruben.roque@congresotabasco.gob.mx',
@@ -42,7 +42,7 @@ async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
 /**
  * Obtiene todos los integrantes del despacho junto con los límites del plan
  */
-export async function getOfficeUsersAction(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getOfficeUsersAction(officeId?: string) {
   try {
     const office = await resolveOffice(officeId);
     if (!office) {
@@ -124,8 +124,7 @@ export async function inviteOfficeUserAction(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
-    const office = await resolveOffice(officeId);
+    const office = await resolveOffice(data.officeId);
     if (!office) {
       return { success: false, error: 'Despacho no encontrado' };
     }

@@ -20,8 +20,7 @@ import {
   fetchGoogleCalendarEvents,
   fetchUserCalendars
 } from '@/lib/google-calendar';
-
-const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
+import { getActiveOfficeId } from '@/lib/session-office';
 
 const DEFAULT_TIPOS_EVENTOS = [
   'Comisión',
@@ -67,17 +66,18 @@ const DEFAULT_SEDES_PARLAMENTARIAS = [
 ];
 
 /**
- * Encuentra el despacho por ID o fallback al primer despacho activo
+ * Encuentra el despacho por ID o fallback al despacho activo
  */
-async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
+async function resolveOffice(officeId?: string) {
   try {
-    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
+    const targetId = await getActiveOfficeId(officeId);
+    const officeList = await db.select().from(offices).where(eq(offices.id, targetId));
     if (officeList.length > 0) return officeList[0];
     const anyOffice = await db.select().from(offices).limit(1);
     if (anyOffice.length > 0) return anyOffice[0];
 
     const [created] = await db.insert(offices).values({
-      id: DEFAULT_OFFICE_ID,
+      id: targetId,
       name: 'Despacho Parlamentario Dip. Ruben Roque',
       titularName: 'Dip. Ruben Roque',
       titularEmail: 'contacto@rubenroque.mx',
@@ -96,7 +96,7 @@ async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
 /**
  * Obtiene un access token válido para el despacho (refrescándolo automáticamente si está expirado)
  */
-async function getValidGoogleTokenForOffice(officeId: string): Promise<{
+async function getValidGoogleTokenForOffice(officeId?: string): Promise<{
   accessToken: string;
   calendarId: string;
 } | null> {
@@ -143,12 +143,13 @@ async function getValidGoogleTokenForOffice(officeId: string): Promise<{
 // -------------------------------------------------------------
 // EVENTOS DE LA AGENDA
 // -------------------------------------------------------------
-export async function getAgendaEventos(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getAgendaEventos(officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     const data = await db
       .select()
       .from(agendaEventos)
-      .where(eq(agendaEventos.officeId, officeId))
+      .where(eq(agendaEventos.officeId, activeOfficeId))
       .orderBy(desc(agendaEventos.fecha));
 
     return { success: true, data };
@@ -171,7 +172,7 @@ export async function createAgendaEvento(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
 
     // Validación de horas: horaFin debe ser posterior a horaInicio
     if (data.horaFin && data.horaInicio && data.horaFin <= data.horaInicio) {
@@ -245,9 +246,10 @@ export async function updateAgendaEvento(
     notas: string;
     googleEventId: string;
   }>,
-  officeId: string = DEFAULT_OFFICE_ID
+  officeId?: string
 ) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     // Validación de horas si ambas están presentes
     if (data.horaFin && data.horaInicio && data.horaFin <= data.horaInicio) {
       return { success: false, error: 'La hora de término debe ser posterior a la hora de inicio' };
@@ -263,7 +265,7 @@ export async function updateAgendaEvento(
 
     // Sincronización automática de actualización con Google Calendar
     try {
-      const gcal = await getValidGoogleTokenForOffice(officeId);
+      const gcal = await getValidGoogleTokenForOffice(activeOfficeId);
       if (gcal && ev) {
         if (ev.googleEventId) {
           await updateGoogleCalendarEvent(gcal.accessToken, gcal.calendarId, ev.googleEventId, {
@@ -309,8 +311,9 @@ export async function updateAgendaEvento(
   }
 }
 
-export async function deleteAgendaEvento(id: string, officeId: string = DEFAULT_OFFICE_ID) {
+export async function deleteAgendaEvento(id: string, officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     // Buscar si tenía googleEventId antes de borrar
     const existing = await db.select().from(agendaEventos).where(eq(agendaEventos.id, id as any));
     const ev = existing[0];
@@ -320,7 +323,7 @@ export async function deleteAgendaEvento(id: string, officeId: string = DEFAULT_
     // Eliminar también de Google Calendar si estaba sincronizado
     if (ev && ev.googleEventId) {
       try {
-        const gcal = await getValidGoogleTokenForOffice(officeId);
+        const gcal = await getValidGoogleTokenForOffice(activeOfficeId);
         if (gcal) {
           await deleteGoogleCalendarEvent(gcal.accessToken, gcal.calendarId, ev.googleEventId);
         }
@@ -341,7 +344,7 @@ export async function deleteAgendaEvento(id: string, officeId: string = DEFAULT_
 // -------------------------------------------------------------
 // GOOGLE CALENDAR ACTIONS (STATUS, DISCONNECT, FULL SYNC)
 // -------------------------------------------------------------
-export async function getGoogleCalendarStatusAction(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getGoogleCalendarStatusAction(officeId?: string) {
   try {
     const office = await resolveOffice(officeId);
     if (!office) {
@@ -364,7 +367,7 @@ export async function getGoogleCalendarStatusAction(officeId: string = DEFAULT_O
 /**
  * Obtiene la lista de todos los calendarios disponibles del usuario en Google Calendar
  */
-export async function getGoogleCalendarsListAction(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getGoogleCalendarsListAction(officeId?: string) {
   try {
     const gcal = await getValidGoogleTokenForOffice(officeId);
     if (!gcal) {
@@ -388,7 +391,7 @@ export async function getGoogleCalendarsListAction(officeId: string = DEFAULT_OF
  */
 export async function setGoogleCalendarIdAction(
   calendarId: string,
-  officeId: string = DEFAULT_OFFICE_ID
+  officeId?: string
 ) {
   try {
     const office = await resolveOffice(officeId);
@@ -413,10 +416,12 @@ export async function setGoogleCalendarIdAction(
   }
 }
 
-export async function disconnectGoogleCalendarAction(officeId: string = DEFAULT_OFFICE_ID) {
+export async function disconnectGoogleCalendarAction(officeId?: string) {
   try {
     const office = await resolveOffice(officeId);
-    const targetId = office?.id || officeId;
+    if (!office) {
+      return { success: false, error: 'Despacho no encontrado' };
+    }
 
     await db
       .update(offices)
@@ -429,7 +434,7 @@ export async function disconnectGoogleCalendarAction(officeId: string = DEFAULT_
         googleCalendarLastSync: null,
         updatedAt: new Date(),
       })
-      .where(eq(offices.id, targetId));
+      .where(eq(offices.id, office.id));
 
     revalidatePath('/agenda');
     revalidatePath('/configuracion');
@@ -440,9 +445,10 @@ export async function disconnectGoogleCalendarAction(officeId: string = DEFAULT_
   }
 }
 
-export async function syncGoogleCalendarAction(officeId: string = DEFAULT_OFFICE_ID) {
+export async function syncGoogleCalendarAction(officeId?: string) {
   try {
-    const gcal = await getValidGoogleTokenForOffice(officeId);
+    const activeOfficeId = await getActiveOfficeId(officeId);
+    const gcal = await getValidGoogleTokenForOffice(activeOfficeId);
     if (!gcal) {
       return { success: false, error: 'Google Calendar no está conectado' };
     }
@@ -451,7 +457,7 @@ export async function syncGoogleCalendarAction(officeId: string = DEFAULT_OFFICE
     const localEvents = await db
       .select()
       .from(agendaEventos)
-      .where(eq(agendaEventos.officeId, officeId));
+      .where(eq(agendaEventos.officeId, activeOfficeId));
 
     let pushedCount = 0;
 
@@ -486,7 +492,7 @@ export async function syncGoogleCalendarAction(officeId: string = DEFAULT_OFFICE
         googleCalendarLastSync: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(offices.id, officeId));
+      .where(eq(offices.id, activeOfficeId));
 
     revalidatePath('/agenda');
     return {
@@ -503,18 +509,19 @@ export async function syncGoogleCalendarAction(officeId: string = DEFAULT_OFFICE
 // -------------------------------------------------------------
 // SEDES FRECUENTES / LUGARES DEL DESPACHO
 // -------------------------------------------------------------
-export async function getAgendaSedes(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getAgendaSedes(officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     let data = await db
       .select()
       .from(agendaSedes)
-      .where(eq(agendaSedes.officeId, officeId))
+      .where(eq(agendaSedes.officeId, activeOfficeId))
       .orderBy(asc(agendaSedes.createdAt));
 
     // Si el despacho aún no tiene sedes registradas, inicializar con las predeterminadas
     if (data.length === 0) {
       const initialInserts: NewAgendaSede[] = DEFAULT_SEDES_PARLAMENTARIAS.map((s) => ({
-        officeId,
+        officeId: activeOfficeId,
         nombre: s.nombre,
         ubicacionUrl: s.ubicacionUrl,
         referencia: s.referencia,
@@ -537,7 +544,7 @@ export async function createAgendaSede(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
     const newSede: NewAgendaSede = {
       officeId,
       nombre: data.nombre.trim(),
@@ -568,18 +575,19 @@ export async function deleteAgendaSede(id: string) {
 // -------------------------------------------------------------
 // TIPOS DE EVENTO DEL DESPACHO
 // -------------------------------------------------------------
-export async function getAgendaTipos(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getAgendaTipos(officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     let data = await db
       .select()
       .from(agendaTipos)
-      .where(eq(agendaTipos.officeId, officeId))
+      .where(eq(agendaTipos.officeId, activeOfficeId))
       .orderBy(asc(agendaTipos.createdAt));
 
     // Si el despacho aún no tiene tipos registrados, inicializar con los predeterminados
     if (data.length === 0) {
       const initialInserts: NewAgendaTipo[] = DEFAULT_TIPOS_EVENTOS.map((nombre) => ({
-        officeId,
+        officeId: activeOfficeId,
         nombre,
         color: 'blue',
       }));
@@ -600,7 +608,7 @@ export async function createAgendaTipo(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
     const newTipo: NewAgendaTipo = {
       officeId,
       nombre: data.nombre.trim(),
@@ -616,14 +624,15 @@ export async function createAgendaTipo(data: {
   }
 }
 
-export async function deleteAgendaTipo(nombreOrId: string, officeId: string = DEFAULT_OFFICE_ID) {
+export async function deleteAgendaTipo(nombreOrId: string, officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     await db
       .delete(agendaTipos)
       .where(
         or(
           eq(agendaTipos.id, nombreOrId as any),
-          and(eq(agendaTipos.officeId, officeId), eq(agendaTipos.nombre, nombreOrId))
+          and(eq(agendaTipos.officeId, activeOfficeId), eq(agendaTipos.nombre, nombreOrId))
         )
       );
     revalidatePath('/agenda');

@@ -3,15 +3,15 @@
 import { db, atencionMensajes, type NewAtencionMensaje } from '@/db';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { getActiveOfficeId } from '@/lib/session-office';
 
-const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
-
-export async function getAtencionMensajes(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getAtencionMensajes(officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     const data = await db
       .select()
       .from(atencionMensajes)
-      .where(eq(atencionMensajes.officeId, officeId))
+      .where(eq(atencionMensajes.officeId, activeOfficeId))
       .orderBy(desc(atencionMensajes.createdAt));
 
     return { success: true, data };
@@ -31,7 +31,7 @@ export async function createAtencionMensaje(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
 
     const newEntry: NewAtencionMensaje = {
       officeId,

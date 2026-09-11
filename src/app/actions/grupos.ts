@@ -3,15 +3,15 @@
 import { db, gruposContactos, grupoMiembros, type NewGrupoContacto, type NewGrupoMiembro } from '@/db';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { getActiveOfficeId } from '@/lib/session-office';
 
-const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
-
-export async function getGruposConMiembros(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getGruposConMiembros(officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     const grupos = await db
       .select()
       .from(gruposContactos)
-      .where(eq(gruposContactos.officeId, officeId))
+      .where(eq(gruposContactos.officeId, activeOfficeId))
       .orderBy(desc(gruposContactos.createdAt));
 
     const miembros = await db.select().from(grupoMiembros);
@@ -36,7 +36,7 @@ export async function createGrupo(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
 
     const newEntry: NewGrupoContacto = {
       officeId,

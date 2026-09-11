@@ -3,22 +3,22 @@
 import { db, gestiones, iniciativas, iaGenerations, type NewGestion, type NewIniciativa } from '@/db';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-
-const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
+import { getActiveOfficeId } from '@/lib/session-office';
 
 export async function getFirstOfficeId(): Promise<string> {
-  return DEFAULT_OFFICE_ID;
+  return await getActiveOfficeId();
 }
 
 // -------------------------------------------------------------
 // GESTIONES ACTIONS (Multi-Tenant)
 // -------------------------------------------------------------
-export async function getGestiones(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getGestiones(officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     const data = await db
       .select()
       .from(gestiones)
-      .where(eq(gestiones.officeId, officeId))
+      .where(eq(gestiones.officeId, activeOfficeId))
       .orderBy(desc(gestiones.createdAt));
 
     return { success: true, data };
@@ -38,7 +38,7 @@ export async function createGestion(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
     const year = new Date().getFullYear();
     const randomFolioSuffix = Math.floor(1000 + Math.random() * 9000);
     const folio = `GES-${year}-${randomFolioSuffix}`;
@@ -69,12 +69,13 @@ export async function createGestion(data: {
 // -------------------------------------------------------------
 // INICIATIVAS ACTIONS (Multi-Tenant)
 // -------------------------------------------------------------
-export async function getIniciativas(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getIniciativas(officeId?: string) {
   try {
+    const activeOfficeId = await getActiveOfficeId(officeId);
     const data = await db
       .select()
       .from(iniciativas)
-      .where(eq(iniciativas.officeId, officeId))
+      .where(eq(iniciativas.officeId, activeOfficeId))
       .orderBy(desc(iniciativas.createdAt));
 
     return { success: true, data };
@@ -93,7 +94,7 @@ export async function createIniciativa(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
 
     const newEntry: NewIniciativa = {
       officeId,
@@ -127,7 +128,7 @@ export async function saveIaGeneration(data: {
   officeId?: string;
 }) {
   try {
-    const officeId = data.officeId || DEFAULT_OFFICE_ID;
+    const officeId = await getActiveOfficeId(data.officeId);
 
     const inserted = await db.insert(iaGenerations).values({
       officeId,

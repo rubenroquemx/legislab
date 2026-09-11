@@ -46,6 +46,7 @@ import {
   PLAN_CONFIGS,
 } from '@/lib/saas-config';
 import { generateWhatsAppQR, getWhatsAppStatus } from '@/app/actions/whatsapp';
+import { setActiveOfficeAction } from '@/lib/session-office';
 import { cn } from '@/lib/utils';
 
 export default function SaasDespachoDetailPage({
@@ -240,6 +241,15 @@ export default function SaasDespachoDetailPage({
     }
   };
 
+  const handleEnterOffice = async () => {
+    try {
+      await setActiveOfficeAction(officeId);
+      router.push('/dashboard');
+    } catch (e) {
+      console.error('Error entering office:', e);
+    }
+  };
+
   const handleGenerateQR = async () => {
     if (!instanceName) return;
     setGeneratingQr(true);
@@ -329,13 +339,14 @@ export default function SaasDespachoDetailPage({
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 px-3.5 py-2 rounded-lg transition-colors"
+          <button
+            type="button"
+            onClick={handleEnterOffice}
+            className="flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors shadow-2xs cursor-pointer"
           >
-            <span>Impersonar / Entrar como Despacho</span>
-            <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
-          </Link>
+            <span>⚡ Entrar a Operar este Despacho</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 

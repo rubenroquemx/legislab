@@ -4,21 +4,21 @@ import { db, offices } from '@/db';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { refreshDriveAccessToken, createDriveSubfolder } from '@/lib/google-drive';
-
-const DEFAULT_OFFICE_ID = '00000000-0000-0000-0000-000000000001';
+import { getActiveOfficeId } from '@/lib/session-office';
 
 /**
- * Encuentra el despacho por ID o fallback al primer despacho activo
+ * Encuentra el despacho por ID o fallback al despacho activo
  */
-async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
+async function resolveOffice(officeId?: string) {
   try {
-    const officeList = await db.select().from(offices).where(eq(offices.id, officeId));
+    const targetId = await getActiveOfficeId(officeId);
+    const officeList = await db.select().from(offices).where(eq(offices.id, targetId));
     if (officeList.length > 0) return officeList[0];
     const anyOffice = await db.select().from(offices).limit(1);
     if (anyOffice.length > 0) return anyOffice[0];
 
     const [created] = await db.insert(offices).values({
-      id: DEFAULT_OFFICE_ID,
+      id: targetId,
       name: 'Despacho Parlamentario Dip. Ruben Roque',
       titularName: 'Dip. Ruben Roque',
       titularEmail: 'contacto@rubenroque.mx',
@@ -37,7 +37,7 @@ async function resolveOffice(officeId: string = DEFAULT_OFFICE_ID) {
 /**
  * Obtiene un access token válido para Google Drive del despacho
  */
-async function getValidDriveTokenForOffice(officeId: string): Promise<{
+async function getValidDriveTokenForOffice(officeId?: string): Promise<{
   accessToken: string;
   rootFolderId: string | null;
   rootFolderUrl: string | null;
@@ -86,7 +86,7 @@ async function getValidDriveTokenForOffice(officeId: string): Promise<{
 /**
  * Obtiene el estado actual de la conexión de Google Drive
  */
-export async function getGoogleDriveStatusAction(officeId: string = DEFAULT_OFFICE_ID) {
+export async function getGoogleDriveStatusAction(officeId?: string) {
   try {
     const office = await resolveOffice(officeId);
     if (!office) {
@@ -112,7 +112,7 @@ export async function getGoogleDriveStatusAction(officeId: string = DEFAULT_OFFI
 export async function updateGoogleDriveFolderAction(
   folderUrl: string,
   folderId?: string,
-  officeId: string = DEFAULT_OFFICE_ID
+  officeId?: string
 ) {
   try {
     const office = await resolveOffice(officeId);
@@ -149,10 +149,12 @@ export async function updateGoogleDriveFolderAction(
 /**
  * Desconecta la cuenta de Google Drive del despacho
  */
-export async function disconnectGoogleDriveAction(officeId: string = DEFAULT_OFFICE_ID) {
+export async function disconnectGoogleDriveAction(officeId?: string) {
   try {
     const office = await resolveOffice(officeId);
-    const targetId = office?.id || officeId;
+    if (!office) {
+      return { success: false, error: 'Despacho no encontrado' };
+    }
 
     await db
       .update(offices)
@@ -166,7 +168,7 @@ export async function disconnectGoogleDriveAction(officeId: string = DEFAULT_OFF
         googleDriveFolderUrl: null,
         updatedAt: new Date(),
       })
-      .where(eq(offices.id, targetId));
+      .where(eq(offices.id, office.id));
 
     revalidatePath('/configuracion');
     revalidatePath('/gestiones');
@@ -183,7 +185,7 @@ export async function disconnectGoogleDriveAction(officeId: string = DEFAULT_OFF
 export async function createGestionDriveFolderAction(
   gestionFolio: string,
   citizenName: string,
-  officeId: string = DEFAULT_OFFICE_ID
+  officeId?: string
 ) {
   try {
     const drive = await getValidDriveTokenForOffice(officeId);

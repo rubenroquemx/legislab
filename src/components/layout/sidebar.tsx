@@ -26,8 +26,8 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 
 interface NavItem {
   name: string;
@@ -94,6 +94,7 @@ export function Sidebar({
   mobileOpen = false, 
   onCloseMobile 
 }: SidebarProps) {
+  const { data: session } = useSession();
   const pathname = usePathname();
   const [enabledModules, setEnabledModules] = useState<string[] | null>(null);
 
@@ -272,29 +273,32 @@ export function Sidebar({
             </button>
           )}
 
-          <Link
-            href="/admin"
-            title={isCol ? "Consola SaaS Superadmin" : undefined}
-            className={cn(
-              "flex items-center gap-2 rounded-lg text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/80 transition-colors",
-              isCol ? "justify-center p-2.5 w-full" : "px-2.5 py-1.5"
-            )}
-          >
-            <ShieldCheck className="h-4 w-4 shrink-0 text-indigo-500" />
-            {!isCol && <span>Consola SaaS Admin</span>}
-          </Link>
+          {session?.user?.isSuperAdmin && (
+            <Link
+              href="/admin"
+              title={isCol ? "Consola SaaS Superadmin" : undefined}
+              className={cn(
+                "flex items-center gap-2 rounded-lg text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/80 transition-colors",
+                isCol ? "justify-center p-2.5 w-full" : "px-2.5 py-1.5"
+              )}
+            >
+              <ShieldCheck className="h-4 w-4 shrink-0 text-indigo-500" />
+              {!isCol && <span>Consola SaaS Admin</span>}
+            </Link>
+          )}
 
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: '/login' })}
             title={isCol ? "Cerrar sesión" : undefined}
             className={cn(
-              "flex items-center gap-2 rounded-lg text-xs font-medium text-zinc-500 hover:text-red-600 hover:bg-red-50/60 transition-colors",
-              isCol ? "justify-center p-2.5 w-full" : "px-2.5 py-1.5"
+              "w-full flex items-center gap-2 rounded-lg text-xs font-medium text-zinc-500 hover:text-red-600 hover:bg-red-50/60 transition-colors",
+              isCol ? "justify-center p-2.5" : "px-2.5 py-1.5 text-left"
             )}
           >
             <LogOut className="h-4 w-4 shrink-0" />
             {!isCol && <span>Cerrar sesión</span>}
-          </Link>
+          </button>
         </div>
       </div>
     );
