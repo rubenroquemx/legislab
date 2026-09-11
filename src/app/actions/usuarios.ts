@@ -151,7 +151,7 @@ export async function inviteOfficeUserAction(data: {
 
     // 2. Verificar si el correo ya existe
     const [existing] = await db
-      .select()
+      .select({ id: users.id })
       .from(users)
       .where(eq(users.email, cleanEmail))
       .limit(1);

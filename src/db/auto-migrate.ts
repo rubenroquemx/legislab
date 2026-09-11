@@ -86,15 +86,43 @@ export async function ensureDatabaseTables(connectionString: string) {
         id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::TEXT,
         name TEXT,
         email TEXT UNIQUE NOT NULL,
-        email_verified TIMESTAMP WITH TIME ZONE,
+        "emailVerified" TIMESTAMP WITH TIME ZONE,
+        password_hash TEXT,
         image TEXT,
         cargo TEXT DEFAULT 'Asesor Legislativo',
         office_id UUID REFERENCES offices(id) ON DELETE CASCADE,
         role TEXT NOT NULL DEFAULT 'asesor_a',
+        status TEXT NOT NULL DEFAULT 'active',
+        is_super_admin BOOLEAN NOT NULL DEFAULT false,
+        permissions TEXT,
+        activation_token TEXT,
+        activation_token_expiry TIMESTAMP WITH TIME ZONE,
+        invited_by TEXT,
         phone TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+        last_login_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       )
     `;
+
+    // Ensure all columns exist in users table
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "emailVerified" TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS image TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cargo TEXT DEFAULT 'Asesor Legislativo'`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS office_id UUID REFERENCES offices(id) ON DELETE CASCADE`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'asesor_a'`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_super_admin BOOLEAN NOT NULL DEFAULT false`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_token TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_token_expiry TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL`;
 
     // 3. NextAuth Accounts & Sessions
     await sql`
@@ -300,6 +328,36 @@ export async function ensureDatabaseTables(connectionString: string) {
         tipo_documento TEXT NOT NULL,
         ambito TEXT NOT NULL,
         generated_text TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      )
+    `;
+
+    // 12. System Settings
+    await sql`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        id TEXT PRIMARY KEY DEFAULT 'global',
+        platform_name TEXT NOT NULL DEFAULT 'LegisLab SaaS',
+        evolution_api_url TEXT DEFAULT 'https://evoapi.rubenroque.com.mx',
+        evolution_api_key TEXT DEFAULT '429683C4C977415CAAFCCE10F7D57E11',
+        maintenance_mode BOOLEAN DEFAULT false NOT NULL,
+        global_announcement TEXT,
+        announcement_type TEXT DEFAULT 'info',
+        allow_new_registrations BOOLEAN DEFAULT true NOT NULL,
+        default_trial_days INTEGER DEFAULT 14 NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      )
+    `;
+
+    // 13. Audit Logs
+    await sql`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        office_id UUID REFERENCES offices(id) ON DELETE SET NULL,
+        user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+        action TEXT NOT NULL,
+        description TEXT NOT NULL,
+        ip_address TEXT,
+        metadata TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       )
     `;
