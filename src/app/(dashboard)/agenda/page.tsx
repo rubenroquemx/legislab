@@ -41,12 +41,14 @@ import {
   ChevronRight,
   GripVertical,
   ArrowRight,
+  ArrowUpDown,
   RefreshCw,
   Zap,
   CheckCircle2,
   Edit3,
   Search
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface EventoLegislativo {
   id: string;
@@ -1590,6 +1592,15 @@ export default function AgendaPage() {
                 <span>Conectar Google Calendar</span>
               </button>
             )}
+
+            <Link
+              href="/configuracion?tab=import-export"
+              title="Importar y Exportar eventos de Agenda"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-[11px] font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-2xs"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+              <span>Importar / Exportar</span>
+            </Link>
 
             <button
               onClick={handleOpenCompartir}

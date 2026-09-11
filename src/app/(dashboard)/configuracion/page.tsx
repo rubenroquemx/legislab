@@ -20,6 +20,7 @@ import {
   getOfficeConfigAction,
   updateOfficeGeneralConfigAction
 } from '@/app/actions/configuracion';
+import { ImportExportTab } from '@/components/configuracion/import-export-tab';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
@@ -155,19 +156,21 @@ function ConfiguracionContent() {
   const router = useRouter();
   
   const tabFromQuery = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<'general' | 'conexiones' | 'diseno'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'conexiones' | 'diseno' | 'import-export'>('general');
 
   useEffect(() => {
     if (tabFromQuery === 'conexiones') {
       setActiveTab('conexiones');
     } else if (tabFromQuery === 'diseno') {
       setActiveTab('diseno');
+    } else if (tabFromQuery === 'import-export') {
+      setActiveTab('import-export');
     } else if (tabFromQuery === 'general') {
       setActiveTab('general');
     }
   }, [tabFromQuery]);
 
-  const handleTabChange = (tab: 'general' | 'conexiones' | 'diseno') => {
+  const handleTabChange = (tab: 'general' | 'conexiones' | 'diseno' | 'import-export') => {
     setActiveTab(tab);
     router.replace(`/configuracion?tab=${tab}`);
   };
@@ -534,6 +537,19 @@ function ConfiguracionContent() {
         >
           <Palette className="h-4 w-4" />
           <span>Diseño de Membretes</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('import-export')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap",
+            activeTab === 'import-export'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          )}
+        >
+          <ArrowRight className="h-4 w-4 rotate-[-45deg]" />
+          <span>Importar / Exportar</span>
         </button>
       </div>
 
@@ -962,6 +978,11 @@ function ConfiguracionContent() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* PESTAÑA 4: IMPORTAR / EXPORTAR */}
+      {activeTab === 'import-export' && (
+        <ImportExportTab officeId={officeId} officeName={nombreDespacho} />
       )}
     </div>
   );
