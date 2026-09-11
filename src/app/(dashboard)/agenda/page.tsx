@@ -796,9 +796,9 @@ export default function AgendaPage() {
     setNuevaHora(formatted24);
     
     const startMins = parseTimeToMinutes(formatted24);
-    const endMins = (startMins + 60) % 1440;
-    const endH = Math.floor(endMins / 60);
-    const endM = endMins % 60;
+    const nextMins = Math.min(startMins + 60, 1439);
+    const endH = Math.floor(nextMins / 60);
+    const endM = nextMins % 60;
     setNuevaHoraFin(`${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`);
     
     setIsCustomTipo(false);
@@ -835,8 +835,18 @@ export default function AgendaPage() {
     setEventoAEditar(ev);
     setEditTitulo(ev.titulo);
     setEditFecha(ev.fecha);
-    setEditHora(formatTimeTo24(ev.hora));
-    setEditHoraFin(formatTimeTo24(ev.horaFin || ev.hora));
+    const start24 = formatTimeTo24(ev.hora);
+    setEditHora(start24);
+    
+    let end24 = ev.horaFin ? formatTimeTo24(ev.horaFin) : '';
+    if (!end24 || parseTimeToMinutes(end24) <= parseTimeToMinutes(start24)) {
+      const sMins = parseTimeToMinutes(start24);
+      const nextMins = Math.min(sMins + 60, 1439);
+      const nh = Math.floor(nextMins / 60);
+      const nm = nextMins % 60;
+      end24 = `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+    }
+    setEditHoraFin(end24);
     setEditLugar(ev.lugar);
     setEditUbicacionUrl(ev.ubicacionUrl);
     setEditTipo(ev.tipo);
@@ -903,9 +913,12 @@ export default function AgendaPage() {
     const { evento, nuevaFecha, nuevaHora } = reagendadoPendiente;
 
     const startMins = parseTimeToMinutes(nuevaHora);
-    const endMins = (startMins + 60) % 1440;
-    const endH = Math.floor(endMins / 60);
-    const endM = endMins % 60;
+    const prevDuration = evento.horaFin
+      ? Math.max(parseTimeToMinutes(evento.horaFin) - parseTimeToMinutes(evento.hora), 15)
+      : 60;
+    const nextMins = Math.min(startMins + prevDuration, 1439);
+    const endH = Math.floor(nextMins / 60);
+    const endM = nextMins % 60;
     const nuevaHoraFin = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
     const updatedEvents = eventos.map((ev) => {
