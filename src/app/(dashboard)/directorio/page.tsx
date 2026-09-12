@@ -38,6 +38,8 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { SectionHeader, InsetGroup, ListRow } from '@/components/ui/ios-inset-group';
+import { IosSwipeableRow } from '@/components/ui/ios-swipeable-row';
+import { IosEdgeSwipeContainer } from '@/components/ui/ios-edge-swipe-container';
 
 
 export interface ObservacionContacto {
@@ -630,58 +632,78 @@ export default function DirectorioPage() {
                       {contactosAgrupados[letra].map((contacto) => {
                         const isSelected = contactoSeleccionado?.id === contacto.id;
                         return (
-                          <div
+                          <IosSwipeableRow
                             key={contacto.id}
-                            onClick={() => handleSelectContacto(contacto)}
-                            className={`px-4 py-3 flex items-center justify-between gap-3 cursor-pointer transition-all ${
-                              isSelected
-                                ? 'bg-blue-50/80 border-l-4 border-blue-600 pl-3'
-                                : 'hover:bg-gray-50 dark:bg-gray-800/40'
-                            }`}
+                            actionsRight={[
+                              {
+                                label: 'Llamar',
+                                icon: <Phone className="w-4 h-4 stroke-[2]" />,
+                                color: 'bg-[#34C759]',
+                                onClick: () => window.open(`tel:${contacto.telefono}`),
+                              },
+                              {
+                                label: 'WhatsApp',
+                                icon: <MessageCircle className="w-4 h-4 stroke-[2]" />,
+                                color: 'bg-[#1B62E3]',
+                                onClick: () => {
+                                  const clean = contacto.telefono.replace(/\D/g, '');
+                                  window.open(`https://wa.me/52${clean}`, '_blank');
+                                },
+                              },
+                            ]}
                           >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="h-11 w-11 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 border border-gray-200/80 dark:border-gray-800/80 shrink-0 relative flex items-center justify-center">
-                                {hasCustomPhoto(contacto.avatarUrl) ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={contacto.avatarUrl}
-                                    alt={contacto.nombre}
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="h-full w-full bg-gradient-to-b from-[#8E8E93] to-[#636366] dark:from-[#636366] dark:to-[#48484A] text-white font-bold text-xs flex items-center justify-center select-none shadow-2xs">
-                                    {getContactInitials(contacto.nombre)}
-                                  </div>
-                                )}
-                                {contacto.esCumpleanosHoy && (
-                                  <span className="absolute -top-1 -right-1 text-xs">🎂</span>
-                                )}
-                              </div>
-
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <h3 className={`text-xs font-bold truncate ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
-                                    {contacto.nombre}
-                                  </h3>
+                            <div
+                              onClick={() => handleSelectContacto(contacto)}
+                              className={`px-4 py-3 flex items-center justify-between gap-3 cursor-pointer transition-all ios-row-tap ${
+                                isSelected
+                                  ? 'bg-blue-50/80 border-l-4 border-blue-600 pl-3'
+                                  : 'hover:bg-gray-50 dark:bg-gray-800/40'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-11 w-11 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 border border-gray-200/80 dark:border-gray-800/80 shrink-0 relative flex items-center justify-center">
+                                  {hasCustomPhoto(contacto.avatarUrl) ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={contacto.avatarUrl}
+                                      alt={contacto.nombre}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-full w-full bg-gradient-to-b from-[#8E8E93] to-[#636366] dark:from-[#636366] dark:to-[#48484A] text-white font-bold text-xs flex items-center justify-center select-none shadow-2xs">
+                                      {getContactInitials(contacto.nombre)}
+                                    </div>
+                                  )}
                                   {contacto.esCumpleanosHoy && (
-                                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded-full shrink-0">
-                                      Cumpleaños
-                                    </span>
+                                    <span className="absolute -top-1 -right-1 text-xs">🎂</span>
                                   )}
                                 </div>
-                                <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{contacto.cargo}</p>
-                                <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{contacto.organizacion}</p>
+
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <h3 className={`text-xs font-bold truncate ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
+                                      {contacto.nombre}
+                                    </h3>
+                                    {contacto.esCumpleanosHoy && (
+                                      <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded-full shrink-0">
+                                        Cumpleaños
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{contacto.cargo}</p>
+                                  <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{contacto.organizacion}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                {contacto.folioGestion && (
+                                  <span className="text-[9px] font-mono font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded">
+                                    {contacto.folioGestion}
+                                  </span>
+                                )}
                               </div>
                             </div>
-
-                            <div className="flex items-center gap-1 shrink-0">
-                              {contacto.folioGestion && (
-                                <span className="text-[9px] font-mono font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded">
-                                  {contacto.folioGestion}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                          </IosSwipeableRow>
                         );
                       })}
                     </div>
@@ -725,6 +747,11 @@ export default function DirectorioPage() {
         <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-0 sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[calc(100dvh-125px)] sm:h-[750px] ${
           mobileShowDetail ? 'flex animate-in slide-in-from-right-4 duration-200' : 'hidden lg:flex'
         }`}>
+          <IosEdgeSwipeContainer
+            onBack={() => setMobileShowDetail(false)}
+            enabled={mobileShowDetail}
+            className="flex flex-col h-full"
+          >
           {/* iOS Mobile Navigation Bar (< lg) */}
           <div className="lg:hidden flex items-center justify-between px-3.5 py-2.5 bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800 shrink-0 sticky top-0 z-20">
             <button
@@ -1050,6 +1077,7 @@ export default function DirectorioPage() {
             </div>
           )}
           </div>
+          </IosEdgeSwipeContainer>
         </div>
       </div>
 

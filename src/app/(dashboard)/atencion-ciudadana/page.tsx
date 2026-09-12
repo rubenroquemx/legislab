@@ -37,9 +37,12 @@ import {
   MoreVertical,
   SlidersHorizontal,
   FileText,
-  X
+  X,
+  ChevronLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { IosSwipeableRow } from '@/components/ui/ios-swipeable-row';
+import { IosEdgeSwipeContainer } from '@/components/ui/ios-edge-swipe-container';
 
 interface NotaInternaItem {
   id: string;
@@ -407,7 +410,10 @@ export default function AtencionCiudadanaPage() {
       {/* MAIN INBOX INTERFACE (3 COLUMNS) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-auto lg:h-[calc(100vh-220px)] min-h-[500px]">
         {/* COLUMNA 1: LISTA DE CONVERSACIONES (4 Cols) */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-zinc-200 shadow-2xs flex flex-col overflow-hidden">
+        <div className={cn(
+          "lg:col-span-4 bg-white rounded-2xl border border-zinc-200 shadow-2xs flex flex-col overflow-hidden",
+          activeConv ? "hidden lg:flex" : "flex"
+        )}>
           {/* Top Search & Filter Tabs */}
           <div className="p-3.5 border-b border-zinc-100 space-y-2.5">
             <div className="relative">
@@ -481,67 +487,105 @@ export default function AtencionCiudadanaPage() {
               filteredConversaciones.map((conv) => {
                 const isSelected = activeConv?.id === conv.id;
                 return (
-                  <div
+                  <IosSwipeableRow
                     key={conv.id}
-                    onClick={() => setSelectedConvId(conv.id)}
-                    className={cn(
-                      'p-3.5 flex items-start gap-3 cursor-pointer transition-all text-left',
-                      isSelected
-                        ? 'bg-blue-50/70 border-l-4 border-l-blue-600'
-                        : 'hover:bg-zinc-50/80'
-                    )}
+                    actionsRight={[
+                      {
+                        label: 'Gestión',
+                        icon: <Sparkles className="h-4 w-4" />,
+                        color: 'bg-blue-600 text-white',
+                        onClick: () => {
+                          setFormSolicitante(conv.ciudadanoNombre);
+                          setFormTelefono(conv.ciudadanoTelefono);
+                          setFormColonia(conv.colonia || 'Centro');
+                          setFormMunicipio(conv.municipio || 'Centro');
+                          setFormAsunto(conv.ultimoMensaje && conv.ultimoMensaje !== 'Conversación iniciada' ? conv.ultimoMensaje : '');
+                          setFormCategoria(conv.categoria || 'Gestión Médica');
+                          setFormPrioridad('Media');
+                          setShowModalGestion(true);
+                        },
+                      },
+                      {
+                        label: 'WhatsApp',
+                        icon: <MessageCircle className="h-4 w-4" />,
+                        color: 'bg-emerald-600 text-white',
+                        onClick: () => {
+                          window.open(`https://wa.me/52${conv.ciudadanoTelefono.replace(/\D/g, '')}`, '_blank');
+                        },
+                      },
+                    ]}
+                    actionsLeft={[
+                      {
+                        label: 'Llamar',
+                        icon: <Phone className="h-4 w-4" />,
+                        color: 'bg-green-600 text-white',
+                        onClick: () => {
+                          window.location.href = `tel:${conv.ciudadanoTelefono.replace(/\D/g, '')}`;
+                        },
+                      },
+                    ]}
                   >
-                    <div className="relative shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={conv.ciudadanoAvatar}
-                        alt={conv.ciudadanoNombre}
-                        className="h-10 w-10 rounded-full object-cover border border-zinc-200"
-                      />
-                      {conv.noLeidos > 0 && (
-                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                          {conv.noLeidos}
-                        </span>
+                    <div
+                      onClick={() => setSelectedConvId(conv.id)}
+                      className={cn(
+                        'p-3.5 flex items-start gap-3 cursor-pointer transition-all text-left w-full',
+                        isSelected
+                          ? 'bg-blue-50/70 border-l-4 border-l-blue-600'
+                          : 'hover:bg-zinc-50/80 bg-white'
                       )}
-                    </div>
-
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <p className="text-xs font-bold text-zinc-900 truncate">
-                          {conv.ciudadanoNombre}
-                        </p>
-                        <span className="text-[10px] text-zinc-400 shrink-0 font-medium">
-                          {conv.ultimaHora}
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] text-zinc-500 truncate leading-relaxed">
-                        {conv.ultimoMensaje}
-                      </p>
-
-                      <div className="flex items-center justify-between gap-1 pt-1">
-                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-zinc-100 text-gray-600">
-                          {conv.categoria}
-                        </span>
-
-                        {conv.folioGestion ? (
-                          <span className="text-[9px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                            {conv.folioGestion}
-                          </span>
-                        ) : conv.asignadoA ? (
-                          <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={conv.asignadoA.foto} alt="" className="h-3.5 w-3.5 rounded-full" />
-                            <span className="truncate max-w-[80px]">{conv.asignadoA.nombre.split(' ')[0]}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                            Sin Asignar
+                    >
+                      <div className="relative shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={conv.ciudadanoAvatar}
+                          alt={conv.ciudadanoNombre}
+                          className="h-10 w-10 rounded-full object-cover border border-zinc-200"
+                        />
+                        {conv.noLeidos > 0 && (
+                          <span className="absolute -top-1 -right-1 h-4 w-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                            {conv.noLeidos}
                           </span>
                         )}
                       </div>
+
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-bold text-zinc-900 truncate">
+                            {conv.ciudadanoNombre}
+                          </p>
+                          <span className="text-[10px] text-zinc-400 shrink-0 font-medium">
+                            {conv.ultimaHora}
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-zinc-500 truncate leading-relaxed">
+                          {conv.ultimoMensaje}
+                        </p>
+
+                        <div className="flex items-center justify-between gap-1 pt-1">
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-zinc-100 text-gray-600">
+                            {conv.categoria}
+                          </span>
+
+                          {conv.folioGestion ? (
+                            <span className="text-[9px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                              {conv.folioGestion}
+                            </span>
+                          ) : conv.asignadoA ? (
+                            <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={conv.asignadoA.foto} alt="" className="h-3.5 w-3.5 rounded-full" />
+                              <span className="truncate max-w-[80px]">{conv.asignadoA.nombre.split(' ')[0]}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                              Sin Asignar
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </IosSwipeableRow>
                 );
               })
             )}
@@ -551,6 +595,26 @@ export default function AtencionCiudadanaPage() {
         {/* COLUMNA 2: CHAT ACTIVO EN TIEMPO REAL (5 Cols) */}
         {activeConv ? (
           <div className="lg:col-span-5 bg-white rounded-2xl border border-zinc-200 shadow-2xs flex flex-col overflow-hidden">
+            <IosEdgeSwipeContainer
+              onBack={() => setSelectedConvId('')}
+              enabled={!!activeConv}
+              className="flex flex-col h-full"
+            >
+            {/* Mobile Navigation Header (lg:hidden) */}
+            <div className="lg:hidden flex items-center justify-between px-3.5 py-2.5 bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedConvId('')}
+                className="inline-flex items-center gap-0.5 text-blue-600 dark:text-blue-400 font-semibold text-xs hover:opacity-80 active:scale-95 transition-all cursor-pointer -ml-1 px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>Conversaciones</span>
+              </button>
+              <span className="text-xs font-bold text-gray-900 dark:text-white truncate max-w-[150px]">
+                {activeConv.ciudadanoNombre}
+              </span>
+            </div>
+
             {/* Chat Header */}
             <div className="p-3.5 border-b border-zinc-100 flex items-center justify-between gap-3 bg-zinc-50/50">
               <div className="flex items-center gap-3 overflow-hidden">
@@ -698,16 +762,17 @@ export default function AtencionCiudadanaPage() {
                 </button>
               </div>
             </form>
+            </IosEdgeSwipeContainer>
           </div>
         ) : (
-          <div className="lg:col-span-5 bg-white rounded-2xl border border-zinc-200 shadow-2xs flex items-center justify-center p-8 text-center text-zinc-400 text-xs">
+          <div className="hidden lg:flex lg:col-span-5 bg-white rounded-2xl border border-zinc-200 shadow-2xs items-center justify-center p-8 text-center text-zinc-400 text-xs">
             Selecciona una conversación para abrir el chat en vivo.
           </div>
         )}
 
         {/* COLUMNA 3: EXPEDIENTE CIUDADANO & NOTAS RÁPIDAS (3 Cols) */}
         {activeConv ? (
-          <div className="lg:col-span-3 bg-white rounded-2xl border border-zinc-200 shadow-2xs p-3.5 space-y-3.5 flex flex-col overflow-y-auto">
+          <div className="hidden lg:flex lg:col-span-3 bg-white rounded-2xl border border-zinc-200 shadow-2xs p-3.5 space-y-3.5 flex-col overflow-y-auto">
             {/* Encabezado Expediente */}
             <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600">

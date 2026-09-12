@@ -27,7 +27,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 
 interface NavItem {
@@ -112,6 +112,52 @@ export function Sidebar({
   }, []);
 
   const isDashboardActive = pathname === '/dashboard';
+
+  const [drawerTranslateX, setDrawerTranslateX] = useState(0);
+  const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
+  const drawerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleDrawerTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    drawerTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    setIsDraggingDrawer(true);
+  };
+
+  const handleDrawerTouchMove = (e: React.TouchEvent) => {
+    if (!drawerTouchStartRef.current) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    const dx = touch.clientX - drawerTouchStartRef.current.x;
+    const dy = Math.abs(touch.clientY - drawerTouchStartRef.current.y);
+
+    if (dx < 0 && Math.abs(dx) > dy * 0.5) {
+      setDrawerTranslateX(dx);
+    } else if (dx > 0) {
+      setDrawerTranslateX(0);
+    }
+  };
+
+  const handleDrawerTouchEnd = (e: React.TouchEvent) => {
+    if (!drawerTouchStartRef.current) {
+      setIsDraggingDrawer(false);
+      setDrawerTranslateX(0);
+      return;
+    }
+
+    const touch = e.changedTouches[0];
+    if (touch) {
+      const dx = touch.clientX - drawerTouchStartRef.current.x;
+      if (dx < -60) {
+        onCloseMobile?.();
+      }
+    }
+
+    setIsDraggingDrawer(false);
+    setDrawerTranslateX(0);
+    drawerTouchStartRef.current = null;
+  };
 
   const visibleSections = navSections.map(sec => ({
     ...sec,
@@ -398,7 +444,15 @@ export function Sidebar({
           />
           {/* Spring sliding drawer overlay */}
           <aside 
-            className="relative w-[300px] max-w-[85vw] flex flex-col h-full shadow-[0_0_50px_rgba(0,0,0,0.25)] z-10 transition-transform duration-350 ease-[cubic-bezier(0.32,0.72,0,1)] animate-in slide-in-from-left"
+            onTouchStart={handleDrawerTouchStart}
+            onTouchMove={handleDrawerTouchMove}
+            onTouchEnd={handleDrawerTouchEnd}
+            onTouchCancel={handleDrawerTouchEnd}
+            style={{
+              transform: drawerTranslateX < 0 ? `translateX(${drawerTranslateX}px)` : undefined,
+              transition: isDraggingDrawer ? 'none' : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+            }}
+            className="relative w-[300px] max-w-[85vw] flex flex-col h-full shadow-[0_0_50px_rgba(0,0,0,0.25)] z-10 animate-in slide-in-from-left"
           >
             {renderContent(true)}
           </aside>
