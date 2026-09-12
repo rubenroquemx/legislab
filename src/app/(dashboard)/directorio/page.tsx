@@ -540,16 +540,14 @@ export default function DirectorioPage() {
         </button>
       </div>
 
-      {/* Main iPhone Style Master-Detail Layout with Mobile Slide Animation */}
-      <div className="-mx-4 sm:mx-0 relative w-auto sm:w-full lg:grid lg:grid-cols-12 lg:gap-5 items-start overflow-hidden min-h-[750px] lg:overflow-visible">
+      {/* Main iPhone Style Master-Detail Layout */}
+      <div className="w-full lg:grid lg:grid-cols-12 lg:gap-5 items-start">
         
         {/* =========================================================================
             LEFT COLUMN (5 COLS): iPHONE CONTACTS ALPHABETICAL LIST
            ========================================================================= */}
-        <div className={`w-full lg:col-span-5 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-y sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-          mobileShowDetail
-            ? '-translate-x-full absolute inset-0 opacity-0 pointer-events-none lg:relative lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
-            : 'translate-x-0 relative opacity-100'
+        <div className={`w-full lg:col-span-5 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] ${
+          mobileShowDetail ? 'hidden lg:flex' : 'flex'
         }`}>
           {/* Top iOS Search Bar & Type Filter */}
           <div className="p-3.5 border-b border-gray-100 dark:border-gray-800 space-y-2.5 bg-gray-50/80 dark:bg-gray-800/40">
@@ -696,10 +694,8 @@ export default function DirectorioPage() {
         {/* =========================================================================
             RIGHT COLUMN (7 COLS): iPHONE CONTACT CARD DETAIL & CHAT
            ========================================================================= */}
-        <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-y sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-          mobileShowDetail
-            ? 'translate-x-0 relative opacity-100'
-            : 'translate-x-full absolute inset-0 opacity-0 pointer-events-none lg:relative lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
+        <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] ${
+          mobileShowDetail ? 'flex animate-in slide-in-from-right-4 duration-200' : 'hidden lg:flex'
         }`}>
           {/* iOS Mobile Navigation Bar (< lg) */}
           <div className="lg:hidden flex items-center justify-between px-3.5 py-2.5 bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800 shrink-0 sticky top-0 z-20">
