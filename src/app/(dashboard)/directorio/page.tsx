@@ -531,7 +531,7 @@ export default function DirectorioPage() {
   const cumpleanerosCount = contactos.filter(c => c.esCumpleanosHoy).length;
 
   return (
-    <div className="-mx-4 -mt-4 sm:mx-0 sm:mt-0 space-y-0 sm:space-y-4">
+    <div className="w-full flex-1 flex flex-col space-y-0 sm:space-y-4">
       {/* Action Bar (Desktop / Tablet) */}
       <div className="hidden sm:flex items-center justify-end gap-2">
         {cumpleanerosCount > 0 && (
@@ -558,12 +558,12 @@ export default function DirectorioPage() {
       </div>
 
       {/* Main iPhone Style Master-Detail Layout */}
-      <div className="w-full lg:grid lg:grid-cols-12 lg:gap-5 items-start">
+      <div className="w-full flex-1 lg:grid lg:grid-cols-12 lg:gap-5 items-start">
         
         {/* =========================================================================
             LEFT COLUMN (5 COLS): iPHONE CONTACTS ALPHABETICAL LIST
            ========================================================================= */}
-        <div className={`w-full lg:col-span-5 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-0 sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[calc(100dvh-125px)] sm:h-[750px] ${
+        <div className={`w-full lg:col-span-5 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-0 sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[100dvh] sm:h-[750px] ${
           mobileShowDetail ? 'hidden lg:flex' : 'flex'
         }`}>
           {/* Top iOS Search Bar & Type Filter - STICKY FIXED ON SCROLL */}
@@ -744,7 +744,7 @@ export default function DirectorioPage() {
         {/* =========================================================================
             RIGHT COLUMN (7 COLS): iPHONE CONTACT CARD DETAIL & CHAT
            ========================================================================= */}
-        <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-0 sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[calc(100dvh-125px)] sm:h-[750px] ${
+        <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-0 sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[100dvh] sm:h-[750px] ${
           mobileShowDetail ? 'flex animate-in slide-in-from-right-4 duration-200' : 'hidden lg:flex'
         }`}>
           <IosEdgeSwipeContainer

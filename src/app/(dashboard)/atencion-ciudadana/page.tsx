@@ -408,7 +408,7 @@ export default function AtencionCiudadanaPage() {
       )}
 
       {/* MAIN INBOX INTERFACE (3 COLUMNS) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-auto lg:h-[calc(100vh-220px)] min-h-[500px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[100dvh] sm:h-auto lg:h-[calc(100vh-140px)] min-h-[500px]">
         {/* COLUMNA 1: LISTA DE CONVERSACIONES (4 Cols) */}
         <div className={cn(
           "lg:col-span-4 bg-white rounded-2xl border border-zinc-200 shadow-2xs flex flex-col overflow-hidden",

@@ -47,8 +47,8 @@ export default function DashboardLayout({
         />
         
         {/* Main Content Area - Full edge-to-edge on mobile */}
-        <main className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:p-6 lg:p-8 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] lg:pb-8">
-          <div className="max-w-[1520px] mx-auto">
+        <main className="flex-1 overflow-y-auto overscroll-contain p-0 sm:p-6 lg:p-8 pb-0 sm:pb-6 lg:pb-8 flex flex-col">
+          <div className="max-w-[1520px] mx-auto w-full flex-1 flex flex-col">
             {children}
           </div>
         </main>
