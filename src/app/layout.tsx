@@ -12,8 +12,14 @@ export const metadata: Metadata = {
     title: 'LegisLab',
   },
   icons: {
-    icon: '/icons/icon.svg',
-    apple: '/icons/icon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.svg',
   }
 };
 
@@ -34,6 +40,8 @@ export default function RootLayout({
     <html lang="es" className="h-full">
       <head>
         <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/icons/icon.svg" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

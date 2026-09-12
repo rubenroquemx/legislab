@@ -89,12 +89,15 @@ export default function SaasAdminLayout({
           )}
         >
           <Link href="/admin" className="flex items-center gap-2.5 overflow-hidden">
-            <div className="h-7 w-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white font-black text-xs shadow-xs shrink-0">
-              L
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/icon.svg"
+              alt="LegisLab"
+              className="h-7 w-7 shrink-0 object-contain"
+            />
             {!isCol && (
               <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
-                <span className="font-semibold text-zinc-900 text-sm tracking-tight">
+                <span className="font-bold text-zinc-900 text-sm tracking-tight">
                   LegisLab
                 </span>
                 <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1 py-0.2 rounded font-medium">

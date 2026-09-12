@@ -100,13 +100,15 @@ function LoginFormContent() {
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 text-white selection:bg-blue-600">
       <div className="max-w-md w-full space-y-6 bg-slate-900/90 border border-slate-800/80 p-6 sm:p-8 rounded-2xl shadow-2xl animate-in fade-in">
         {/* Logo & Header */}
-        <div className="text-center space-y-2">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <Scale className="h-6 w-6 text-white" />
+        <div className="text-center space-y-3">
+          <div className="flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-white.svg"
+              alt="LegisLab"
+              className="h-14 max-w-[280px] object-contain"
+            />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">
-            Bienvenido a Legis<span className="text-blue-500">lab</span>
-          </h2>
           <p className="text-xs text-slate-400">
             Sistema Integral de Gestión y Técnica Parlamentaria
           </p>

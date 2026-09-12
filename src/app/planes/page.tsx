@@ -143,17 +143,12 @@ function PlanesContent() {
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform">
-              <Scale className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold tracking-tight text-lg text-white">
-                Legis<span className="text-blue-500">lab</span>
-              </span>
-              <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 -mt-1">
-                SaaS Parlamentario
-              </span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-white.svg"
+              alt="LegisLab"
+              className="h-9 max-w-[180px] object-contain group-hover:opacity-90 transition-opacity"
+            />
           </Link>
 
           <div className="flex items-center gap-3">
