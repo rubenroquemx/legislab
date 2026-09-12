@@ -1,16 +1,24 @@
 // LegisLab PWA Service Worker with Push Notifications Support
-const CACHE_NAME = 'legislab-pwa-v4-' + Date.now();
+const CACHE_NAME = 'legislab-pwa-v5-' + Date.now();
 const STATIC_ASSETS = [
   '/',
+  '/manifest.json',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
+  '/icons/icon-384.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-192.png',
   '/icons/icon-maskable-512.png',
   '/apple-touch-icon.png',
   '/apple-touch-icon-precomposed.png',
+  '/apple-touch-icon-180x180.png',
+  '/apple-touch-icon-152x152.png',
+  '/apple-touch-icon-120x120.png',
+  '/apple-touch-icon-76x76.png',
+  '/apple-touch-icon-60x60.png',
   '/favicon-32x32.png',
   '/favicon-16x16.png',
+  '/favicon-48x48.png',
   '/favicon.ico',
   '/favicon.svg',
   '/logo.svg',
