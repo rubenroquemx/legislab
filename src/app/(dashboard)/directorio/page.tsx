@@ -774,7 +774,7 @@ export default function DirectorioPage() {
             ) : <div className="w-10" />}
           </div>
 
-          <div ref={detailScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          <div ref={detailScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 pb-40 sm:pb-8 space-y-6 overscroll-contain">
             {contactoSeleccionado ? (
               <div className="space-y-6 animate-in fade-in">
               {/* iPhone Contact Header: Big Avatar & Name */}

@@ -28,7 +28,10 @@ export function IosEdgeSwipeContainer({
   });
 
   return (
-    <div className={cn('relative w-full h-full overflow-hidden', className)}>
+    <div 
+      className={cn('relative w-full h-full overflow-hidden flex flex-col', className)}
+      data-ios-edge-swipe={enabled ? 'true' : undefined}
+    >
       {/* Visual iOS Edge Swipe Indicator (pill arrow that follows drag) */}
       {enabled && isSwiping && translateX > 15 && showBackAffordance && (
         <div
@@ -48,7 +51,7 @@ export function IosEdgeSwipeContainer({
           transform: isSwiping ? `translateX(${translateX}px)` : undefined,
           transition: isSwiping ? 'none' : 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)',
         }}
-        className="w-full h-full"
+        className="w-full h-full flex flex-col min-h-0 flex-1"
       >
         {children}
       </div>

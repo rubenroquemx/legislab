@@ -36,41 +36,53 @@ export function IosSwipeableRow({
   const handleTouchStart = (e: React.TouchEvent) => {
     if (disabled) return;
     const touch = e.touches[0];
+    if (!touch) return;
     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (disabled || !touchStartRef.current) return;
     const touch = e.touches[0];
+    if (!touch) return;
     const dx = touch.clientX - touchStartRef.current.x;
     const dy = Math.abs(touch.clientY - touchStartRef.current.y);
 
-    if (dy > Math.abs(dx)) return; // Allow vertical scroll
+    // If vertical movement dominates, release and allow full vertical scroll
+    if (dy > 6 && dy >= Math.abs(dx)) {
+      touchStartRef.current = null;
+      if (offsetX !== 0 && !isOpenRight && !isOpenLeft) {
+        setOffsetX(0);
+      }
+      return;
+    }
 
-    if (dx < 0 && actionsRight.length > 0) {
-      const base = isOpenRight ? -rightActionWidth : 0;
-      const target = Math.max(base + dx, -rightActionWidth - 25);
-      setOffsetX(target);
-    } else if (dx > 0 && actionsLeft.length > 0) {
-      const base = isOpenLeft ? leftActionWidth : 0;
-      const target = Math.min(base + dx, leftActionWidth + 25);
-      setOffsetX(target);
-    } else if (isOpenRight && dx > 0) {
-      setOffsetX(Math.min(0, -rightActionWidth + dx));
-    } else if (isOpenLeft && dx < 0) {
-      setOffsetX(Math.max(0, leftActionWidth + dx));
+    // Only swipe horizontally if horizontal movement is clearly intended
+    if (Math.abs(dx) > 8 && Math.abs(dx) > dy * 1.4) {
+      if (dx < 0 && actionsRight.length > 0) {
+        const base = isOpenRight ? -rightActionWidth : 0;
+        const target = Math.max(base + dx, -rightActionWidth - 25);
+        setOffsetX(target);
+      } else if (dx > 0 && actionsLeft.length > 0) {
+        const base = isOpenLeft ? leftActionWidth : 0;
+        const target = Math.min(base + dx, leftActionWidth + 25);
+        setOffsetX(target);
+      } else if (isOpenRight && dx > 0) {
+        setOffsetX(Math.min(0, -rightActionWidth + dx));
+      } else if (isOpenLeft && dx < 0) {
+        setOffsetX(Math.max(0, leftActionWidth + dx));
+      }
     }
   };
 
   const handleTouchEnd = () => {
-    if (disabled || !touchStartRef.current) return;
+    if (!touchStartRef.current && offsetX === 0) return;
     touchStartRef.current = null;
 
-    if (offsetX < -rightActionWidth / 2 && actionsRight.length > 0) {
+    if (offsetX < -rightActionWidth * 0.4 && actionsRight.length > 0) {
       setOffsetX(-rightActionWidth);
       setIsOpenRight(true);
       setIsOpenLeft(false);
-    } else if (offsetX > leftActionWidth / 2 && actionsLeft.length > 0) {
+    } else if (offsetX > leftActionWidth * 0.4 && actionsLeft.length > 0) {
       setOffsetX(leftActionWidth);
       setIsOpenLeft(true);
       setIsOpenRight(false);

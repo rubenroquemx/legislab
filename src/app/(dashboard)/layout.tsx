@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Navbar } from '@/components/layout/navbar';
 import { MobileFullScreenMenu } from '@/components/layout/mobile-fullscreen-menu';
+import { GlobalSwipeNavigation } from '@/components/layout/global-swipe-navigation';
 import { SUPERADMIN_EMAIL } from '@/lib/auth-constants';
 import { cn } from '@/lib/utils';
 
@@ -59,6 +60,9 @@ export default function DashboardLayout({
           onToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
           onClose={() => setMobileMenuOpen(false)}
         />
+
+        {/* Global Edge-Swipe Back Navigation (Mobile) */}
+        <GlobalSwipeNavigation />
       </div>
     </div>
   );

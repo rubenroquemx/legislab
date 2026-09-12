@@ -5,9 +5,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 interface EdgeSwipeOptions {
   onBack: () => void;
   enabled?: boolean;
-  edgeThreshold?: number; // Distance in px from left edge to start gesture (default 40px)
-  triggerDistance?: number; // Minimum px drag to trigger back (default 75px)
-  maxVerticalRatio?: number; // Max dy/dx ratio to avoid triggering during vertical scroll (default 0.7)
+  edgeThreshold?: number; // Distance in px from left edge to start gesture (default 90px)
+  triggerDistance?: number; // Minimum px drag to trigger back (default 65px)
 }
 
 /**
@@ -16,15 +15,14 @@ interface EdgeSwipeOptions {
 export function useEdgeSwipeBack({
   onBack,
   enabled = true,
-  edgeThreshold = 40,
-  triggerDistance = 75,
-  maxVerticalRatio = 0.7,
+  edgeThreshold = 90,
+  triggerDistance = 65,
 }: EdgeSwipeOptions) {
   const [dragProgress, setDragProgress] = useState(0); // 0 to 1
   const [isSwiping, setIsSwiping] = useState(false);
   const [translateX, setTranslateX] = useState(0);
 
-  const touchStartRef = useRef<{ x: number; y: number; isEdge: boolean } | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; isEdge: boolean; decided: boolean } | null>(null);
 
   const handleTouchStart = useCallback(
     (e: TouchEvent) => {
@@ -32,15 +30,17 @@ export function useEdgeSwipeBack({
       const touch = e.touches[0];
       if (!touch) return;
 
-      const isEdge = touch.clientX <= edgeThreshold;
+      const threshold = typeof window !== 'undefined' ? Math.max(edgeThreshold, window.innerWidth * 0.25) : edgeThreshold;
+      const isEdge = touch.clientX <= threshold;
+
       touchStartRef.current = {
         x: touch.clientX,
         y: touch.clientY,
         isEdge,
+        decided: false,
       };
 
       if (isEdge) {
-        setIsSwiping(true);
         setTranslateX(0);
         setDragProgress(0);
       }
@@ -57,23 +57,34 @@ export function useEdgeSwipeBack({
       const dx = touch.clientX - touchStartRef.current.x;
       const dy = Math.abs(touch.clientY - touchStartRef.current.y);
 
-      // If vertical movement dominates, cancel swipe gesture
-      if (dx > 0 && dy / dx > maxVerticalRatio) {
-        setIsSwiping(false);
-        setTranslateX(0);
-        setDragProgress(0);
-        touchStartRef.current.isEdge = false;
-        return;
+      // Give a tiny tolerance zone (8px) before deciding swipe vs vertical scroll
+      if (!touchStartRef.current.decided) {
+        if (Math.abs(dx) > 8 || dy > 8) {
+          touchStartRef.current.decided = true;
+          if (dy > dx * 0.85 || dx <= 0) {
+            // It's vertical scroll or swiping left -> cancel edge swipe
+            touchStartRef.current.isEdge = false;
+            setIsSwiping(false);
+            setTranslateX(0);
+            setDragProgress(0);
+            return;
+          } else {
+            setIsSwiping(true);
+          }
+        } else {
+          return;
+        }
       }
 
       if (dx > 0) {
         if (e.cancelable) e.preventDefault();
-        const clampedDx = Math.min(dx, window.innerWidth);
+        const maxW = typeof window !== 'undefined' ? window.innerWidth : 400;
+        const clampedDx = Math.min(dx, maxW);
         setTranslateX(clampedDx);
-        setDragProgress(Math.min(clampedDx / (window.innerWidth * 0.45), 1));
+        setDragProgress(Math.min(clampedDx / (maxW * 0.4), 1));
       }
     },
-    [enabled, maxVerticalRatio]
+    [enabled]
   );
 
   const handleTouchEnd = useCallback(
@@ -82,6 +93,7 @@ export function useEdgeSwipeBack({
         setIsSwiping(false);
         setTranslateX(0);
         setDragProgress(0);
+        touchStartRef.current = null;
         return;
       }
 
