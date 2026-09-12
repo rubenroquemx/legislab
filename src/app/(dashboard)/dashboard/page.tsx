@@ -329,50 +329,59 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       
+      {/* iOS Large Title Header */}
+      <div className="space-y-1 pt-1 pb-1">
+        <h1 className="text-ios-large-title font-bold text-[#0B172D] tracking-tight">
+          Escritorio
+        </h1>
+        <p className="text-ios-subhead text-[#8E8E93]">
+          Panel de control legislativo y atención ciudadana
+        </p>
+      </div>
+
       {/* =========================================================================
-          1. BARRA MINIMALISTA DE 100% CON MÉTRICAS REALES
+          1. BARRA MINIMALISTA CON MÉTRICAS REALES (TARJETAS KPI HIG)
          ========================================================================= */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         
         {/* 1.1 Gestiones Nuevas */}
         <Link 
           href="/gestiones"
-          className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-2xs hover:border-[#1B62E3]/30 hover:shadow-xs transition-all flex flex-col justify-between group ios-press"
+          className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#1B62E3]/40 transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#68768A] tracking-wide uppercase">Gestiones Nuevas</span>
-            <div className="h-8 w-8 rounded-xl bg-[#EBF2FC] text-[#1B62E3] flex items-center justify-center">
-              <FolderKanban className="h-4 w-4" />
+            <span className="text-ios-footnote font-semibold text-[#8E8E93] tracking-wide uppercase">Gestiones Nuevas</span>
+            <div className="h-8 w-8 rounded-[10px] bg-[#1B62E3]/10 text-[#1B62E3] flex items-center justify-center">
+              <FolderKanban className="h-4 w-4 stroke-[1.75]" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold tracking-tight text-[#0B172D]">{gestionesNuevasCount}</span>
-              <span className="text-xs text-[#68768A] font-medium">solicitudes</span>
+              <span className="text-ios-title1 font-bold tracking-tight text-[#0B172D]">{gestionesNuevasCount}</span>
+              <span className="text-ios-caption1 text-[#8E8E93]">solicitudes</span>
             </div>
-            <span className="text-[10px] font-bold text-[#1B62E3] bg-[#EBF2FC] border border-[#1B62E3]/20 px-2 py-0.5 rounded-full">
+            <span className="text-ios-caption2 font-semibold text-[#1B62E3] bg-[#1B62E3]/10 px-2 py-0.5 rounded-full">
               Recibidas
             </span>
           </div>
         </Link>
-
         {/* 1.2 Gestiones en Proceso */}
         <Link 
           href="/gestiones"
-          className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-2xs hover:border-[#CA7B20]/30 hover:shadow-xs transition-all flex flex-col justify-between group ios-press"
+          className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#CA7B20]/40 transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#68768A] tracking-wide uppercase">Gestiones en Proceso</span>
-            <div className="h-8 w-8 rounded-xl bg-[#FDF4EB] text-[#CA7B20] flex items-center justify-center">
-              <Clock className="h-4 w-4" />
+            <span className="text-ios-footnote font-semibold text-[#8E8E93] tracking-wide uppercase">Gestiones en Proceso</span>
+            <div className="h-8 w-8 rounded-[10px] bg-[#CA7B20]/10 text-[#CA7B20] flex items-center justify-center">
+              <Clock className="h-4 w-4 stroke-[1.75]" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold tracking-tight text-[#0B172D]">{gestionesEnProcesoCount}</span>
-              <span className="text-xs text-[#68768A] font-medium">en trámite</span>
+              <span className="text-ios-title1 font-bold tracking-tight text-[#0B172D]">{gestionesEnProcesoCount}</span>
+              <span className="text-ios-caption1 text-[#8E8E93]">en trámite</span>
             </div>
-            <span className="text-[10px] font-bold text-[#CA7B20] bg-[#FDF4EB] border border-[#CA7B20]/20 px-2 py-0.5 rounded-full">
+            <span className="text-ios-caption2 font-semibold text-[#CA7B20] bg-[#CA7B20]/10 px-2 py-0.5 rounded-full">
               En Trámite
             </span>
           </div>
@@ -381,20 +390,20 @@ export default function DashboardPage() {
         {/* 1.3 Tareas Nuevas */}
         <Link 
           href="/tareas"
-          className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-2xs hover:border-[#1B62E3]/30 hover:shadow-xs transition-all flex flex-col justify-between group ios-press"
+          className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#1B62E3]/40 transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#68768A] tracking-wide uppercase">Tareas Nuevas</span>
-            <div className="h-8 w-8 rounded-xl bg-[#EBF2FC] text-[#1B62E3] flex items-center justify-center">
-              <CheckSquare className="h-4 w-4" />
+            <span className="text-ios-footnote font-semibold text-[#8E8E93] tracking-wide uppercase">Tareas Nuevas</span>
+            <div className="h-8 w-8 rounded-[10px] bg-[#1B62E3]/10 text-[#1B62E3] flex items-center justify-center">
+              <CheckSquare className="h-4 w-4 stroke-[1.75]" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold tracking-tight text-[#0B172D]">{tareasNuevasCount}</span>
-              <span className="text-xs text-[#68768A] font-medium">por iniciar</span>
+              <span className="text-ios-title1 font-bold tracking-tight text-[#0B172D]">{tareasNuevasCount}</span>
+              <span className="text-ios-caption1 text-[#8E8E93]">por iniciar</span>
             </div>
-            <span className="text-[10px] font-bold text-[#1B62E3] bg-[#EBF2FC] border border-[#1B62E3]/20 px-2 py-0.5 rounded-full">
+            <span className="text-ios-caption2 font-semibold text-[#1B62E3] bg-[#1B62E3]/10 px-2 py-0.5 rounded-full">
               Pendientes
             </span>
           </div>
@@ -403,20 +412,20 @@ export default function DashboardPage() {
         {/* 1.4 Tareas en Proceso */}
         <Link 
           href="/tareas"
-          className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-2xs hover:border-[#34C759]/30 hover:shadow-xs transition-all flex flex-col justify-between group ios-press"
+          className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#34C759]/40 transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#68768A] tracking-wide uppercase">Tareas en Proceso</span>
-            <div className="h-8 w-8 rounded-xl bg-[#EBF9EE] text-[#34C759] flex items-center justify-center">
-              <Flame className="h-4 w-4" />
+            <span className="text-ios-footnote font-semibold text-[#8E8E93] tracking-wide uppercase">Tareas en Proceso</span>
+            <div className="h-8 w-8 rounded-[10px] bg-[#34C759]/10 text-[#34C759] flex items-center justify-center">
+              <Flame className="h-4 w-4 stroke-[1.75]" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold tracking-tight text-[#0B172D]">{tareasEnProcesoCount}</span>
-              <span className="text-xs text-[#68768A] font-medium">en curso</span>
+              <span className="text-ios-title1 font-bold tracking-tight text-[#0B172D]">{tareasEnProcesoCount}</span>
+              <span className="text-ios-caption1 text-[#8E8E93]">en curso</span>
             </div>
-            <span className="text-[10px] font-bold text-[#28A745] bg-[#EBF9EE] border border-[#34C759]/20 px-2 py-0.5 rounded-full">
+            <span className="text-ios-caption2 font-semibold text-[#34C759] bg-[#34C759]/10 px-2 py-0.5 rounded-full">
               En Ejecución
             </span>
           </div>

@@ -1322,10 +1322,21 @@ export default function AgendaPage() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start font-sans text-gray-800 dark:text-gray-100">
-      
-      {/* SIDEBAR IZQUIERDA ESTILO GOOGLE CALENDAR */}
-      <aside className="w-full lg:w-60 shrink-0 space-y-4">
+    <div className="space-y-4">
+      {/* iOS Large Title Header */}
+      <div className="space-y-0.5 pt-1 pb-1">
+        <h1 className="text-ios-large-title font-bold text-[#0B172D] tracking-tight">
+          Agenda Parlamentaria
+        </h1>
+        <p className="text-ios-subhead text-[#8E8E93]">
+          Calendario institucional, sesiones, comisiones y eventos en territorio
+        </p>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start font-sans text-[#0B172D]">
+        
+        {/* SIDEBAR IZQUIERDA ESTILO GOOGLE CALENDAR / iOS HIG */}
+        <aside className="w-full lg:w-60 shrink-0 space-y-4">
         {/* Botón + Crear Google Monochrome */}
         <button
           type="button"
@@ -3171,6 +3182,7 @@ export default function AgendaPage() {
           <span>{toastMessage}</span>
         </div>
       )}
+      </div>
     </div>
   );
 }

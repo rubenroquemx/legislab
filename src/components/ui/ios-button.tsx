@@ -30,9 +30,9 @@ export const IosButton = forwardRef<HTMLButtonElement, IosButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl select-none transition-all duration-120 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed ios-press';
 
     const sizeStyles = {
-      sm: 'h-8 px-3 text-xs gap-1.5 min-w-[32px]',
-      md: 'h-10 px-4 text-xs gap-2 min-w-[40px]',
-      lg: 'h-12 px-5 text-sm gap-2.5 min-w-[48px]',
+      sm: 'h-8 px-3 text-ios-footnote gap-1.5 min-w-[32px] rounded-[9px]',
+      md: 'h-11 px-4 text-ios-body font-semibold gap-2 min-w-[44px] min-h-[44px] rounded-[11px]',
+      lg: 'h-12 px-5 text-ios-headline font-semibold gap-2.5 min-w-[48px] min-h-[48px] rounded-[13px]',
     };
 
     const variantStyles = {

@@ -332,29 +332,40 @@ export default function AtencionCiudadanaPage() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1600px] mx-auto">
-      {/* Action Bar */}
-      <div className="flex items-center justify-end gap-2.5">
-        <div className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold",
-          isWhatsappConnected
-            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60"
-            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/60"
-        )}>
-          <span className={cn(
-            "h-2 w-2 rounded-full",
-            isWhatsappConnected ? "bg-emerald-500 animate-pulse" : "bg-red-500"
-          )}></span>
-          <span>{isWhatsappConnected ? (connectedPhone ? `WhatsApp Conectado (${connectedPhone})` : "WhatsApp Conectado") : "WhatsApp Desconectado"}</span>
+    <div className="space-y-5 max-w-[1600px] mx-auto">
+      {/* iOS Large Title Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 pb-1">
+        <div className="space-y-0.5">
+          <h1 className="text-ios-large-title font-bold text-[#0B172D] tracking-tight">
+            Atención Ciudadana
+          </h1>
+          <p className="text-ios-subhead text-[#8E8E93]">
+            Bandeja omnicanal de WhatsApp oficial y canalización de peticiones
+          </p>
         </div>
 
-        <Link
-          href="/configuracion?tab=conexiones"
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-800 hover:bg-zinc-50 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-semibold shadow-xs transition-colors"
-        >
-          <QrCode className="h-3.5 w-3.5 text-blue-600" />
-          <span>Configurar Conector QR</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-[10px] border text-xs font-semibold",
+            isWhatsappConnected
+              ? "bg-[#EBF9EE] text-[#34C759] border-[#34C759]/30"
+              : "bg-red-50 text-red-600 border-red-200"
+          )}>
+            <span className={cn(
+              "h-2 w-2 rounded-full",
+              isWhatsappConnected ? "bg-[#34C759] animate-pulse" : "bg-red-500"
+            )}></span>
+            <span>{isWhatsappConnected ? (connectedPhone ? `Conectado (${connectedPhone})` : "WhatsApp Conectado") : "Desconectado"}</span>
+          </div>
+
+          <Link
+            href="/configuracion?tab=conexiones"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#0B172D] border border-[#E5E5EA] rounded-[10px] text-xs font-semibold shadow-xs hover:bg-[#F3F5F9] ios-press"
+          >
+            <QrCode className="h-3.5 w-3.5 text-[#1B62E3]" />
+            <span>Conector QR</span>
+          </Link>
+        </div>
       </div>
 
       {/* ALERTA EN CASO DE DESCONEXIÓN */}

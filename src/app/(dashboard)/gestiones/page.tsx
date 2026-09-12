@@ -709,8 +709,17 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
 
   return (
     <div className="space-y-6">
-      {/* Action Bar */}
-      <div className="flex flex-wrap items-center justify-end gap-2.5">
+      {/* iOS Large Title Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 pb-1">
+        <div className="space-y-0.5">
+          <h1 className="text-ios-large-title font-bold text-[#0B172D] tracking-tight">
+            Gestiones Ciudadanas
+          </h1>
+          <p className="text-ios-subhead text-[#8E8E93]">
+            Trámite de solicitudes, expedientes digitales y oficios con IA
+          </p>
+        </div>
+
         <button
           onClick={() => {
             setIsOcrProcessing(false);
@@ -718,37 +727,37 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
             setAvatarUrl('');
             setIsModalCrearOpen(true);
           }}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 bg-[#1B62E3] hover:bg-[#1550BA] text-white text-ios-body font-semibold px-4 py-2 rounded-[12px] shadow-xs ios-press cursor-pointer self-start sm:self-auto"
         >
-          <Plus className="h-3.5 w-3.5" />
-          <span>Nueva Gestión Ciudadana</span>
+          <Plus className="h-4 w-4 stroke-[2]" />
+          <span>Nueva Gestión</span>
         </button>
       </div>
 
       {/* Bar: View Switcher (Lista vs Kanban) + Filters & Search */}
-      <div className="bg-white dark:bg-[#121824] p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-4">
+      <div className="bg-white p-3 sm:p-4 rounded-[14px] border border-[#E5E5EA]/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl text-xs font-semibold">
+          <div className="flex items-center bg-[#F0F2F5] p-1 rounded-[10px] text-xs font-semibold">
             <button
               onClick={() => setVistaModo('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] transition-all ios-press ${
                 vistaModo === 'kanban'
-                  ? 'bg-white text-blue-600 shadow-xs font-bold'
-                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white'
+                  ? 'bg-white text-[#0B172D] shadow-xs font-bold'
+                  : 'text-[#8E8E93] hover:text-[#0B172D]'
               }`}
             >
-              <Kanban className="h-3.5 w-3.5" />
+              <Kanban className="h-3.5 w-3.5 stroke-[1.75]" />
               <span>Tablero Kanban</span>
             </button>
             <button
               onClick={() => setVistaModo('lista')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] transition-all ios-press ${
                 vistaModo === 'lista'
-                  ? 'bg-white text-blue-600 shadow-xs font-bold'
-                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white'
+                  ? 'bg-white text-[#0B172D] shadow-xs font-bold'
+                  : 'text-[#8E8E93] hover:text-[#0B172D]'
               }`}
             >
-              <LayoutList className="h-3.5 w-3.5" />
+              <LayoutList className="h-3.5 w-3.5 stroke-[1.75]" />
               <span>Lista / Tabla</span>
             </button>
           </div>

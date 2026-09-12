@@ -13,13 +13,13 @@ export interface SectionHeaderProps {
 
 export function SectionHeader({ title, subtitle, action, className }: SectionHeaderProps) {
   return (
-    <div className={cn('px-3.5 pb-1.5 flex items-end justify-between gap-2', className)}>
+    <div className={cn('px-4 pb-1.5 pt-3 flex items-end justify-between gap-2', className)}>
       <div>
-        <h3 className="text-[11px] font-bold text-[#68768A] uppercase tracking-wider">
+        <h3 className="text-ios-footnote font-semibold text-[#8E8E93] uppercase tracking-wider">
           {title}
         </h3>
         {subtitle && (
-          <p className="text-[11px] text-[#68768A] mt-0.5">{subtitle}</p>
+          <p className="text-ios-caption1 text-[#8E8E93] mt-0.5">{subtitle}</p>
         )}
       </div>
       {action && <div className="shrink-0">{action}</div>}
@@ -36,7 +36,7 @@ export function InsetGroup({ children, className }: InsetGroupProps) {
   return (
     <div
       className={cn(
-        'bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden divide-y divide-[#F0F2F5]',
+        'bg-white rounded-[12px] border border-[#E5E5EA]/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] overflow-hidden divide-y divide-[#E5E5EA]/60',
         className
       )}
     >
@@ -76,8 +76,8 @@ export function ListRow({
     <div
       onClick={onClick}
       className={cn(
-        'px-4 py-3 flex items-center justify-between gap-3 min-h-[44px]',
-        isClickable && 'cursor-pointer hover:bg-[#F3F5F9] active:bg-[#E8ECF2] transition-colors ios-press',
+        'px-4 py-2.5 flex items-center justify-between gap-3 min-h-[44px]',
+        isClickable && 'ios-row-tap cursor-pointer',
         className
       )}
     >
@@ -90,14 +90,14 @@ export function ListRow({
         <div className="min-w-0 flex-1">
           <p
             className={cn(
-              'text-xs font-semibold truncate',
-              destructive ? 'text-red-600' : 'text-[#0B172D]'
+              'text-ios-body font-normal truncate',
+              destructive ? 'text-red-600 font-medium' : 'text-[#0B172D]'
             )}
           >
             {label}
           </p>
           {sublabel && (
-            <p className="text-[11px] text-[#68768A] truncate mt-0.5">{sublabel}</p>
+            <p className="text-ios-caption1 text-[#8E8E93] truncate mt-0.5">{sublabel}</p>
           )}
         </div>
       </div>
@@ -105,13 +105,13 @@ export function ListRow({
       <div className="flex items-center gap-2 shrink-0">
         {badge && <div className="shrink-0">{badge}</div>}
         {value && (
-          <div className="text-xs text-[#68768A] font-medium text-right truncate max-w-[180px]">
+          <div className="text-ios-body text-[#8E8E93] font-normal text-right truncate max-w-[180px]">
             {value}
           </div>
         )}
         {children}
         {chevron && (
-          <ChevronRight className="h-4 w-4 text-[#68768A] shrink-0" />
+          <ChevronRight className="h-4 w-4 text-[#C7C7CC] stroke-[1.5] shrink-0" />
         )}
       </div>
     </div>

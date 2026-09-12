@@ -91,9 +91,9 @@ export default function SaasAdminLayout({
           <Link href="/admin" className="flex items-center gap-2.5 overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/icons/icon.svg"
+              src="/icons/icon-192.png"
               alt="LegisLab"
-              className="h-7 w-7 shrink-0 object-contain"
+              className="h-7 w-7 shrink-0 object-contain rounded-[6px]"
             />
             {!isCol && (
               <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
@@ -241,9 +241,9 @@ export default function SaasAdminLayout({
               <div className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/icons/icon.svg"
+                  src="/icons/icon-192.png"
                   alt="LegisLab"
-                  className="h-6 w-6 object-contain"
+                  className="h-6 w-6 object-contain rounded-[6px]"
                 />
                 <span className="font-bold text-[#0B172D] text-sm">LegisLab Admin</span>
               </div>
