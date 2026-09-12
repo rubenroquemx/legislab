@@ -37,6 +37,8 @@ import {
   PhoneCall,
   ChevronLeft
 } from 'lucide-react';
+import { SectionHeader, InsetGroup, ListRow } from '@/components/ui/ios-inset-group';
+
 
 export interface ObservacionContacto {
   id: string;
@@ -785,14 +787,14 @@ export default function DirectorioPage() {
                 </div>
 
                 {/* iPhone Quick Action Buttons (Call, WhatsApp, Email, Wish Birthday) */}
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
                   {/* Llamar (tel:) */}
                   <a
                     href={`tel:${contactoSeleccionado.telefono.replace(/\D/g, '')}`}
-                    className="flex flex-col items-center justify-center w-16 h-14 bg-blue-50 dark:bg-blue-500/15 hover:bg-blue-100 dark:hover:bg-blue-500/25 rounded-2xl text-blue-600 dark:text-blue-400 transition-all shadow-2xs hover:scale-105"
+                    className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-blue-50/80 dark:bg-blue-500/15 hover:bg-blue-100 dark:hover:bg-blue-500/25 rounded-2xl text-[#007AFF] dark:text-blue-400 transition-all border border-blue-100/50 dark:border-blue-900/40 shadow-xs ios-press"
                   >
-                    <Phone className="h-5 w-5" />
-                    <span className="text-[10px] font-bold mt-1">Llamar</span>
+                    <Phone className="h-5 w-5 stroke-[2.2]" />
+                    <span className="text-[10px] font-semibold mt-1">Llamar</span>
                   </a>
 
                   {/* WhatsApp */}
@@ -800,20 +802,20 @@ export default function DirectorioPage() {
                     href={`https://api.whatsapp.com/send?phone=52${contactoSeleccionado.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Hola ${contactoSeleccionado.nombre}, le escribe el Diputado Ruben Roque.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex flex-col items-center justify-center w-16 h-14 bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 rounded-2xl text-[#00a884] dark:text-emerald-400 transition-all shadow-2xs hover:scale-105"
+                    className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-emerald-50/80 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 rounded-2xl text-[#34C759] dark:text-emerald-400 transition-all border border-emerald-100/50 dark:border-emerald-900/40 shadow-xs ios-press"
                   >
-                    <MessageCircle className="h-5 w-5" />
-                    <span className="text-[10px] font-bold mt-1">WhatsApp</span>
+                    <MessageCircle className="h-5 w-5 stroke-[2.2]" />
+                    <span className="text-[10px] font-semibold mt-1">WhatsApp</span>
                   </a>
 
                   {/* Correo (mailto:) */}
                   {contactoSeleccionado.correos[0] && (
                     <a
                       href={`mailto:${contactoSeleccionado.correos[0]}`}
-                      className="flex flex-col items-center justify-center w-16 h-14 bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 rounded-2xl text-indigo-600 dark:text-indigo-400 transition-all shadow-2xs hover:scale-105"
+                      className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-indigo-50/80 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 rounded-2xl text-[#5856D6] dark:text-indigo-400 transition-all border border-indigo-100/50 dark:border-indigo-900/40 shadow-xs ios-press"
                     >
-                      <Mail className="h-5 w-5" />
-                      <span className="text-[10px] font-bold mt-1">Correo</span>
+                      <Mail className="h-5 w-5 stroke-[2.2]" />
+                      <span className="text-[10px] font-semibold mt-1">Correo</span>
                     </a>
                   )}
 
@@ -823,7 +825,7 @@ export default function DirectorioPage() {
                       href={`https://api.whatsapp.com/send?phone=52${contactoSeleccionado.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Estimado(a) ${contactoSeleccionado.nombre}, con motivo de su cumpleaños le envío un afectuoso abrazo y mis mejores deseos de salud, éxito y bienestar. ¡Muchas felicidades! Atte: Dip. Ruben Roque.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-col items-center justify-center px-4 h-14 bg-amber-500 hover:bg-amber-600 rounded-2xl text-white transition-all shadow-md shadow-amber-500/30 hover:scale-105 font-bold"
+                      className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-[#FF9500] hover:bg-amber-600 rounded-2xl text-white transition-all shadow-md shadow-amber-500/25 ios-press font-semibold"
                     >
                       <Cake className="h-5 w-5" />
                       <span className="text-[10px] mt-1">Felicitar 🎂</span>
@@ -834,7 +836,7 @@ export default function DirectorioPage() {
                   {contactoSeleccionado.folioGestion && (
                     <Link
                       href="/gestiones"
-                      className="flex flex-col items-center justify-center px-4 h-14 bg-purple-50 dark:bg-purple-500/15 hover:bg-purple-100 dark:hover:bg-purple-500/25 rounded-2xl text-purple-700 dark:text-purple-300 transition-all shadow-2xs hover:scale-105 font-bold"
+                      className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-purple-50/80 dark:bg-purple-500/15 hover:bg-purple-100 dark:hover:bg-purple-500/25 rounded-2xl text-[#AF52DE] dark:text-purple-300 transition-all border border-purple-100/50 dark:border-purple-900/40 shadow-xs ios-press font-semibold"
                     >
                       <FolderKanban className="h-5 w-5" />
                       <span className="text-[10px] mt-1">Gestión ({contactoSeleccionado.folioGestion})</span>
@@ -843,60 +845,76 @@ export default function DirectorioPage() {
                 </div>
               </div>
 
-              {/* iOS Style Grouped Information Cards */}
-              <div className="space-y-3">
-                {/* 1. Teléfonos y Correos */}
-                <div className="bg-gray-50/80 dark:bg-gray-800/40 rounded-2xl p-4 border border-gray-200/80 dark:border-gray-800/80 space-y-3 text-xs">
-                  <div className="flex items-center justify-between pb-2 border-b border-gray-200/80 dark:border-gray-800/60">
-                    <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Contacto Directo</span>
-                    <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                      {contactoSeleccionado.tipoContacto}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-medium">Teléfono Celular:</span>
-                      <a href={`tel:${contactoSeleccionado.telefono.replace(/\D/g, '')}`} className="font-bold text-gray-900 dark:text-white hover:text-blue-600 text-sm">
-                        📞 {contactoSeleccionado.telefono}
-                      </a>
-                    </div>
-                    {contactoSeleccionado.telefonoAlterno && (
-                      <div>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-medium">Teléfono Oficina / Alterno:</span>
-                        <a href={`tel:${contactoSeleccionado.telefonoAlterno.replace(/\D/g, '')}`} className="font-bold text-gray-900 dark:text-white hover:text-blue-600 text-sm">
-                          📞 {contactoSeleccionado.telefonoAlterno}
+              {/* iOS Style Inset Grouped Information Cards */}
+              <div className="space-y-4">
+                {/* 1. Contacto Directo */}
+                <div>
+                  <SectionHeader
+                    title="Contacto Directo"
+                    action={
+                      <span className="text-[10px] font-semibold text-[#007AFF] bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 rounded-full border border-blue-200/60 dark:border-blue-800/60">
+                        {contactoSeleccionado.tipoContacto}
+                      </span>
+                    }
+                  />
+                  <InsetGroup>
+                    <ListRow
+                      icon={<Phone className="h-4 w-4 text-[#007AFF]" />}
+                      label="Teléfono Celular"
+                      value={
+                        <a href={`tel:${contactoSeleccionado.telefono.replace(/\D/g, '')}`} className="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-[#007AFF]">
+                          {contactoSeleccionado.telefono}
                         </a>
+                      }
+                    />
+                    {contactoSeleccionado.telefonoAlterno && (
+                      <ListRow
+                        icon={<PhoneCall className="h-4 w-4 text-[#007AFF]" />}
+                        label="Teléfono Oficina / Alterno"
+                        value={
+                          <a href={`tel:${contactoSeleccionado.telefonoAlterno.replace(/\D/g, '')}`} className="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-[#007AFF]">
+                            {contactoSeleccionado.telefonoAlterno}
+                          </a>
+                        }
+                      />
+                    )}
+                    {contactoSeleccionado.correos && contactoSeleccionado.correos.length > 0 && (
+                      <div className="px-4 py-3 space-y-1.5">
+                        <div className="flex items-center gap-3 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          <Mail className="h-4 w-4 text-[#5856D6] shrink-0" />
+                          <span>Correos Electrónicos</span>
+                        </div>
+                        <div className="pl-7 space-y-1">
+                          {contactoSeleccionado.correos.map((correo, idx) => (
+                            <a key={idx} href={`mailto:${correo}`} className="block text-xs text-[#007AFF] hover:underline font-mono truncate">
+                              {correo}
+                            </a>
+                          ))}
+                        </div>
                       </div>
                     )}
-                  </div>
-
-                  <div className="pt-2 border-t border-gray-200/80 dark:border-gray-800/60 space-y-1">
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-medium">Correos Electrónicos:</span>
-                    {contactoSeleccionado.correos.map((correo, idx) => (
-                      <a key={idx} href={`mailto:${correo}`} className="block text-blue-600 hover:underline font-mono text-xs">
-                        ✉️ {correo}
-                      </a>
-                    ))}
-                  </div>
+                  </InsetGroup>
                 </div>
 
-                {/* 2. Domicilio y Cumpleaños */}
-                <div className="bg-gray-50/80 dark:bg-gray-800/40 rounded-2xl p-4 border border-gray-200/80 dark:border-gray-800/80 space-y-2 text-xs">
-                  <div className="flex items-center justify-between pb-2 border-b border-gray-200/80 dark:border-gray-800/60">
-                    <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Ubicación y Fecha</span>
-                    <div className="flex items-center gap-1 text-amber-700 font-bold">
-                      <Cake className="h-3.5 w-3.5" />
-                      <span>Cumpleaños: {formatFechaCumpleanos(contactoSeleccionado.fechaCumpleanos)}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-medium">Domicilio Oficial:</span>
-                    <p className="font-medium text-gray-800 dark:text-gray-100">
-                      📍 {contactoSeleccionado.domicilio}, {contactoSeleccionado.colonia}, {contactoSeleccionado.municipio}
-                    </p>
-                  </div>
+                {/* 2. Ubicación y Fecha */}
+                <div>
+                  <SectionHeader title="Ubicación y Fecha" />
+                  <InsetGroup>
+                    <ListRow
+                      icon={<Cake className="h-4 w-4 text-[#FF9500]" />}
+                      label="Cumpleaños"
+                      value={
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                          {formatFechaCumpleanos(contactoSeleccionado.fechaCumpleanos)}
+                        </span>
+                      }
+                    />
+                    <ListRow
+                      icon={<MapPin className="h-4 w-4 text-[#FF3B30]" />}
+                      label="Domicilio Oficial"
+                      sublabel={`${contactoSeleccionado.domicilio}, ${contactoSeleccionado.colonia}, ${contactoSeleccionado.municipio}`}
+                    />
+                  </InsetGroup>
                 </div>
 
                 {/* 3. OBSERVACIONES */}

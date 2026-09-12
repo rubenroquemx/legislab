@@ -202,23 +202,23 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
   const userCargo = user?.cargo || (user?.isSuperAdmin ? 'Super Administrador SaaS' : 'Integrante de Despacho');
 
   return (
-    <header className="h-14 bg-white/80 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-14 bg-white/80 dark:bg-[#121824]/80 backdrop-blur-2xl border-b border-zinc-200/80 dark:border-zinc-800 px-3 sm:px-5 flex items-center justify-between sticky top-0 z-30 select-none">
       {/* Left: Mobile Toggle & Sidebar Collapse & Active Office Switcher */}
       <div className="flex items-center gap-2 sm:gap-3 max-w-xl">
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="lg:hidden p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
+          className="lg:hidden p-2 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all duration-120 ios-press cursor-pointer"
           title="Abrir menú"
         >
-          <Menu className="h-4 w-4" />
+          <Menu className="h-5 w-5 stroke-[2]" />
         </button>
 
         {onToggleSidebarCollapse && (
           <button
             type="button"
             onClick={onToggleSidebarCollapse}
-            className="hidden lg:flex p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
+            className="hidden lg:flex p-2 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all duration-120 ios-press cursor-pointer"
             title={isSidebarCollapsed ? "Expandir barra lateral" : "Colapsar barra lateral"}
           >
             <PanelLeft className="h-4 w-4" />
@@ -231,15 +231,15 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
             <button
               type="button"
               onClick={() => setOfficeDropdownOpen(!officeDropdownOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-zinc-100 hover:bg-zinc-200/80 text-zinc-900 rounded-lg border border-zinc-200/80 transition-colors shadow-2xs group max-w-[220px] sm:max-w-xs truncate"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-zinc-100/90 dark:bg-zinc-800/90 hover:bg-zinc-200/80 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl border border-zinc-200/80 dark:border-zinc-700 transition-all duration-120 shadow-xs ios-press group max-w-[220px] sm:max-w-xs truncate cursor-pointer"
               title="Cambiar despacho activo"
             >
-              <Building2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <Building2 className="w-3.5 h-3.5 text-[#007AFF] shrink-0" />
               <span className="truncate">{activeOffice?.name || 'Seleccionar Despacho'}</span>
-              <ChevronDown className="w-3 h-3 text-zinc-400 group-hover:text-zinc-700 shrink-0" />
+              <ChevronDown className="w-3 h-3 text-zinc-400 group-hover:text-zinc-700 dark:text-zinc-500 shrink-0" />
             </button>
           ) : (
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-zinc-50 text-zinc-800 rounded-lg border border-zinc-200/70 max-w-[240px] truncate">
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-zinc-100/80 dark:bg-zinc-800/60 text-zinc-800 dark:text-zinc-200 rounded-xl border border-zinc-200/70 dark:border-zinc-700 max-w-[240px] truncate">
               <Building2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
               <span className="truncate">{activeOffice?.name || 'Despacho Parlamentario'}</span>
             </div>

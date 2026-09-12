@@ -28,7 +28,7 @@ export function BottomNav({ onOpenDrawer }: BottomNavProps) {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-zinc-200 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-xs">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/85 dark:bg-[#121824]/85 backdrop-blur-2xl border-t border-zinc-200/80 dark:border-zinc-800 px-1 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-lg">
       {items.map((item) => {
         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
         const Icon = item.icon;
@@ -38,14 +38,16 @@ export function BottomNav({ onOpenDrawer }: BottomNavProps) {
             key={item.name}
             href={item.href}
             className={cn(
-              'flex flex-col items-center justify-center py-1 px-2 rounded-lg transition-colors min-w-[54px] active:scale-95',
+              'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-120 min-w-[56px] min-h-[44px] ios-press',
               isActive
-                ? 'text-zinc-900 font-semibold'
-                : 'text-zinc-500 hover:text-zinc-800'
+                ? 'text-[#007AFF] font-bold'
+                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 font-medium'
             )}
           >
-            <Icon className={cn('h-4 w-4', isActive ? 'text-zinc-900' : 'text-zinc-400')} />
-            <span className="text-[10px] mt-0.5 font-medium tracking-tight">{item.name}</span>
+            <div className="relative">
+              <Icon className={cn('h-5 w-5 transition-transform duration-120', isActive ? 'text-[#007AFF] scale-105 stroke-[2.3]' : 'text-zinc-400 dark:text-zinc-500 stroke-[1.8]')} />
+            </div>
+            <span className="text-[10px] mt-1 tracking-tight leading-none">{item.name}</span>
           </Link>
         );
       })}
@@ -53,10 +55,10 @@ export function BottomNav({ onOpenDrawer }: BottomNavProps) {
       <button
         type="button"
         onClick={onOpenDrawer}
-        className="flex flex-col items-center justify-center py-1 px-2 rounded-lg transition-colors min-w-[54px] text-zinc-500 hover:text-zinc-800 active:scale-95"
+        className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-120 min-w-[56px] min-h-[44px] text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 font-medium ios-press cursor-pointer"
       >
-        <Menu className="h-4 w-4 text-zinc-400" />
-        <span className="text-[10px] mt-0.5 font-medium tracking-tight">Menú</span>
+        <Menu className="h-5 w-5 text-zinc-400 dark:text-zinc-500 stroke-[1.8]" />
+        <span className="text-[10px] mt-1 tracking-tight leading-none">Menú</span>
       </button>
     </nav>
   );
