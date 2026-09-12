@@ -287,6 +287,7 @@ export const directorioContactos = pgTable('directorio_contactos', {
   foto: text('foto'),
   fechaNacimiento: text('fecha_nacimiento'), // '03 de Septiembre' o MM-DD
   direccion: text('direccion'),
+  observaciones: text('observaciones'),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 

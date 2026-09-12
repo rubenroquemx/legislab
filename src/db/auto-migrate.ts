@@ -251,9 +251,12 @@ export async function ensureDatabaseTables(connectionString: string) {
         foto TEXT,
         fecha_nacimiento TEXT,
         direccion TEXT,
+        observaciones TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       )
     `;
+
+    await sql`ALTER TABLE directorio_contactos ADD COLUMN IF NOT EXISTS observaciones TEXT`;
 
     // 8. Grupos
     await sql`

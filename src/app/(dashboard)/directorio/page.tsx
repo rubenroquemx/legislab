@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { getContactos, createContacto } from '@/app/actions/directorio';
+import { 
+  getContactos, 
+  createContacto, 
+  updateContacto, 
+  deleteContacto, 
+  addObservacionAction, 
+  deleteObservacionAction 
+} from '@/app/actions/directorio';
 import { getCurrentTimeMexicoCity } from '@/lib/date-utils';
 import Link from 'next/link';
 import { 
@@ -74,6 +81,63 @@ const INITIAL_CONTACTOS: ContactoDirectorio[] = [];
 
 const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
+function getContactInitials(nombre?: string | null): string {
+  if (!nombre || !nombre.trim()) return 'C';
+  const clean = nombre.trim().replace(/^(Dip\.|Lic\.|Dr\.|Dra\.|Ing\.|Mtro\.|Mtra\.|Prof\.|Profa\.|Sra\.|Sr\.|Don|Doña)\s+/i, '');
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'C';
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function hasCustomPhoto(avatarUrl?: string | null): boolean {
+  if (!avatarUrl || !avatarUrl.trim()) return false;
+  if (avatarUrl.includes('photo-1534528741775-53994a69daeb')) return false;
+  return true;
+}
+
+function formatFechaCumpleanos(dateStr?: string | null): string {
+  if (!dateStr || !dateStr.trim()) return 'No registrada';
+  const str = dateStr.trim();
+
+  const meses = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+
+  // Case 1: YYYY-MM-DD
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(str)) {
+    const [y, m, d] = str.split('-').map(Number);
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${d} de ${meses[m - 1]} de ${y}`;
+    }
+  }
+
+  // Case 2: M/D/YY or M/D/YYYY or MM/DD/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(str)) {
+    const parts = str.split('/').map(Number);
+    let m = parts[0];
+    let d = parts[1];
+    let y = parts[2];
+    if (y < 100) {
+      y = y > 30 ? 1900 + y : 2000 + y;
+    }
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${d} de ${meses[m - 1]} de ${y}`;
+    }
+  }
+
+  // Case 3: DD-MM-YYYY
+  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(str)) {
+    const [d, m, y] = str.split('-').map(Number);
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${d} de ${meses[m - 1]} de ${y}`;
+    }
+  }
+
+  return str;
+}
+
 export default function DirectorioPage() {
   const [contactos, setContactos] = useState<ContactoDirectorio[]>(INITIAL_CONTACTOS);
   const [loading, setLoading] = useState(true);
@@ -83,23 +147,38 @@ export default function DirectorioPage() {
     try {
       const res = await getContactos();
       if (res.success && res.data && res.data.length > 0) {
-        const mapped: ContactoDirectorio[] = res.data.map((d: any) => ({
-          id: d.id,
-          nombre: d.nombre,
-          telefono: d.telefono,
-          cargo: d.cargo,
-          organizacion: d.organizacion,
-          correos: d.email ? [d.email] : [],
-          domicilio: d.direccion || '',
-          colonia: '',
-          municipio: 'Centro',
-          fechaCumpleanos: d.fechaNacimiento || '',
-          tipoContacto: (d.categoria as any) || 'Funcionario Estatal',
-          avatarUrl: d.foto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-          observaciones: [],
-        }));
+        const mapped: ContactoDirectorio[] = res.data.map((d: any) => {
+          let obs: ObservacionContacto[] = [];
+          if (d.observaciones) {
+            try {
+              obs = typeof d.observaciones === 'string' ? JSON.parse(d.observaciones) : d.observaciones;
+              if (!Array.isArray(obs)) obs = [];
+            } catch {
+              obs = [];
+            }
+          }
+          return {
+            id: d.id,
+            nombre: d.nombre,
+            telefono: d.telefono,
+            cargo: d.cargo,
+            organizacion: d.organizacion,
+            correos: d.email ? [d.email] : [],
+            domicilio: d.direccion || '',
+            colonia: '',
+            municipio: 'Centro',
+            fechaCumpleanos: d.fechaNacimiento || '',
+            tipoContacto: (d.categoria as any) || 'Funcionario Estatal',
+            avatarUrl: d.foto || '',
+            observaciones: obs,
+          };
+        });
         setContactos(mapped);
-        setContactoSeleccionado((prev) => prev || mapped[0] || null);
+        setContactoSeleccionado((prev) => {
+          if (!prev) return mapped[0] || null;
+          const found = mapped.find(m => m.id === prev.id);
+          return found || mapped[0] || null;
+        });
       }
     } catch (err) {
       console.warn('Error loading contactos:', err);
@@ -238,7 +317,7 @@ export default function DirectorioPage() {
     }
   };
 
-  const handleGuardarContacto = (e: React.FormEvent) => {
+  const handleGuardarContacto = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formNombre.trim() || !formTelefono.trim()) {
       alert('Por favor completa los campos obligatorios (Nombre y Teléfono).');
@@ -246,42 +325,14 @@ export default function DirectorioPage() {
     }
 
     const correosArray = [formCorreoPrincipal.trim(), formCorreoAlt.trim()].filter(Boolean);
-    const avatar = formAvatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80';
+    const avatar = formAvatarUrl.trim() || '';
     
     // Check if birthday matches today (03 Sep)
     const isBirthdayToday = formCumpleanos.endsWith('09-03');
 
     if (contactoEnEdicion) {
-      const actualizados = contactos.map((c) => {
-        if (c.id === contactoEnEdicion.id) {
-          const updated: ContactoDirectorio = {
-            ...c,
-            nombre: formNombre.trim(),
-            telefono: formTelefono.trim(),
-            telefonoAlterno: formTelefonoAlt.trim() || undefined,
-            cargo: formCargo.trim() || 'Contacto General',
-            organizacion: formOrganizacion.trim() || 'Particular',
-            correos: correosArray,
-            domicilio: formDomicilio.trim(),
-            colonia: formColonia.trim(),
-            municipio: formMunicipio.trim(),
-            fechaCumpleanos: formCumpleanos,
-            esCumpleanosHoy: isBirthdayToday,
-            tipoContacto: formTipoContacto,
-            folioGestion: formFolioGestion.trim() || undefined,
-            avatarUrl: avatar,
-          };
-          if (contactoSeleccionado?.id === c.id) {
-            setContactoSeleccionado(updated);
-          }
-          return updated;
-        }
-        return c;
-      });
-      setContactos(actualizados);
-    } else {
-      const nuevo: ContactoDirectorio = {
-        id: `con-${Date.now()}`,
+      const updated: ContactoDirectorio = {
+        ...contactoEnEdicion,
         nombre: formNombre.trim(),
         telefono: formTelefono.trim(),
         telefonoAlterno: formTelefonoAlt.trim() || undefined,
@@ -296,26 +347,91 @@ export default function DirectorioPage() {
         tipoContacto: formTipoContacto,
         folioGestion: formFolioGestion.trim() || undefined,
         avatarUrl: avatar,
-        observaciones: [
-          {
-            id: `obs-${Date.now()}`,
-            fecha: 'Hoy',
-            hora: getCurrentTimeMexicoCity(),
-            autor: usuarioActivo.nombre,
-            texto: 'Contacto registrado en el Directorio Oficial.',
-            esDiputado: true,
-          }
-        ],
       };
+
+      const actualizados = contactos.map((c) => (c.id === contactoEnEdicion.id ? updated : c));
+      setContactos(actualizados);
+      if (contactoSeleccionado?.id === contactoEnEdicion.id) {
+        setContactoSeleccionado(updated);
+      }
+      setIsModalCrearOpen(false);
+
+      try {
+        await updateContacto(contactoEnEdicion.id, {
+          nombre: formNombre.trim(),
+          cargo: formCargo.trim() || 'Contacto General',
+          organizacion: formOrganizacion.trim() || 'Particular',
+          categoria: formTipoContacto,
+          telefono: formTelefono.trim(),
+          email: formCorreoPrincipal.trim() || undefined,
+          foto: avatar || null,
+          fechaNacimiento: formCumpleanos,
+          direccion: `${formDomicilio.trim()}${formColonia.trim() ? ', ' + formColonia.trim() : ''}${formMunicipio.trim() ? ', ' + formMunicipio.trim() : ''}`,
+        });
+      } catch (err) {
+        console.error('Error updating contacto:', err);
+      }
+    } else {
+      const initialObs: ObservacionContacto = {
+        id: `obs-${Date.now()}`,
+        fecha: 'Hoy',
+        hora: getCurrentTimeMexicoCity(),
+        autor: usuarioActivo.nombre,
+        texto: 'Contacto registrado en el Directorio Oficial.',
+        esDiputado: true,
+      };
+
+      const tempId = `con-${Date.now()}`;
+      const nuevo: ContactoDirectorio = {
+        id: tempId,
+        nombre: formNombre.trim(),
+        telefono: formTelefono.trim(),
+        telefonoAlterno: formTelefonoAlt.trim() || undefined,
+        cargo: formCargo.trim() || 'Contacto General',
+        organizacion: formOrganizacion.trim() || 'Particular',
+        correos: correosArray,
+        domicilio: formDomicilio.trim(),
+        colonia: formColonia.trim(),
+        municipio: formMunicipio.trim(),
+        fechaCumpleanos: formCumpleanos,
+        esCumpleanosHoy: isBirthdayToday,
+        tipoContacto: formTipoContacto,
+        folioGestion: formFolioGestion.trim() || undefined,
+        avatarUrl: avatar,
+        observaciones: [initialObs],
+      };
+
       setContactos([nuevo, ...contactos]);
       setContactoSeleccionado(nuevo);
       setMobileShowDetail(true);
-    }
+      setIsModalCrearOpen(false);
 
-    setIsModalCrearOpen(false);
+      try {
+        const res = await createContacto({
+          nombre: formNombre.trim(),
+          cargo: formCargo.trim() || 'Contacto General',
+          organizacion: formOrganizacion.trim() || 'Particular',
+          categoria: formTipoContacto,
+          telefono: formTelefono.trim(),
+          email: formCorreoPrincipal.trim() || undefined,
+          foto: avatar || undefined,
+          fechaNacimiento: formCumpleanos,
+          direccion: `${formDomicilio.trim()}${formColonia.trim() ? ', ' + formColonia.trim() : ''}${formMunicipio.trim() ? ', ' + formMunicipio.trim() : ''}`,
+          observaciones: [initialObs],
+        });
+        if (res.success && res.data) {
+          setContactos(prev => prev.map(c => c.id === tempId ? { ...c, id: res.data.id } : c));
+          if (contactoSeleccionado?.id === tempId) {
+            setContactoSeleccionado(prev => prev ? { ...prev, id: res.data.id } : null);
+          }
+        }
+      } catch (err) {
+        console.error('Error creating contacto in DB:', err);
+      }
+    }
   };
 
-  const handleEliminarContacto = (id: string) => {
+  const handleEliminarContacto = async (id: string) => {
     const restantes = contactos.filter(c => c.id !== id);
     setContactos(restantes);
     setModalDeleteId(null);
@@ -323,19 +439,28 @@ export default function DirectorioPage() {
       setContactoSeleccionado(restantes[0] || null);
       setMobileShowDetail(false);
     }
+
+    try {
+      await deleteContacto(id);
+    } catch (err) {
+      console.error('Error deleting contacto:', err);
+    }
   };
 
   // Add Observation in WhatsApp Chat Style
-  const handleAgregarObservacion = (e: React.FormEvent) => {
+  const handleAgregarObservacion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevaObsTexto.trim() || !contactoSeleccionado) return;
+
+    const texto = nuevaObsTexto.trim();
+    setNuevaObsTexto('');
 
     const nuevaObs: ObservacionContacto = {
       id: `obs-${Date.now()}`,
       fecha: 'Hoy',
       hora: getCurrentTimeMexicoCity(),
       autor: usuarioActivo.nombre,
-      texto: nuevaObsTexto.trim(),
+      texto,
       esDiputado: true,
     };
 
@@ -346,10 +471,23 @@ export default function DirectorioPage() {
 
     setContactos(contactos.map(c => c.id === contactoSeleccionado.id ? updatedContacto : c));
     setContactoSeleccionado(updatedContacto);
-    setNuevaObsTexto('');
+
+    try {
+      const res = await addObservacionAction(contactoSeleccionado.id, texto, usuarioActivo.nombre, true);
+      if (res.success && res.allObservaciones) {
+        const synced: ContactoDirectorio = {
+          ...contactoSeleccionado,
+          observaciones: res.allObservaciones,
+        };
+        setContactos(prev => prev.map(c => c.id === contactoSeleccionado.id ? synced : c));
+        setContactoSeleccionado(synced);
+      }
+    } catch (err) {
+      console.error('Error saving observacion:', err);
+    }
   };
 
-  const handleEliminarObservacion = (obsId: string) => {
+  const handleEliminarObservacion = async (obsId: string) => {
     if (!contactoSeleccionado) return;
     const updatedContacto: ContactoDirectorio = {
       ...contactoSeleccionado,
@@ -357,6 +495,20 @@ export default function DirectorioPage() {
     };
     setContactos(contactos.map(c => c.id === contactoSeleccionado.id ? updatedContacto : c));
     setContactoSeleccionado(updatedContacto);
+
+    try {
+      const res = await deleteObservacionAction(contactoSeleccionado.id, obsId);
+      if (res.success && res.allObservaciones) {
+        const synced: ContactoDirectorio = {
+          ...contactoSeleccionado,
+          observaciones: res.allObservaciones,
+        };
+        setContactos(prev => prev.map(c => c.id === contactoSeleccionado.id ? synced : c));
+        setContactoSeleccionado(synced);
+      }
+    } catch (err) {
+      console.error('Error deleting observacion:', err);
+    }
   };
 
   const cumpleanerosCount = contactos.filter(c => c.esCumpleanosHoy).length;
@@ -381,7 +533,7 @@ export default function DirectorioPage() {
 
         <button
           onClick={handleOpenCrearModal}
-          className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-all"
+          className="hidden sm:inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Nuevo Contacto</span>
@@ -389,12 +541,12 @@ export default function DirectorioPage() {
       </div>
 
       {/* Main iPhone Style Master-Detail Layout with Mobile Slide Animation */}
-      <div className="relative w-full lg:grid lg:grid-cols-12 lg:gap-5 items-start overflow-hidden min-h-[750px] lg:overflow-visible">
+      <div className="-mx-4 sm:mx-0 relative w-auto sm:w-full lg:grid lg:grid-cols-12 lg:gap-5 items-start overflow-hidden min-h-[750px] lg:overflow-visible">
         
         {/* =========================================================================
             LEFT COLUMN (5 COLS): iPHONE CONTACTS ALPHABETICAL LIST
            ========================================================================= */}
-        <div className={`w-full lg:col-span-5 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+        <div className={`w-full lg:col-span-5 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-y sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
           mobileShowDetail
             ? '-translate-x-full absolute inset-0 opacity-0 pointer-events-none lg:relative lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
             : 'translate-x-0 relative opacity-100'
@@ -466,13 +618,19 @@ export default function DirectorioPage() {
                             }`}
                           >
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="h-11 w-11 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 border border-gray-200/80 dark:border-gray-800/80 shrink-0 relative">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={contacto.avatarUrl}
-                                  alt={contacto.nombre}
-                                  className="h-full w-full object-cover"
-                                />
+                              <div className="h-11 w-11 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 border border-gray-200/80 dark:border-gray-800/80 shrink-0 relative flex items-center justify-center">
+                                {hasCustomPhoto(contacto.avatarUrl) ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={contacto.avatarUrl}
+                                    alt={contacto.nombre}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-full w-full bg-gradient-to-b from-[#8E8E93] to-[#636366] dark:from-[#636366] dark:to-[#48484A] text-white font-bold text-xs flex items-center justify-center select-none shadow-2xs">
+                                    {getContactInitials(contacto.nombre)}
+                                  </div>
+                                )}
                                 {contacto.esCumpleanosHoy && (
                                   <span className="absolute -top-1 -right-1 text-xs">🎂</span>
                                 )}
@@ -538,7 +696,7 @@ export default function DirectorioPage() {
         {/* =========================================================================
             RIGHT COLUMN (7 COLS): iPHONE CONTACT CARD DETAIL & CHAT
            ========================================================================= */}
-        <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+        <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-y sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
           mobileShowDetail
             ? 'translate-x-0 relative opacity-100'
             : 'translate-x-full absolute inset-0 opacity-0 pointer-events-none lg:relative lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
@@ -570,13 +728,19 @@ export default function DirectorioPage() {
               <div className="space-y-6 animate-in fade-in">
               {/* iPhone Contact Header: Big Avatar & Name */}
               <div className="flex flex-col items-center text-center space-y-3 pt-2">
-                <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-white shadow-lg relative group bg-gray-100 dark:bg-gray-800">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={contactoSeleccionado.avatarUrl}
-                    alt={contactoSeleccionado.nombre}
-                    className="h-full w-full object-cover"
-                  />
+                <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-white dark:border-gray-800 shadow-lg relative group bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  {hasCustomPhoto(contactoSeleccionado.avatarUrl) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={contactoSeleccionado.avatarUrl}
+                      alt={contactoSeleccionado.nombre}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-b from-[#8E8E93] to-[#636366] dark:from-[#636366] dark:to-[#48484A] text-white font-bold text-2xl flex items-center justify-center select-none">
+                      {getContactInitials(contactoSeleccionado.nombre)}
+                    </div>
+                  )}
                   {contactoSeleccionado.esCumpleanosHoy && (
                     <span className="absolute bottom-0 right-0 text-xl animate-bounce">🎂</span>
                   )}
@@ -701,7 +865,7 @@ export default function DirectorioPage() {
                     <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Ubicación y Fecha</span>
                     <div className="flex items-center gap-1 text-amber-700 font-bold">
                       <Cake className="h-3.5 w-3.5" />
-                      <span>Cumpleaños: {contactoSeleccionado.fechaCumpleanos}</span>
+                      <span>Cumpleaños: {formatFechaCumpleanos(contactoSeleccionado.fechaCumpleanos)}</span>
                     </div>
                   </div>
 
@@ -713,7 +877,7 @@ export default function DirectorioPage() {
                   </div>
                 </div>
 
-                {/* 3. CHAT DE OBSERVACIONES ESTILO WHATSAPP */}
+                {/* 3. OBSERVACIONES */}
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -722,7 +886,7 @@ export default function DirectorioPage() {
                       </div>
                       <div>
                         <h3 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                          <span>Historial de Observaciones y Acuerdos</span>
+                          <span>Observaciones</span>
                           <span className="text-[10px] font-bold text-[#00a884] bg-emerald-50 px-2 py-0.2 rounded-full border border-emerald-200">
                             {contactoSeleccionado.observaciones.length} notas
                           </span>
@@ -730,7 +894,6 @@ export default function DirectorioPage() {
                         <p className="text-[10px] text-gray-400 dark:text-gray-500">Bitácora interna de seguimiento con este contacto</p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">WhatsApp Style</span>
                   </div>
 
                   {/* Chat Container */}
@@ -1107,6 +1270,17 @@ export default function DirectorioPage() {
           </div>
         </div>
       )}
+
+      {/* Mobile Floating Action Button (FAB): Bottom Right corner above bottom menu */}
+      <div className="fixed bottom-20 right-4 z-40 sm:hidden">
+        <button
+          onClick={handleOpenCrearModal}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs py-3 px-4.5 rounded-full shadow-xl shadow-blue-600/40 border border-blue-500/30 transition-all cursor-pointer"
+        >
+          <Plus className="h-4 w-4 stroke-[2.5]" />
+          <span>Nuevo Contacto</span>
+        </button>
+      </div>
     </div>
   );
 }

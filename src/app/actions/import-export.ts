@@ -432,7 +432,7 @@ export async function importDirectorioAction(
         categoria: item.categoria?.trim() || 'Gabinete Estatal',
         telefono: item.telefono?.trim() || '993 000 0000',
         email: item.email?.trim() || null,
-        foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        foto: null,
         fechaNacimiento: item.fechaNacimiento?.trim() || null,
         direccion: item.direccion?.trim() || null,
       });
