@@ -22,10 +22,6 @@ const ACTIVE_OFFICE_COOKIE = 'legislab_active_office_id';
  * 4. Fallback final: Primer despacho disponible en la base de datos o el ID por defecto.
  */
 export async function getActiveOfficeId(explicitOfficeId?: string | null): Promise<string> {
-  if (explicitOfficeId && typeof explicitOfficeId === 'string' && explicitOfficeId.trim() !== '' && explicitOfficeId !== 'undefined' && explicitOfficeId !== 'null' && explicitOfficeId.length > 5) {
-    return explicitOfficeId.trim();
-  }
-
   let session = null;
   try {
     session = await getServerSession(authOptions);
@@ -38,8 +34,12 @@ export async function getActiveOfficeId(explicitOfficeId?: string | null): Promi
     session?.user?.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
   );
 
-  // 1. Para Superadmin: Consultar cookie de Despacho Activo
+  // 1. Para Superadmin: Si se envía explicitOfficeId o existe cookie de Despacho Activo
   if (isSuper) {
+    if (explicitOfficeId && typeof explicitOfficeId === 'string' && explicitOfficeId.trim() !== '' && explicitOfficeId !== 'undefined' && explicitOfficeId !== 'null' && explicitOfficeId.length > 5) {
+      return explicitOfficeId.trim();
+    }
+
     try {
       const cookieStore = await cookies();
       const cookieOfficeId = cookieStore.get(ACTIVE_OFFICE_COOKIE)?.value;
@@ -57,63 +57,61 @@ export async function getActiveOfficeId(explicitOfficeId?: string | null): Promi
     } catch (cookieErr) {
       console.warn('Error reading active office cookie:', cookieErr);
     }
+
+    // Fallback exclusivo para Superadmin: Despacho más reciente
+    try {
+      const [latestOffice] = await db
+        .select({ id: offices.id })
+        .from(offices)
+        .orderBy(desc(offices.createdAt))
+        .limit(1);
+
+      if (latestOffice) {
+        return latestOffice.id;
+      }
+    } catch (dbErr) {
+      console.warn('Error querying fallback office in DB for superadmin:', dbErr);
+    }
+
+    return '00000000-0000-0000-0000-000000000001';
   }
 
-  // 2. Si el usuario tiene un officeId asignado en su sesión
+  // 2. Si el usuario regular tiene un officeId asignado en su sesión
   if (session?.user?.officeId) {
     return session.user.officeId;
   }
 
   // 3. Consultar usuario en BD por correo si no viene en sesión
   if (session?.user?.email) {
+    const cleanEmail = session.user.email.toLowerCase().trim();
     try {
       const [dbUser] = await db
         .select({ officeId: users.officeId })
         .from(users)
-        .where(eq(users.email, session.user.email.toLowerCase().trim()))
+        .where(eq(users.email, cleanEmail))
         .limit(1);
 
       if (dbUser?.officeId) {
         return dbUser.officeId;
+      }
+
+      // Consultar si es titular de algún despacho registrado
+      const [officeTitular] = await db
+        .select({ id: offices.id })
+        .from(offices)
+        .where(eq(offices.titularEmail, cleanEmail))
+        .limit(1);
+
+      if (officeTitular?.id) {
+        return officeTitular.id;
       }
     } catch (dbErr) {
       console.warn('Error querying user office in DB:', dbErr);
     }
   }
 
-  // 4. Intentar leer cookie de despacho activo incluso si no hay sesión activa aún
-  try {
-    const cookieStore = await cookies();
-    const cookieOfficeId = cookieStore.get(ACTIVE_OFFICE_COOKIE)?.value;
-    if (cookieOfficeId && cookieOfficeId.length > 5) {
-      const [found] = await db
-        .select({ id: offices.id })
-        .from(offices)
-        .where(eq(offices.id, cookieOfficeId))
-        .limit(1);
-
-      if (found) {
-        return found.id;
-      }
-    }
-  } catch (e) {}
-
-  // 5. Fallback a la base de datos: obtener el despacho más reciente
-  try {
-    const [latestOffice] = await db
-      .select({ id: offices.id })
-      .from(offices)
-      .orderBy(desc(offices.createdAt))
-      .limit(1);
-
-    if (latestOffice) {
-      return latestOffice.id;
-    }
-  } catch (dbErr) {
-    console.warn('Error querying fallback office in DB:', dbErr);
-  }
-
-  return '00000000-0000-0000-0000-000000000001';
+  // Si no es superadmin y no tiene despacho asignado ni es titular:
+  throw new Error('NO_OFFICE_ASSIGNED: El usuario no tiene ningún despacho asignado ni es titular.');
 }
 
 /**
@@ -121,7 +119,6 @@ export async function getActiveOfficeId(explicitOfficeId?: string | null): Promi
  */
 export async function getActiveOfficeInfoAction() {
   try {
-    const activeOfficeId = await getActiveOfficeId();
     let session = null;
     try {
       session = await getServerSession(authOptions);
@@ -131,6 +128,19 @@ export async function getActiveOfficeInfoAction() {
       session?.user?.isSuperAdmin ||
       session?.user?.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
     );
+
+    let activeOfficeId: string;
+    try {
+      activeOfficeId = await getActiveOfficeId();
+    } catch (officeErr) {
+      return {
+        success: false,
+        error: 'NO_OFFICE_ASSIGNED',
+        activeOffice: null,
+        isSuperAdmin: false,
+        allOffices: [],
+      };
+    }
 
     let activeOffice: any = null;
     try {
@@ -148,18 +158,28 @@ export async function getActiveOfficeInfoAction() {
     }
 
     if (!activeOffice) {
-      activeOffice = {
-        id: activeOfficeId,
-        name: 'Despacho Parlamentario',
-        titularName: 'Diputado',
-        titularEmail: '',
-        district: 'Distrito 04 Federal',
-        state: 'Tabasco',
-        legislature: 'LXVI Legislatura',
-        party: 'MORENA',
-        status: 'active',
-        plan: 'starter',
-      };
+      if (isSuperAdmin) {
+        activeOffice = {
+          id: activeOfficeId,
+          name: 'Despacho Parlamentario',
+          titularName: 'Superadministrador',
+          titularEmail: SUPERADMIN_EMAIL,
+          district: 'Distrito 04 Federal',
+          state: 'Tabasco',
+          legislature: 'LXVI Legislatura',
+          party: 'MORENA',
+          status: 'active',
+          plan: 'enterprise',
+        };
+      } else {
+        return {
+          success: false,
+          error: 'NO_OFFICE_ASSIGNED',
+          activeOffice: null,
+          isSuperAdmin: false,
+          allOffices: [],
+        };
+      }
     }
 
     // Si es superadmin, también obtenemos la lista de despachos para el switcher

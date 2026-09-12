@@ -147,52 +147,119 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (account?.provider === 'google' && user.email) {
-        const cleanEmail = user.email.toLowerCase().trim();
-        try {
-          const [existingUser] = await db
-            .select()
-            .from(users)
-            .where(eq(users.email, cleanEmail))
-            .limit(1);
+      if (!user.email) return false;
+      const cleanEmail = user.email.toLowerCase().trim();
 
-          if (existingUser) {
-            if (existingUser.status === 'suspended') {
-              return false; // Bloquear inicio de sesión
-            }
-            // Si estaba en estado "invited", al iniciar sesión con Google se activa automáticamente
-            if (existingUser.status === 'invited') {
-              await db
-                .update(users)
-                .set({ status: 'active', lastLoginAt: new Date(), image: user.image || existingUser.image })
-                .where(eq(users.id, existingUser.id));
-            } else {
-              await db
-                .update(users)
-                .set({ lastLoginAt: new Date(), image: user.image || existingUser.image })
-                .where(eq(users.id, existingUser.id));
+      // 1. Acceso de Superadmin Maestro siempre permitido
+      if (cleanEmail === SUPERADMIN_EMAIL.toLowerCase()) {
+        return true;
+      }
+
+      try {
+        // 2. Verificar si el usuario ya existe en la base de datos
+        const [existingUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, cleanEmail))
+          .limit(1);
+
+        if (existingUser) {
+          if (existingUser.status === 'suspended') {
+            return false; // Bloquear inicio de sesión
+          }
+
+          // Si el usuario tiene despacho asignado, verificar que el despacho exista
+          if (existingUser.officeId) {
+            const [office] = await db
+              .select({ id: offices.id, status: offices.status })
+              .from(offices)
+              .where(eq(offices.id, existingUser.officeId))
+              .limit(1);
+
+            if (office) {
+              if (existingUser.status === 'invited') {
+                await db
+                  .update(users)
+                  .set({ status: 'active', lastLoginAt: new Date(), image: user.image || existingUser.image })
+                  .where(eq(users.id, existingUser.id));
+              } else {
+                await db
+                  .update(users)
+                  .set({ lastLoginAt: new Date(), image: user.image || existingUser.image })
+                  .where(eq(users.id, existingUser.id));
+              }
+              return true;
             }
           }
-        } catch (err) {
-          console.warn('Error in Google signIn callback:', err);
+
+          // Si existe en users pero no tiene officeId, buscar si es titular en offices
+          const [titularOffice] = await db
+            .select({ id: offices.id })
+            .from(offices)
+            .where(eq(offices.titularEmail, cleanEmail))
+            .limit(1);
+
+          if (titularOffice) {
+            await db
+              .update(users)
+              .set({
+                officeId: titularOffice.id,
+                role: 'diputado',
+                status: 'active',
+                lastLoginAt: new Date(),
+                image: user.image || existingUser.image,
+              })
+              .where(eq(users.id, existingUser.id));
+            return true;
+          }
+
+          // Está registrado pero sin despacho y no es titular -> enviar a planes
+          return '/planes?unassigned=true';
         }
+
+        // 3. Si no existe en la tabla users, verificar si es titular registrado de algún despacho
+        const [titularOffice] = await db
+          .select()
+          .from(offices)
+          .where(eq(offices.titularEmail, cleanEmail))
+          .limit(1);
+
+        if (titularOffice) {
+          await db.insert(users).values({
+            name: user.name || titularOffice.titularName || 'Diputado Titular',
+            email: cleanEmail,
+            role: 'diputado',
+            officeId: titularOffice.id,
+            cargo: 'Diputado Titular',
+            status: 'active',
+            image: user.image || null,
+            lastLoginAt: new Date(),
+          });
+          return true;
+        }
+
+        // 4. Si NO es superadmin, NO está asignado a un despacho y NO es titular de ningún despacho:
+        // Bloquear acceso al sistema y redirigir a la página de planes / venta
+        return '/planes?unassigned=true';
+      } catch (err) {
+        console.warn('Error in signIn callback:', err);
+        return '/planes?unassigned=true';
       }
-      return true;
     },
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.role = user.role || 'asesor_a';
         token.officeId = user.officeId || null;
-        token.isSuperAdmin = user.isSuperAdmin || user.email?.toLowerCase() === SUPERADMIN_EMAIL;
+        token.isSuperAdmin = user.isSuperAdmin || user.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
         token.cargo = user.cargo || 'Integrante';
         token.permissions = user.permissions || null;
       }
 
-      // Si inició sesión con Google o necesitamos refrescar datos de base de datos
+      // Si necesitamos refrescar datos de base de datos
       if (token.email) {
         const cleanEmail = token.email.toLowerCase().trim();
-        if (cleanEmail === SUPERADMIN_EMAIL) {
+        if (cleanEmail === SUPERADMIN_EMAIL.toLowerCase()) {
           token.isSuperAdmin = true;
           token.role = 'admin';
         }
@@ -209,8 +276,23 @@ export const authOptions: NextAuthOptions = {
             token.officeId = dbUser.officeId || null;
             token.role = dbUser.role || 'asesor_a';
             token.cargo = dbUser.cargo || 'Integrante';
-            token.isSuperAdmin = Boolean(dbUser.isSuperAdmin) || cleanEmail === SUPERADMIN_EMAIL;
+            token.isSuperAdmin = Boolean(dbUser.isSuperAdmin) || cleanEmail === SUPERADMIN_EMAIL.toLowerCase();
             token.permissions = dbUser.permissions || null;
+          } else {
+            // Verificar si es titular de algún despacho
+            const [titularOffice] = await db
+              .select({ id: offices.id })
+              .from(offices)
+              .where(eq(offices.titularEmail, cleanEmail))
+              .limit(1);
+
+            if (titularOffice) {
+              token.officeId = titularOffice.id;
+              token.role = 'diputado';
+              token.cargo = 'Diputado Titular';
+            } else {
+              token.officeId = null;
+            }
           }
         } catch (e) {
           // Ignorar si la BD aún no está disponible

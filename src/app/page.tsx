@@ -29,6 +29,12 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-4">
             <Link
+              href="/planes"
+              className="text-sm font-medium text-slate-300 hover:text-white transition-colors px-3 py-2"
+            >
+              Planes y Paquetes
+            </Link>
+            <Link
               href="/login"
               className="text-sm font-medium text-slate-300 hover:text-white transition-colors px-3 py-2"
             >

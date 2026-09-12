@@ -1,17 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Navbar } from '@/components/layout/navbar';
 import { BottomNav } from '@/components/layout/bottom-nav';
+import { SUPERADMIN_EMAIL } from '@/lib/auth-constants';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const isSuper = Boolean(
+        session.user.isSuperAdmin ||
+        session.user.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
+      );
+      if (!isSuper && !session.user.officeId) {
+        router.push('/planes?unassigned=true');
+      }
+    }
+  }, [status, session, router]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#fafafa] text-zinc-900">

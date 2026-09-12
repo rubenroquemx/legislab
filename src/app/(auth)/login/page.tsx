@@ -36,12 +36,14 @@ function LoginFormContent() {
     if (status === 'authenticated' && session?.user) {
       const isSuper = Boolean(
         session.user.isSuperAdmin || 
-        session.user.email?.toLowerCase() === SUPERADMIN_EMAIL
+        session.user.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
       );
       if (isSuper) {
         router.push('/admin');
-      } else {
+      } else if (session.user.officeId) {
         router.push('/dashboard');
+      } else {
+        router.push('/planes?unassigned=true');
       }
     }
   }, [status, session, router]);
@@ -53,8 +55,10 @@ function LoginFormContent() {
       setErrorMsg('El correo ya está registrado con otro método de acceso.');
     } else if (errorParam === 'CredentialsSignin') {
       setErrorMsg('Correo o contraseña incorrectos.');
+    } else if (errorParam === 'AccessDenied' || searchParams.get('unassigned')) {
+      setErrorMsg('Tu cuenta no está asignada a ningún despacho parlamentario activo.');
     }
-  }, [errorParam]);
+  }, [errorParam, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
