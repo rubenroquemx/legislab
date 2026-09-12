@@ -1,7 +1,6 @@
-// LegisLab PWA Service Worker with Push Notifications Support
-const CACHE_NAME = 'legislab-pwa-v5-' + Date.now();
+// LegisLab PWA Service Worker - v7 Cache-Buster & Network-First
+const CACHE_NAME = 'legislab-pwa-v7-' + Date.now();
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
@@ -26,12 +25,12 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
     })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -39,24 +38,31 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
+          // Delete all older caches
           if (key !== CACHE_NAME) {
+            console.log('[SW] Eliminando caché antigua:', key);
             return caches.delete(key);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Network-first strategy so new deployments and design system updates reflect immediately
+// Network-first strategy with cache-bypass for navigation and dynamic data
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+
+  // Skip service worker cache for API routes, auth, and webhooks
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/data/')) {
+    return;
+  }
+
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then((networkResponse) => {
-        // Cache successful responses for offline fallback
         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -66,7 +72,7 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       })
       .catch(() => {
-        // Offline fallback
+        // Fallback to cache only when offline
         return caches.match(event.request);
       })
   );

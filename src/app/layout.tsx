@@ -69,13 +69,36 @@ export default function RootLayout({
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
+                  // Purge old cache storage entries on client side
+                  if ('caches' in window) {
+                    caches.keys().then(function(keys) {
+                      keys.forEach(function(key) {
+                        if (!key.startsWith('legislab-pwa-v7-')) {
+                          console.log('[App] Purgando caché obsoleta:', key);
+                          caches.delete(key);
+                        }
+                      });
+                    });
+                  }
+
                   navigator.serviceWorker.register('/sw.js').then(
                     function(registration) {
                       registration.update();
-                      console.log('LegisLab ServiceWorker registrado con éxito:', registration.scope);
+                      
+                      registration.onupdatefound = function() {
+                        var installingWorker = registration.installing;
+                        if (installingWorker) {
+                          installingWorker.onstatechange = function() {
+                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                              console.log('[App] Nueva versión detectada, actualizando interfaz...');
+                              window.location.reload();
+                            }
+                          };
+                        }
+                      };
                     },
                     function(err) {
-                      console.log('Fallo al registrar ServiceWorker:', err);
+                      console.log('Error al registrar ServiceWorker:', err);
                     }
                   );
                 });
