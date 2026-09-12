@@ -1,9 +1,17 @@
 // LegisLab PWA Service Worker with Push Notifications Support
-const CACHE_NAME = 'legislab-pwa-v3-' + Date.now();
+const CACHE_NAME = 'legislab-pwa-v4-' + Date.now();
 const STATIC_ASSETS = [
   '/',
   '/manifest.webmanifest',
-  '/icons/icon.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-192.png',
+  '/icons/icon-maskable-512.png',
+  '/apple-touch-icon.png',
+  '/apple-touch-icon-precomposed.png',
+  '/favicon-32x32.png',
+  '/favicon-16x16.png',
+  '/favicon.ico',
   '/favicon.svg',
   '/logo.svg',
   '/logo-white.svg'
@@ -70,8 +78,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: payload.body,
-    icon: '/icons/icon.svg',
-    badge: '/icons/icon.svg',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
     vibrate: [200, 100, 200],
     data: {
       url: payload.url || '/dashboard'
