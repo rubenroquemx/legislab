@@ -58,6 +58,7 @@ export default function RootLayout({
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js').then(
                     function(registration) {
+                      registration.update();
                       console.log('LegisLab ServiceWorker registrado con éxito:', registration.scope);
                     },
                     function(err) {

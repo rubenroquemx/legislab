@@ -1,14 +1,12 @@
 // LegisLab PWA Service Worker with Push Notifications Support
-const CACHE_NAME = 'legislab-pwa-v2';
+const CACHE_NAME = 'legislab-pwa-v3-' + Date.now();
 const STATIC_ASSETS = [
   '/',
-  '/dashboard',
-  '/agenda',
-  '/directorio',
-  '/grupos',
-  '/atencion-ciudadana',
-  '/gestiones',
-  '/tareas'
+  '/manifest.webmanifest',
+  '/icons/icon.svg',
+  '/favicon.svg',
+  '/logo.svg',
+  '/logo-white.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -35,20 +33,26 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Network-first strategy so new deployments and design system updates reflect immediately
 self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(event.request) || caches.match('/dashboard');
-      })
-    );
-    return;
-  }
+  if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Cache successful responses for offline fallback
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Offline fallback
+        return caches.match(event.request);
+      })
   );
 });
 
