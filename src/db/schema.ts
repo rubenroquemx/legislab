@@ -190,14 +190,23 @@ export const gestiones = pgTable('gestiones', {
   folio: text('folio').notNull(), // Ej: "GES-2026-0142"
   asunto: text('asunto').notNull(),
   solicitante: text('solicitante').notNull(),
+  curp: text('curp'),
+  claveElector: text('clave_elector'),
+  seccionElectoral: text('seccion_electoral'),
+  direccion: text('direccion'),
   colonia: text('colonia').notNull(),
   municipio: text('municipio').default('Centro'),
   telefono: text('telefono'),
   email: text('email'),
+  avatarUrl: text('avatar_url'),
   categoria: text('categoria').default('General'),
   prioridad: text('prioridad').default('Media').notNull(),
   estatus: text('estatus').default('En Trámite').notNull(),
   dependenciaCanalizada: text('dependencia_canalizada'),
+  driveFolderUrl: text('drive_folder_url'),
+  documentos: text('documentos'), // JSON array de DocumentoExpediente
+  oficios: text('oficios'), // JSON array de OficioGenerado
+  notas: text('notas'), // JSON array de NotaObservacion
   notasInternas: text('notas_internas'),
   responsableId: text('responsable_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),

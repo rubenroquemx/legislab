@@ -158,20 +158,39 @@ export async function ensureDatabaseTables(connectionString: string) {
         folio TEXT NOT NULL,
         asunto TEXT NOT NULL,
         solicitante TEXT NOT NULL,
+        curp TEXT,
+        clave_elector TEXT,
+        seccion_electoral TEXT,
+        direccion TEXT,
         colonia TEXT NOT NULL,
         municipio TEXT DEFAULT 'Centro',
         telefono TEXT,
         email TEXT,
+        avatar_url TEXT,
         categoria TEXT DEFAULT 'General',
         prioridad TEXT NOT NULL DEFAULT 'Media',
         estatus TEXT NOT NULL DEFAULT 'En Trámite',
         dependencia_canalizada TEXT,
+        drive_folder_url TEXT,
+        documentos TEXT,
+        oficios TEXT,
+        notas TEXT,
         notas_internas TEXT,
         responsable_id TEXT REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       )
     `;
+
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS curp TEXT`;
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS clave_elector TEXT`;
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS seccion_electoral TEXT`;
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS direccion TEXT`;
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS avatar_url TEXT`;
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS drive_folder_url TEXT`;
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS documentos TEXT`;
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS oficios TEXT`;
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS notas TEXT`;
 
     // 5. Tareas
     await sql`

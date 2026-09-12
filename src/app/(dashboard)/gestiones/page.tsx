@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getGestiones, createGestion } from '@/app/actions/gestiones';
+import { 
+  getGestiones, 
+  createGestion, 
+  updateGestionStatus, 
+  deleteGestion, 
+  addNotaGestion, 
+  addDocumentoGestion, 
+  addOficioGestion, 
+  extractIneDataAction 
+} from '@/app/actions/gestiones';
 import { createGestionDriveFolderAction, getGoogleDriveStatusAction } from '@/app/actions/drive';
 import { getCurrentTimeMexicoCity, MEXICO_TIMEZONE } from '@/lib/date-utils';
 import { 
@@ -170,29 +179,58 @@ export default function GestionesPage() {
     try {
       const res = await getGestiones();
       if (res.success && res.data && res.data.length > 0) {
-        const mapped: GestionCiudadana[] = res.data.map((d: any) => ({
-          id: d.id,
-          folio: d.folio,
-          nombre: d.solicitante,
-          avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-          telefono: d.telefono || '993 000 0000',
-          municipio: d.municipio || 'Centro',
-          curp: '',
-          direccion: '',
-          colonia: d.colonia || '',
-          seccionElectoral: '',
-          tipo: d.categoria || 'General',
-          descripcion: d.asunto || '',
-          estatus: (d.estatus as any) || 'En Trámite con Dependencia',
-          prioridad: (d.prioridad as any) || 'Media',
-          dependenciaDestino: d.dependenciaCanalizada || 'General',
-          fecha: d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-MX', { timeZone: MEXICO_TIMEZONE, day: '2-digit', month: 'short', year: 'numeric' }) : 'Hoy',
-          driveFolderUrl: '',
-          documentos: [],
-          oficios: [],
-          notas: [],
-        }));
+        const mapped: GestionCiudadana[] = res.data.map((d: any) => {
+          let docs: DocumentoExpediente[] = [];
+          if (d.documentos) {
+            try {
+              docs = typeof d.documentos === 'string' ? JSON.parse(d.documentos) : d.documentos;
+              if (!Array.isArray(docs)) docs = [];
+            } catch { docs = []; }
+          }
+          let ofs: OficioGenerado[] = [];
+          if (d.oficios) {
+            try {
+              ofs = typeof d.oficios === 'string' ? JSON.parse(d.oficios) : d.oficios;
+              if (!Array.isArray(ofs)) ofs = [];
+            } catch { ofs = []; }
+          }
+          let nts: NotaObservacion[] = [];
+          if (d.notas) {
+            try {
+              nts = typeof d.notas === 'string' ? JSON.parse(d.notas) : d.notas;
+              if (!Array.isArray(nts)) nts = [];
+            } catch { nts = []; }
+          }
+
+          return {
+            id: d.id,
+            folio: d.folio,
+            nombre: d.solicitante,
+            avatarUrl: d.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+            telefono: d.telefono || 'Sin teléfono',
+            municipio: d.municipio || 'Centro',
+            curp: d.curp || '',
+            direccion: d.direccion || '',
+            colonia: d.colonia || '',
+            seccionElectoral: d.seccionElectoral || '',
+            tipo: d.categoria || 'General',
+            descripcion: d.asunto || '',
+            estatus: (d.estatus as any) || 'Recibida',
+            prioridad: (d.prioridad as any) || 'Media',
+            dependenciaDestino: d.dependenciaCanalizada || 'General',
+            fecha: d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-MX', { timeZone: MEXICO_TIMEZONE, day: '2-digit', month: 'short', year: 'numeric' }) : 'Hoy',
+            driveFolderUrl: d.driveFolderUrl || '',
+            documentos: docs,
+            oficios: ofs,
+            notas: nts,
+          };
+        });
         setGestiones(mapped);
+        setGestionSeleccionada((prev) => {
+          if (!prev) return mapped[0] || null;
+          const found = mapped.find(m => m.id === prev.id);
+          return found || mapped[0] || null;
+        });
       }
     } catch (err) {
       console.warn('Error loading gestiones:', err);
@@ -253,6 +291,7 @@ export default function GestionesPage() {
   // Upload in dossier state
   const [isUploadingDossierDoc, setIsUploadingDossierDoc] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const dossierFileInputRef = useRef<HTMLInputElement>(null);
 
   // Generator Oficio state
@@ -314,7 +353,7 @@ export default function GestionesPage() {
     return matchesSearch && matchesEstatus && matchesTipo;
   });
 
-  // OCR INE Simulation (with Face / Photo Extraction)
+  // OCR INE con Gemini Vision & Extracción Inteligente
   const handleSimulateOcrIne = () => {
     setIsOcrProcessing(true);
     setTimeout(() => {
@@ -328,28 +367,47 @@ export default function GestionesPage() {
       setAvatarUrl('https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80');
       setIsOcrProcessing(false);
       setOcrSuccess(true);
-    }, 1200);
+    }, 800);
   };
 
-  const handleFileUploadRegistration = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUploadRegistration = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsOcrProcessing(true);
-    setTimeout(() => {
-      setNombre('Guadalupe del Carmen Ramos Jiménez');
-      setCurp('RAJG850619MTBLNR01');
-      setDireccion('Av. Gregorio Méndez Magaña #1420');
-      setColonia('Col. Nueva Villahermosa');
-      setMunicipio('Centro (Villahermosa)');
-      setSeccionElectoral('0342');
-      setTelefono('993 765 4321');
-      setAvatarUrl('https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80');
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        setAvatarUrl(base64);
+
+        const res = await extractIneDataAction(base64, file.type || 'image/jpeg');
+        if (res.success && res.data) {
+          const d = res.data;
+          if (d.nombreCompleto) {
+            setNombre(d.nombreCompleto);
+          } else if (d.nombre) {
+            setNombre(`${d.nombre} ${d.primerApellido || ''} ${d.segundoApellido || ''}`.trim());
+          }
+          if (d.curp) setCurp(d.curp);
+          if (d.seccionElectoral) setSeccionElectoral(d.seccionElectoral);
+          if (d.calle || d.direccionCompleta) setDireccion(d.calle || d.direccionCompleta);
+          if (d.colonia) setColonia(d.colonia);
+          if (d.municipio) setMunicipio(d.municipio);
+          setOcrSuccess(true);
+        }
+        setIsOcrProcessing(false);
+      };
+      reader.onerror = () => {
+        setIsOcrProcessing(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn('Error processing INE file:', err);
       setIsOcrProcessing(false);
-      setOcrSuccess(true);
-    }, 1000);
+    }
   };
 
-  const handleCrearGestion = (e: React.FormEvent) => {
+  const handleCrearGestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre.trim() || !descripcion.trim()) {
       alert('Por favor completa el nombre del ciudadano y la descripción de la gestión.');
@@ -369,12 +427,30 @@ export default function GestionesPage() {
       }
     }
 
-    const newFolio = `GES-2026-${String(90 + gestiones.length).padStart(3, '0')}`;
+    const tempFolio = `GES-2026-${String(90 + gestiones.length).padStart(3, '0')}`;
     const slugName = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-    const nueva: GestionCiudadana = {
+    const initialNota: NotaObservacion = {
+      id: `not-${Date.now()}`,
+      fecha: 'Hoy',
+      hora: getCurrentTimeMexicoCity(),
+      autor: 'Recepción y Gestión',
+      texto: 'Gestión registrada en el sistema. Se procedió a integrar el expediente digital inicial.',
+      esDiputado: false,
+    };
+
+    const initialDoc: DocumentoExpediente = {
+      id: `doc-${Date.now()}`,
+      nombre: 'INE_Credencial_Digital.pdf',
+      tipo: 'Identificación INE (Rostro Extraído)',
+      fecha: 'Hoy',
+      tamano: '1.4 MB',
+      urlDrive: `${googleDriveBaseUrl}/ine-${slugName}.pdf`,
+    };
+
+    const nuevaLocal: GestionCiudadana = {
       id: `ges-${Date.now()}`,
-      folio: newFolio,
+      folio: tempFolio,
       nombre: nombre.trim(),
       avatarUrl: avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       telefono: telefono.trim() || 'Sin teléfono',
@@ -389,43 +465,56 @@ export default function GestionesPage() {
       prioridad,
       dependenciaDestino: dependenciaDestino.trim() || 'Por definir',
       fecha: 'Hoy',
-      driveFolderUrl: `${googleDriveBaseUrl}/${newFolio}-${slugName}`,
-      documentos: [
-        {
-          id: `doc-${Date.now()}`,
-          nombre: 'INE_Credencial_Digital.pdf',
-          tipo: 'Identificación INE (Rostro Extraído)',
-          fecha: 'Hoy',
-          tamano: '1.4 MB',
-          urlDrive: `${googleDriveBaseUrl}/ine-${slugName}.pdf`,
-        }
-      ],
+      driveFolderUrl: `${googleDriveBaseUrl}/${tempFolio}-${slugName}`,
+      documentos: [initialDoc],
       oficios: [],
-      notas: [
-        {
-          id: `not-${Date.now()}`,
-          fecha: 'Hoy',
-          hora: getCurrentTimeMexicoCity(),
-          autor: 'Recepción y Gestión',
-          texto: 'Gestión registrada en el sistema. Se procedió a integrar el expediente digital inicial.',
-          esDiputado: false,
-        }
-      ],
+      notas: [initialNota],
     };
 
-    setGestiones([nueva, ...gestiones]);
-    
-    // Disparar creación en vivo en Google Drive API si está conectado
-    createGestionDriveFolderAction(newFolio, nombre.trim()).then((driveRes) => {
-      if (driveRes.success && driveRes.folderUrl) {
-        setGestiones((prev) =>
-          prev.map((g) => (g.id === nueva.id ? { ...g, driveFolderUrl: driveRes.folderUrl! } : g))
-        );
-      }
-    }).catch(console.warn);
+    setGestiones([nuevaLocal, ...gestiones]);
+    setGestionSeleccionada(nuevaLocal);
+    setIsModalCrearOpen(false);
 
-    // Notification of automatic Google Drive Folder Creation by ID
-    alert(`✅ ¡Gestión ${newFolio} registrada exitosamente!\n\n📁 Se creó automáticamente la carpeta en Google Drive:\n• Nombre: /${newFolio} - ${nombre.trim()}/\n• ID de Gestión: ${newFolio}\n• Estado: Vinculada y lista para recibir documentos.`);
+    try {
+      const res = await createGestion({
+        asunto: descripcion.trim(),
+        solicitante: nombre.trim(),
+        curp: curp.trim() || undefined,
+        seccionElectoral: seccionElectoral.trim() || undefined,
+        direccion: direccion.trim() || undefined,
+        colonia: colonia.trim() || 'Centro',
+        municipio: municipio.trim() || 'Centro',
+        telefono: telefono.trim() || undefined,
+        avatarUrl: avatarUrl || undefined,
+        prioridad,
+        categoria: tipoFinal,
+        estatus: 'Recibida',
+        dependenciaCanalizada: dependenciaDestino.trim() || undefined,
+        documentos: [initialDoc],
+        notas: [initialNota],
+      });
+
+      if (res.success && res.data) {
+        const saved = res.data;
+        setGestiones((prev) =>
+          prev.map((g) => (g.id === nuevaLocal.id ? { ...g, id: saved.id, folio: saved.folio } : g))
+        );
+        if (gestionSeleccionada?.id === nuevaLocal.id) {
+          setGestionSeleccionada((prev) => (prev ? { ...prev, id: saved.id, folio: saved.folio } : null));
+        }
+
+        // Crear carpeta en Google Drive si está conectado
+        createGestionDriveFolderAction(saved.folio, nombre.trim()).then((driveRes) => {
+          if (driveRes.success && driveRes.folderUrl) {
+            setGestiones((prev) =>
+              prev.map((g) => (g.id === saved.id ? { ...g, driveFolderUrl: driveRes.folderUrl! } : g))
+            );
+          }
+        }).catch(console.warn);
+      }
+    } catch (err) {
+      console.error('Error saving gestion to DB:', err);
+    }
 
     // Reset form
     setNombre('');
@@ -439,18 +528,22 @@ export default function GestionesPage() {
     setIsCustomTipo(false);
     setCustomTipoInput('');
     setOcrSuccess(false);
-    setIsModalCrearOpen(false);
   };
 
-  const handleCambiarEstado = (gestionId: string, nuevoEstado: EstadoGestion) => {
+  const handleCambiarEstado = async (gestionId: string, nuevoEstado: EstadoGestion) => {
     setGestiones(gestiones.map(g => g.id === gestionId ? { ...g, estatus: nuevoEstado } : g));
     if (gestionSeleccionada && gestionSeleccionada.id === gestionId) {
       setGestionSeleccionada({ ...gestionSeleccionada, estatus: nuevoEstado });
     }
+    try {
+      await updateGestionStatus(gestionId, nuevoEstado);
+    } catch (err) {
+      console.error('Error updating gestion status in DB:', err);
+    }
   };
 
   // Add Note in WhatsApp Chat Style (Author is automatically the currently active user)
-  const handleAgregarNota = (e: React.FormEvent) => {
+  const handleAgregarNota = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevaNotaTexto.trim() || !gestionSeleccionada) return;
 
@@ -473,6 +566,12 @@ export default function GestionesPage() {
     setGestiones(gestiones.map(g => g.id === gestionSeleccionada.id ? updatedGestion : g));
     setGestionSeleccionada(updatedGestion);
     setNuevaNotaTexto('');
+
+    try {
+      await addNotaGestion(gestionSeleccionada.id, nuevaNota);
+    } catch (err) {
+      console.error('Error adding nota in DB:', err);
+    }
   };
 
   const handleEliminarNota = (notaId: string) => {
@@ -486,16 +585,17 @@ export default function GestionesPage() {
   };
 
   // Upload document in digital dossier & update avatar if INE
-  const handleUploadDossierDocument = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadDossierDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !gestionSeleccionada) return;
 
     setIsUploadingDossierDoc(true);
-    setTimeout(() => {
-      const isIne = file.name.toLowerCase().includes('ine') || file.name.toLowerCase().includes('credencial') || file.type.includes('image');
-      const newAvatar = isIne 
-        ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80'
-        : gestionSeleccionada.avatarUrl;
+    const isIne = file.name.toLowerCase().includes('ine') || file.name.toLowerCase().includes('credencial') || file.type.includes('image');
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      const newAvatar = isIne ? base64 : gestionSeleccionada.avatarUrl;
 
       const newDoc: DocumentoExpediente = {
         id: `doc-${Date.now()}`,
@@ -515,8 +615,14 @@ export default function GestionesPage() {
       setGestiones(gestiones.map(g => g.id === gestionSeleccionada.id ? updatedGestion : g));
       setGestionSeleccionada(updatedGestion);
       setIsUploadingDossierDoc(false);
-      alert(`✅ ¡Documento "${file.name}" subido a Google Drive API en segundo plano exitosamente!\n\n• Alojado en: /Expedientes-Distrito04/${gestionSeleccionada.folio}/\n• ID de Drive: drive.google.com/file/d/1X9Z-${Date.now()}\n${isIne ? '• Rostro de la credencial INE extraído como fotografía oficial.' : ''}`);
-    }, 900);
+
+      try {
+        await addDocumentoGestion(gestionSeleccionada.id, newDoc);
+      } catch (err) {
+        console.error('Error adding doc in DB:', err);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // Kanban Drag and Drop
