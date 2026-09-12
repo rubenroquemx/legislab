@@ -176,13 +176,13 @@ function SaasDespachosContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1 border-b border-zinc-200/80">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-[#E2E8F0]">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-zinc-800" />
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#0B172D] flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-[#1B62E3]" />
             <span>Despachos Legislativos (Clientes SaaS)</span>
           </h1>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-[#68768A] mt-0.5">
             Gestión de usuarios principales que contratan y pagan la suscripción • Gestiones Ilimitadas.
           </p>
         </div>
@@ -190,15 +190,15 @@ function SaasDespachosContent() {
         <div className="flex items-center gap-2">
           <button
             onClick={loadOffices}
-            className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg shadow-xs transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-[#0B172D] hover:text-[#1B62E3] bg-white hover:bg-[#F3F5F9] border border-[#E2E8F0] px-3.5 py-2 rounded-xl shadow-2xs transition-colors ios-press cursor-pointer"
           >
-            <RefreshCw className={cn('w-3.5 h-3.5 text-zinc-500', loading && 'animate-spin')} />
+            <RefreshCw className={cn('w-3.5 h-3.5 text-[#68768A]', loading && 'animate-spin')} />
             <span>Refrescar</span>
           </button>
 
           <button
             onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 px-3.5 py-1.5 rounded-lg shadow-xs transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#1B62E3] hover:bg-[#1550BA] px-4 py-2 rounded-xl shadow-xs transition-colors ios-press cursor-pointer"
           >
             <UserPlus className="w-3.5 h-3.5" />
             <span>Registrar Nuevo Cliente / Despacho</span>
@@ -207,14 +207,14 @@ function SaasDespachosContent() {
       </div>
 
       {feedback && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <div className="p-3 bg-[#EBF9EE] border border-[#34C759]/30 text-[#1B5E20] rounded-xl text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-[#34C759] shrink-0" />
           <span>{feedback}</span>
         </div>
       )}
 
       {/* Filters Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl border border-zinc-200/80 bg-white shadow-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-2xl border border-[#E2E8F0] bg-white shadow-xs">
         <div className="relative">
           <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input

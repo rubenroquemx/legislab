@@ -28,7 +28,7 @@ export function IosSegmentedControl<T extends string>({
   return (
     <div
       className={cn(
-        'inline-flex items-center p-1 bg-zinc-200/70 dark:bg-zinc-800/80 rounded-xl select-none backdrop-blur-xs',
+        'inline-flex items-center p-1 bg-[#F0F2F5] border border-[#E2E8F0] rounded-xl select-none',
         size === 'sm' ? 'h-8' : 'h-10',
         className
       )}
@@ -44,8 +44,8 @@ export function IosSegmentedControl<T extends string>({
               'flex-1 flex items-center justify-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ios-press',
               size === 'sm' ? 'py-1 text-[11px]' : 'py-1.5 text-xs',
               isSelected
-                ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs font-bold'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                ? 'bg-white text-[#0B172D] shadow-xs font-bold border border-[#E2E8F0]/60'
+                : 'text-[#68768A] hover:text-[#0B172D]'
             )}
           >
             {opt.icon && <span className="shrink-0">{opt.icon}</span>}
@@ -55,8 +55,8 @@ export function IosSegmentedControl<T extends string>({
                 className={cn(
                   'text-[10px] px-1.5 py-0.2 rounded-full font-mono',
                   isSelected
-                    ? 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200'
-                    : 'bg-zinc-300/60 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300'
+                    ? 'bg-[#EBF2FC] text-[#1B62E3] font-bold'
+                    : 'bg-[#E2E8F0] text-[#68768A]'
                 )}
               >
                 {opt.badge}

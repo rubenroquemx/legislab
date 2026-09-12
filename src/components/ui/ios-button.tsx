@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 export interface IosButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'tertiary' | 'destructive' | 'success' | 'tinted' | 'plain';
+  variant?: 'primary' | 'secondary' | 'accent' | 'tertiary' | 'outline' | 'destructive' | 'success' | 'tinted' | 'plain';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: React.ReactNode;
@@ -36,13 +36,15 @@ export const IosButton = forwardRef<HTMLButtonElement, IosButtonProps>(
     };
 
     const variantStyles = {
-      primary: 'bg-[#007AFF] hover:bg-[#0062CC] text-white shadow-xs border border-[#007AFF]/20',
-      secondary: 'bg-zinc-100 hover:bg-zinc-200/80 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200/60 dark:border-zinc-700',
-      tertiary: 'bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800/60 text-zinc-600 dark:text-zinc-300',
+      primary: 'bg-[#1B62E3] hover:bg-[#1550BA] text-white shadow-xs border border-[#1B62E3]/20 active:bg-[#1550BA]',
+      secondary: 'bg-[#0B172D] hover:bg-[#152542] text-white shadow-xs border border-[#0B172D]/30 active:bg-[#152542]',
+      accent: 'bg-[#CA7B20] hover:bg-[#AF6818] text-white shadow-xs border border-[#CA7B20]/20 active:bg-[#AF6818]',
+      outline: 'bg-white hover:bg-[#F3F5F9] text-[#0B172D] border border-[#E2E8F0] shadow-2xs',
+      tertiary: 'bg-transparent hover:bg-[#F0F2F5] text-[#68768A] hover:text-[#0B172D]',
       destructive: 'bg-[#FF3B30] hover:bg-[#D70015] text-white shadow-xs border border-[#FF3B30]/20',
       success: 'bg-[#34C759] hover:bg-[#28A745] text-white shadow-xs border border-[#34C759]/20',
-      tinted: 'bg-[#E5F1FF] hover:bg-[#CCE3FF] text-[#007AFF] dark:bg-[#007AFF]/20 dark:text-[#58A6FF]',
-      plain: 'bg-transparent text-[#007AFF] hover:opacity-80 p-0 h-auto',
+      tinted: 'bg-[#EBF2FC] hover:bg-[#D8E7FA] text-[#1B62E3] border border-[#1B62E3]/15',
+      plain: 'bg-transparent text-[#1B62E3] hover:opacity-80 p-0 h-auto',
     };
 
     return (

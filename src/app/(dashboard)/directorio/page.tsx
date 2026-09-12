@@ -772,18 +772,18 @@ export default function DirectorioPage() {
 
                 <div className="space-y-0.5 max-w-md">
                   <div className="flex items-center justify-center gap-2">
-                    <h2 className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                    <h2 className="text-xl font-extrabold text-[#0B172D] tracking-tight">
                       {contactoSeleccionado.nombre}
                     </h2>
                     {contactoSeleccionado.esCumpleanosHoy && (
-                      <span className="text-xs font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="text-xs font-bold text-[#CA7B20] bg-[#FDF4EB] border border-[#CA7B20]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                         <PartyPopper className="h-3.5 w-3.5" />
                         <span>¡Cumpleaños Hoy!</span>
                       </span>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-blue-700">{contactoSeleccionado.cargo}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{contactoSeleccionado.organizacion}</p>
+                  <p className="text-sm font-semibold text-[#1B62E3]">{contactoSeleccionado.cargo}</p>
+                  <p className="text-xs text-[#68768A]">{contactoSeleccionado.organizacion}</p>
                 </div>
 
                 {/* iPhone Quick Action Buttons (Call, WhatsApp, Email, Wish Birthday) */}
@@ -791,10 +791,10 @@ export default function DirectorioPage() {
                   {/* Llamar (tel:) */}
                   <a
                     href={`tel:${contactoSeleccionado.telefono.replace(/\D/g, '')}`}
-                    className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-blue-50/80 dark:bg-blue-500/15 hover:bg-blue-100 dark:hover:bg-blue-500/25 rounded-2xl text-[#007AFF] dark:text-blue-400 transition-all border border-blue-100/50 dark:border-blue-900/40 shadow-xs ios-press"
+                    className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-[#EBF2FC] hover:bg-[#D8E7FA] rounded-2xl text-[#1B62E3] transition-all border border-[#1B62E3]/20 shadow-xs ios-press"
                   >
                     <Phone className="h-5 w-5 stroke-[2.2]" />
-                    <span className="text-[10px] font-semibold mt-1">Llamar</span>
+                    <span className="text-[10px] font-bold mt-1">Llamar</span>
                   </a>
 
                   {/* WhatsApp */}
@@ -802,20 +802,20 @@ export default function DirectorioPage() {
                     href={`https://api.whatsapp.com/send?phone=52${contactoSeleccionado.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Hola ${contactoSeleccionado.nombre}, le escribe el Diputado Ruben Roque.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-emerald-50/80 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 rounded-2xl text-[#34C759] dark:text-emerald-400 transition-all border border-emerald-100/50 dark:border-emerald-900/40 shadow-xs ios-press"
+                    className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-[#EBF9EE] hover:bg-[#D4F4DA] rounded-2xl text-[#34C759] transition-all border border-[#34C759]/25 shadow-xs ios-press"
                   >
                     <MessageCircle className="h-5 w-5 stroke-[2.2]" />
-                    <span className="text-[10px] font-semibold mt-1">WhatsApp</span>
+                    <span className="text-[10px] font-bold mt-1">WhatsApp</span>
                   </a>
 
                   {/* Correo (mailto:) */}
                   {contactoSeleccionado.correos[0] && (
                     <a
                       href={`mailto:${contactoSeleccionado.correos[0]}`}
-                      className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-indigo-50/80 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 rounded-2xl text-[#5856D6] dark:text-indigo-400 transition-all border border-indigo-100/50 dark:border-indigo-900/40 shadow-xs ios-press"
+                      className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-[#E8ECF2] hover:bg-[#DDE3EC] rounded-2xl text-[#0B172D] transition-all border border-[#0B172D]/15 shadow-xs ios-press"
                     >
                       <Mail className="h-5 w-5 stroke-[2.2]" />
-                      <span className="text-[10px] font-semibold mt-1">Correo</span>
+                      <span className="text-[10px] font-bold mt-1">Correo</span>
                     </a>
                   )}
 
@@ -825,7 +825,7 @@ export default function DirectorioPage() {
                       href={`https://api.whatsapp.com/send?phone=52${contactoSeleccionado.telefono.replace(/\D/g, '')}&text=${encodeURIComponent(`Estimado(a) ${contactoSeleccionado.nombre}, con motivo de su cumpleaños le envío un afectuoso abrazo y mis mejores deseos de salud, éxito y bienestar. ¡Muchas felicidades! Atte: Dip. Ruben Roque.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-[#FF9500] hover:bg-amber-600 rounded-2xl text-white transition-all shadow-md shadow-amber-500/25 ios-press font-semibold"
+                      className="flex flex-col items-center justify-center min-w-[72px] h-14 px-3 bg-[#CA7B20] hover:bg-[#AF6818] rounded-2xl text-white transition-all shadow-md shadow-amber-500/25 ios-press font-bold"
                     >
                       <Cake className="h-5 w-5" />
                       <span className="text-[10px] mt-1">Felicitar 🎂</span>

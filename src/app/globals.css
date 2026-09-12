@@ -4,32 +4,45 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98.5%;
-    --foreground: 240 10% 3.9%;
+    --color-primary: #0B172D;
+    --color-primary-hover: #152542;
+    --color-secondary: #1B62E3;
+    --color-secondary-hover: #1550BA;
+    --color-accent: #CA7B20;
+    --color-accent-hover: #AF6818;
+    --color-background: #F3F5F9;
+    --color-surface: #FFFFFF;
+    --color-neutral: #68768A;
+    --color-border: #E2E8F0;
+    --color-text-primary: #0B172D;
+    --color-text-secondary: #68768A;
+
+    --background: 220 20% 97%;
+    --foreground: 218 61% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 218 61% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 218 61% 11%;
+    --primary: 218 61% 11%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 219 79% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 216 28% 95%;
+    --muted-foreground: 216 14% 47%;
+    --accent: 33 74% 46%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.625rem;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 219 79% 50%;
+    --radius: 0.875rem;
   }
 }
 
 body {
-  background-color: #f2f2f7;
-  color: #1c1c1e;
+  background-color: #F3F5F9;
+  color: #0B172D;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   letter-spacing: -0.015em;
   -webkit-font-smoothing: antialiased;

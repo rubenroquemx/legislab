@@ -337,20 +337,20 @@ export default function DashboardPage() {
         {/* 1.1 Gestiones Nuevas */}
         <Link 
           href="/gestiones"
-          className="bg-white border border-zinc-200/80 rounded-2xl p-4 shadow-2xs hover:border-zinc-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+          className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-2xs hover:border-[#1B62E3]/30 hover:shadow-xs transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Gestiones Nuevas</span>
-            <div className="h-7 w-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold text-[#68768A] tracking-wide uppercase">Gestiones Nuevas</span>
+            <div className="h-8 w-8 rounded-xl bg-[#EBF2FC] text-[#1B62E3] flex items-center justify-center">
               <FolderKanban className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold tracking-tight text-zinc-900">{gestionesNuevasCount}</span>
-              <span className="text-xs text-zinc-400 font-medium">solicitudes</span>
+              <span className="text-2xl font-extrabold tracking-tight text-[#0B172D]">{gestionesNuevasCount}</span>
+              <span className="text-xs text-[#68768A] font-medium">solicitudes</span>
             </div>
-            <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-bold text-[#1B62E3] bg-[#EBF2FC] border border-[#1B62E3]/20 px-2 py-0.5 rounded-full">
               Recibidas
             </span>
           </div>
@@ -359,21 +359,21 @@ export default function DashboardPage() {
         {/* 1.2 Gestiones en Proceso */}
         <Link 
           href="/gestiones"
-          className="bg-white border border-zinc-200/80 rounded-2xl p-4 shadow-2xs hover:border-zinc-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+          className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-2xs hover:border-[#CA7B20]/30 hover:shadow-xs transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Gestiones en Proceso</span>
-            <div className="h-7 w-7 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold text-[#68768A] tracking-wide uppercase">Gestiones en Proceso</span>
+            <div className="h-8 w-8 rounded-xl bg-[#FDF4EB] text-[#CA7B20] flex items-center justify-center">
               <Clock className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold tracking-tight text-purple-700">{gestionesEnProcesoCount}</span>
-              <span className="text-xs text-zinc-400 font-medium">en trámite</span>
+              <span className="text-2xl font-extrabold tracking-tight text-[#0B172D]">{gestionesEnProcesoCount}</span>
+              <span className="text-xs text-[#68768A] font-medium">en trámite</span>
             </div>
-            <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-md">
-              En Seguimiento
+            <span className="text-[10px] font-bold text-[#CA7B20] bg-[#FDF4EB] border border-[#CA7B20]/20 px-2 py-0.5 rounded-full">
+              En Trámite
             </span>
           </div>
         </Link>
@@ -381,20 +381,20 @@ export default function DashboardPage() {
         {/* 1.3 Tareas Nuevas */}
         <Link 
           href="/tareas"
-          className="bg-white border border-zinc-200/80 rounded-2xl p-4 shadow-2xs hover:border-zinc-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+          className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-2xs hover:border-[#1B62E3]/30 hover:shadow-xs transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Tareas Nuevas</span>
-            <div className="h-7 w-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold text-[#68768A] tracking-wide uppercase">Tareas Nuevas</span>
+            <div className="h-8 w-8 rounded-xl bg-[#EBF2FC] text-[#1B62E3] flex items-center justify-center">
               <CheckSquare className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold tracking-tight text-amber-700">{tareasNuevasCount}</span>
-              <span className="text-xs text-zinc-400 font-medium">por iniciar</span>
+              <span className="text-2xl font-extrabold tracking-tight text-[#0B172D]">{tareasNuevasCount}</span>
+              <span className="text-xs text-[#68768A] font-medium">por iniciar</span>
             </div>
-            <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-bold text-[#1B62E3] bg-[#EBF2FC] border border-[#1B62E3]/20 px-2 py-0.5 rounded-full">
               Pendientes
             </span>
           </div>
@@ -403,20 +403,20 @@ export default function DashboardPage() {
         {/* 1.4 Tareas en Proceso */}
         <Link 
           href="/tareas"
-          className="bg-white border border-zinc-200/80 rounded-2xl p-4 shadow-2xs hover:border-zinc-300 hover:shadow-xs transition-all flex flex-col justify-between group"
+          className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-2xs hover:border-[#34C759]/30 hover:shadow-xs transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-zinc-500 tracking-wide uppercase">Tareas en Proceso</span>
-            <div className="h-7 w-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold text-[#68768A] tracking-wide uppercase">Tareas en Proceso</span>
+            <div className="h-8 w-8 rounded-xl bg-[#EBF9EE] text-[#34C759] flex items-center justify-center">
               <Flame className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold tracking-tight text-emerald-700">{tareasEnProcesoCount}</span>
-              <span className="text-xs text-zinc-400 font-medium">en curso</span>
+              <span className="text-2xl font-extrabold tracking-tight text-[#0B172D]">{tareasEnProcesoCount}</span>
+              <span className="text-xs text-[#68768A] font-medium">en curso</span>
             </div>
-            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-bold text-[#28A745] bg-[#EBF9EE] border border-[#34C759]/20 px-2 py-0.5 rounded-full">
               En Ejecución
             </span>
           </div>

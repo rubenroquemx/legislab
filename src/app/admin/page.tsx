@@ -84,15 +84,15 @@ export default function SaasAdminDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1 border-b border-zinc-200/80">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-[#E2E8F0]">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#0B172D] flex items-center gap-2">
             <span>Consola de Administración SaaS</span>
-            <span className="text-[10px] font-mono font-medium bg-zinc-100 text-zinc-700 border border-zinc-200 px-2 py-0.5 rounded">
+            <span className="text-[10px] font-mono font-bold bg-[#E8ECF2] text-[#0B172D] border border-[#0B172D]/20 px-2 py-0.5 rounded-full">
               Superadmin
             </span>
           </h1>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-[#68768A] mt-0.5">
             Supervisa despachos legislativos, orquestación de instancias de WhatsApp y métricas operativas.
           </p>
         </div>
@@ -101,15 +101,15 @@ export default function SaasAdminDashboardPage() {
           <button
             onClick={loadData}
             disabled={refreshing}
-            className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-lg shadow-xs transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-[#0B172D] hover:text-[#1B62E3] bg-white hover:bg-[#F3F5F9] border border-[#E2E8F0] px-3.5 py-2 rounded-xl shadow-2xs transition-colors ios-press cursor-pointer"
           >
-            <RefreshCw className={cn('w-3.5 h-3.5 text-zinc-500', refreshing && 'animate-spin')} />
+            <RefreshCw className={cn('w-3.5 h-3.5 text-[#68768A]', refreshing && 'animate-spin')} />
             <span>Actualizar</span>
           </button>
 
           <Link
             href="/admin/despachos?action=new"
-            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 px-3.5 py-1.5 rounded-lg shadow-xs transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#1B62E3] hover:bg-[#1550BA] px-4 py-2 rounded-xl shadow-xs transition-colors ios-press"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Nuevo Despacho</span>
@@ -118,8 +118,8 @@ export default function SaasAdminDashboardPage() {
       </div>
 
       {feedback && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <div className="p-3 bg-[#EBF9EE] border border-[#34C759]/30 text-[#1B5E20] rounded-xl text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-[#34C759] shrink-0" />
           <span>{feedback}</span>
         </div>
       )}
@@ -127,23 +127,23 @@ export default function SaasAdminDashboardPage() {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Despachos Card */}
-        <div className="p-4 rounded-xl border border-zinc-200/80 bg-white shadow-xs">
+        <div className="p-4 rounded-2xl border border-[#E2E8F0] bg-white shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Despachos Totales</span>
-            <div className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-700 flex items-center justify-center">
-              <Building2 className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold text-[#68768A]">Despachos Totales</span>
+            <div className="w-8 h-8 rounded-xl bg-[#E8ECF2] text-[#0B172D] flex items-center justify-center">
+              <Building2 className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-900 tracking-tight">
+            <span className="text-2xl font-extrabold text-[#0B172D] tracking-tight">
               {metrics?.totalOffices || 4}
             </span>
-            <span className="text-xs text-emerald-700 font-medium">
+            <span className="text-xs text-[#28A745] font-bold">
               {metrics?.activeOffices || 2} activos
             </span>
           </div>
-          <div className="mt-1.5 text-[11px] text-zinc-400 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+          <div className="mt-1.5 text-[11px] text-[#68768A] flex items-center gap-1.5 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#CA7B20]"></span>
             <span>{metrics?.trialOffices || 1} en prueba</span>
             <span>•</span>
             <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
@@ -152,62 +152,62 @@ export default function SaasAdminDashboardPage() {
         </div>
 
         {/* WhatsApp Instances Card */}
-        <div className="p-4 rounded-xl border border-zinc-200/80 bg-white shadow-xs">
+        <div className="p-4 rounded-2xl border border-[#E2E8F0] bg-white shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Instancias Evolution</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <Smartphone className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold text-[#68768A]">Instancias WhatsApp</span>
+            <div className="w-8 h-8 rounded-xl bg-[#EBF9EE] text-[#34C759] flex items-center justify-center">
+              <Smartphone className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-900 tracking-tight">
+            <span className="text-2xl font-extrabold text-[#0B172D] tracking-tight">
               {metrics?.evoInstancesCount || 4}
             </span>
-            <span className="text-xs text-emerald-700 font-medium">
+            <span className="text-xs text-[#28A745] font-bold">
               {metrics?.evoConnectedCount || 2} en vivo
             </span>
           </div>
-          <div className="mt-1.5 text-[11px] text-zinc-400">
+          <div className="mt-1.5 text-[11px] text-[#68768A]">
             {metrics?.evoDisconnectedCount || 2} instancias inactivas
           </div>
         </div>
 
         {/* MRR Card */}
-        <div className="p-4 rounded-xl border border-zinc-200/80 bg-white shadow-xs">
+        <div className="p-4 rounded-2xl border border-[#E2E8F0] bg-white shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">MRR Mensual Estimado</span>
-            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center">
-              <DollarSign className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold text-[#68768A]">MRR Mensual Estimado</span>
+            <div className="w-8 h-8 rounded-xl bg-[#EBF2FC] text-[#1B62E3] flex items-center justify-center">
+              <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-900 tracking-tight">
+            <span className="text-2xl font-extrabold text-[#0B172D] tracking-tight">
               ${(metrics?.totalMRR || 17998).toLocaleString('es-MX')}
             </span>
-            <span className="text-[10px] text-zinc-500 font-mono font-medium">MXN</span>
+            <span className="text-[10px] text-[#68768A] font-mono font-bold">MXN</span>
           </div>
-          <div className="mt-1.5 text-[11px] text-zinc-400">
+          <div className="mt-1.5 text-[11px] text-[#68768A]">
             Facturación mensual en planes activos
           </div>
         </div>
 
         {/* Gestiones Card */}
-        <div className="p-4 rounded-xl border border-zinc-200/80 bg-white shadow-xs">
+        <div className="p-4 rounded-2xl border border-[#E2E8F0] bg-white shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Gestiones Globales</span>
-            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
-              <FolderKanban className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold text-[#68768A]">Gestiones Globales</span>
+            <div className="w-8 h-8 rounded-xl bg-[#FDF4EB] text-[#CA7B20] flex items-center justify-center">
+              <FolderKanban className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-900 tracking-tight">
+            <span className="text-2xl font-extrabold text-[#0B172D] tracking-tight">
               {(metrics?.totalGestiones || 767).toLocaleString('es-MX')}
             </span>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-[#68768A]">
               en {metrics?.totalUsers || 24} usuarios
             </span>
           </div>
-          <div className="mt-1.5 text-[11px] text-zinc-400">
+          <div className="mt-1.5 text-[11px] text-[#68768A]">
             Trámites registrados en la red
           </div>
         </div>

@@ -120,11 +120,11 @@ export function Sidebar({
     const isCol = !isMobile && collapsed;
 
     return (
-      <div className="flex flex-col h-full bg-[#fbfbfb] border-r border-zinc-200/80 text-zinc-700 select-none transition-all duration-300">
+      <div className="flex flex-col h-full bg-white border-r border-[#E2E8F0] text-[#0B172D] select-none transition-all duration-300">
         
         {/* Header con Logo y botón colapsar */}
         <div className={cn(
-          "h-14 flex items-center border-b border-zinc-200/80 px-3",
+          "h-14 flex items-center border-b border-[#E2E8F0] px-3",
           isCol ? "justify-center" : "justify-between"
         )}>
           <Link href="/dashboard" className="flex items-center gap-2.5 overflow-hidden">
@@ -136,10 +136,10 @@ export function Sidebar({
             />
             {!isCol && (
               <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
-                <span className="font-bold text-zinc-900 text-sm tracking-tight">
+                <span className="font-bold text-[#0B172D] text-sm tracking-tight">
                   LegisLab
                 </span>
-                <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 border border-zinc-200 px-1 py-0.2 rounded">
+                <span className="text-[10px] font-mono text-[#68768A] bg-[#F3F5F9] border border-[#E2E8F0] px-1 py-0.2 rounded font-medium">
                   v1.1.1
                 </span>
               </div>
@@ -150,7 +150,7 @@ export function Sidebar({
           {isMobile && onCloseMobile && (
             <button
               onClick={onCloseMobile}
-              className="p-1.5 text-zinc-400 hover:text-zinc-800 rounded-lg hover:bg-zinc-200/60 transition-colors"
+              className="p-1.5 text-[#68768A] hover:text-[#0B172D] rounded-xl hover:bg-[#F3F5F9] transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -161,7 +161,7 @@ export function Sidebar({
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="p-1.5 text-zinc-400 hover:text-zinc-800 rounded-lg hover:bg-zinc-100 transition-colors"
+              className="p-1.5 text-[#68768A] hover:text-[#0B172D] rounded-xl hover:bg-[#F3F5F9] transition-colors"
               title="Colapsar menú lateral"
             >
               <PanelLeftClose className="h-4 w-4" />
@@ -182,15 +182,15 @@ export function Sidebar({
               onClick={() => isMobile && onCloseMobile?.()}
               title={isCol ? "Escritorio" : undefined}
               className={cn(
-                'flex items-center rounded-lg text-xs font-medium transition-colors group relative',
-                isCol ? "justify-center p-2.5" : "justify-between px-2.5 py-1.5",
+                'flex items-center rounded-xl text-xs font-medium transition-colors group relative',
+                isCol ? "justify-center p-2.5" : "justify-between px-2.5 py-2",
                 isDashboardActive
-                  ? 'bg-zinc-200/80 text-zinc-900 font-semibold'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                  ? 'bg-[#EBF2FC] text-[#1B62E3] font-bold'
+                  : 'text-[#68768A] hover:text-[#0B172D] hover:bg-[#F3F5F9]'
               )}
             >
               <div className="flex items-center gap-2.5">
-                <LayoutDashboard className={cn('h-4 w-4 shrink-0', isDashboardActive ? 'text-zinc-900' : 'text-zinc-400 group-hover:text-zinc-700')} />
+                <LayoutDashboard className={cn('h-4 w-4 shrink-0', isDashboardActive ? 'text-[#1B62E3]' : 'text-[#68768A] group-hover:text-[#0B172D]')} />
                 {!isCol && <span>Escritorio</span>}
               </div>
             </Link>
@@ -200,11 +200,11 @@ export function Sidebar({
           {visibleSections.map((section) => (
             <div key={section.sectionTitle} className="space-y-1">
               {!isCol ? (
-                <h4 className="px-2.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+                <h4 className="px-2.5 text-[10px] font-bold text-[#68768A] uppercase tracking-wider">
                   {section.sectionTitle}
                 </h4>
               ) : (
-                <div className="h-px bg-zinc-200/60 my-1 mx-1.5" />
+                <div className="h-px bg-[#E2E8F0] my-1 mx-1.5" />
               )}
 
               <div className="space-y-0.5">
@@ -219,29 +219,29 @@ export function Sidebar({
                       onClick={() => isMobile && onCloseMobile?.()}
                       title={isCol ? item.name : undefined}
                       className={cn(
-                        'flex items-center rounded-lg text-xs font-medium transition-colors group relative',
-                        isCol ? "justify-center p-2.5" : "justify-between px-2.5 py-1.5",
+                        'flex items-center rounded-xl text-xs font-medium transition-colors group relative',
+                        isCol ? "justify-center p-2.5" : "justify-between px-2.5 py-2",
                         isActive
-                          ? 'bg-zinc-200/80 text-zinc-900 font-semibold'
-                          : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                          ? 'bg-[#EBF2FC] text-[#1B62E3] font-bold'
+                          : 'text-[#68768A] hover:text-[#0B172D] hover:bg-[#F3F5F9]'
                       )}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-zinc-900' : 'text-zinc-400 group-hover:text-zinc-700')} />
+                        <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-[#1B62E3]' : 'text-[#68768A] group-hover:text-[#0B172D]')} />
                         {!isCol && <span>{item.name}</span>}
                       </div>
 
                       {!isCol ? (
                         <div className="flex items-center gap-1.5">
                           {item.isNew && (
-                            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#EBF9EE] text-[#28A745] border border-[#34C759]/25 font-bold">
                               NEW
                             </span>
                           )}
                           {item.badge && (
                             <span className={cn(
-                              'text-[10px] font-mono px-1.5 py-0.2 rounded-md',
-                              isActive ? 'bg-zinc-900 text-white' : 'bg-zinc-200/70 text-zinc-600'
+                              'text-[10px] font-mono px-1.5 py-0.2 rounded-md font-semibold',
+                              isActive ? 'bg-[#1B62E3] text-white' : 'bg-[#F0F2F5] text-[#68768A]'
                             )}>
                               {item.badge}
                             </span>
@@ -249,7 +249,7 @@ export function Sidebar({
                         </div>
                       ) : (
                         item.badge && (
-                          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white"></span>
+                          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#1B62E3] ring-2 ring-white"></span>
                         )
                       )}
                     </Link>
@@ -262,14 +262,14 @@ export function Sidebar({
 
         {/* Footer: Expand toggle if collapsed & Cerrar sesión */}
         <div className={cn(
-          "p-2 border-t border-zinc-200/80 space-y-1",
+          "p-2 border-t border-[#E2E8F0] space-y-1 bg-white",
           isCol ? "flex flex-col items-center" : ""
         )}>
           {!isMobile && isCol && onToggleCollapse && (
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors w-full flex justify-center"
+              className="p-2 text-[#68768A] hover:text-[#0B172D] hover:bg-[#F3F5F9] rounded-xl transition-colors w-full flex justify-center"
               title="Expandir barra lateral"
             >
               <PanelLeftOpen className="h-4 w-4" />
@@ -281,11 +281,11 @@ export function Sidebar({
               href="/admin"
               title={isCol ? "Consola SaaS Superadmin" : undefined}
               className={cn(
-                "flex items-center gap-2 rounded-lg text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/80 transition-colors",
-                isCol ? "justify-center p-2.5 w-full" : "px-2.5 py-1.5"
+                "flex items-center gap-2 rounded-xl text-xs font-semibold text-[#0B172D] hover:bg-[#EBF2FC] transition-colors",
+                isCol ? "justify-center p-2.5 w-full" : "px-2.5 py-2"
               )}
             >
-              <ShieldCheck className="h-4 w-4 shrink-0 text-indigo-500" />
+              <ShieldCheck className="h-4 w-4 shrink-0 text-[#1B62E3]" />
               {!isCol && <span>Consola SaaS Admin</span>}
             </Link>
           )}
@@ -295,8 +295,8 @@ export function Sidebar({
             onClick={() => signOut({ callbackUrl: '/login' })}
             title={isCol ? "Cerrar sesión" : undefined}
             className={cn(
-              "w-full flex items-center gap-2 rounded-lg text-xs font-medium text-zinc-500 hover:text-red-600 hover:bg-red-50/60 transition-colors",
-              isCol ? "justify-center p-2.5" : "px-2.5 py-1.5 text-left"
+              "w-full flex items-center gap-2 rounded-xl text-xs font-semibold text-[#68768A] hover:text-red-600 hover:bg-red-50/60 transition-colors",
+              isCol ? "justify-center p-2.5" : "px-2.5 py-2 text-left"
             )}
           >
             <LogOut className="h-4 w-4 shrink-0" />

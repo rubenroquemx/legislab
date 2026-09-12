@@ -31,7 +31,7 @@ export default function DashboardLayout({
   }, [status, session, router]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#fafafa] text-zinc-900">
+    <div className="flex h-screen overflow-hidden bg-[#F3F5F9] text-[#0B172D]">
       <Sidebar 
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}

@@ -58,17 +58,17 @@ export function IosModalSheet({
       {/* Modal / Bottom Sheet Box */}
       <div
         className={cn(
-          'relative w-full bg-white dark:bg-[#161b22] rounded-t-[24px] sm:rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-2xl z-10 flex flex-col max-h-[90dvh] overflow-hidden animate-in slide-in-from-bottom duration-250 ease-out',
+          'relative w-full bg-white rounded-t-[24px] sm:rounded-2xl border border-[#E2E8F0] shadow-2xl z-10 flex flex-col max-h-[90dvh] overflow-hidden animate-in slide-in-from-bottom duration-250 ease-out',
           maxWidthStyles[maxWidth]
         )}
       >
         {/* Mobile Grab Handle */}
         <div className="sm:hidden flex items-center justify-center pt-2.5 pb-1">
-          <div className="w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+          <div className="w-10 h-1 bg-[#D8DFE8] rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between shrink-0 bg-zinc-50/50 dark:bg-zinc-800/40">
+        <div className="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between shrink-0 bg-[#F3F5F9]/70">
           <div>
             {leftAction ? (
               leftAction
@@ -76,7 +76,7 @@ export function IosModalSheet({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-xs font-semibold text-[#007AFF] hover:opacity-80 transition-opacity"
+                className="text-xs font-semibold text-[#1B62E3] hover:opacity-80 transition-opacity"
               >
                 Cancelar
               </button>
@@ -85,12 +85,12 @@ export function IosModalSheet({
 
           <div className="text-center px-2">
             {title && (
-              <h3 className="text-xs font-bold text-zinc-900 dark:text-white truncate max-w-[200px] sm:max-w-xs">
+              <h3 className="text-xs font-bold text-[#0B172D] truncate max-w-[200px] sm:max-w-xs">
                 {title}
               </h3>
             )}
             {subtitle && (
-              <p className="text-[10px] text-zinc-400 truncate">{subtitle}</p>
+              <p className="text-[10px] text-[#68768A] truncate">{subtitle}</p>
             )}
           </div>
 
@@ -101,7 +101,7 @@ export function IosModalSheet({
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="p-1 rounded-full text-[#68768A] hover:text-[#0B172D] hover:bg-[#E8ECF2] transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
