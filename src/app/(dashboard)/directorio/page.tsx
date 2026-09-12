@@ -227,13 +227,14 @@ export default function DirectorioPage() {
     foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
   };
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const detailScrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (contactoSeleccionado) {
-      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (detailScrollRef.current) {
+      detailScrollRef.current.scrollTop = 0;
     }
-  }, [contactoSeleccionado?.observaciones]);
+  }, [contactoSeleccionado?.id, mobileShowDetail]);
 
   // Sort contacts alphabetically by full name A-Z
   const contactosOrdenados = [...contactos].sort((a, b) => 
@@ -472,6 +473,10 @@ export default function DirectorioPage() {
     setContactos(contactos.map(c => c.id === contactoSeleccionado.id ? updatedContacto : c));
     setContactoSeleccionado(updatedContacto);
 
+    setTimeout(() => {
+      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+
     try {
       const res = await addObservacionAction(contactoSeleccionado.id, texto, usuarioActivo.nombre, true);
       if (res.success && res.allObservaciones) {
@@ -511,12 +516,20 @@ export default function DirectorioPage() {
     }
   };
 
+  const handleSelectContacto = (contacto: ContactoDirectorio) => {
+    setContactoSeleccionado(contacto);
+    setMobileShowDetail(true);
+    if (detailScrollRef.current) {
+      detailScrollRef.current.scrollTop = 0;
+    }
+  };
+
   const cumpleanerosCount = contactos.filter(c => c.esCumpleanosHoy).length;
 
   return (
-    <div className="space-y-4">
-      {/* Action Bar */}
-      <div className="flex items-center justify-end gap-2">
+    <div className="-mx-4 -mt-4 sm:mx-0 sm:mt-0 space-y-0 sm:space-y-4">
+      {/* Action Bar (Desktop / Tablet) */}
+      <div className="hidden sm:flex items-center justify-end gap-2">
         {cumpleanerosCount > 0 && (
           <button
             onClick={() => setFiltroSoloCumpleanos(!filtroSoloCumpleanos)}
@@ -533,7 +546,7 @@ export default function DirectorioPage() {
 
         <button
           onClick={handleOpenCrearModal}
-          className="hidden sm:inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer"
+          className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Nuevo Contacto</span>
@@ -546,11 +559,11 @@ export default function DirectorioPage() {
         {/* =========================================================================
             LEFT COLUMN (5 COLS): iPHONE CONTACTS ALPHABETICAL LIST
            ========================================================================= */}
-        <div className={`w-full lg:col-span-5 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] ${
+        <div className={`w-full lg:col-span-5 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-0 sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[calc(100dvh-125px)] sm:h-[750px] ${
           mobileShowDetail ? 'hidden lg:flex' : 'flex'
         }`}>
-          {/* Top iOS Search Bar & Type Filter */}
-          <div className="p-3.5 border-b border-gray-100 dark:border-gray-800 space-y-2.5 bg-gray-50/80 dark:bg-gray-800/40">
+          {/* Top iOS Search Bar & Type Filter - STICKY FIXED ON SCROLL */}
+          <div className="shrink-0 p-3 sm:p-3.5 border-b border-gray-200/80 dark:border-gray-800 space-y-2.5 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-md sticky top-0 z-20">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
               <input
@@ -571,6 +584,18 @@ export default function DirectorioPage() {
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] no-scrollbar">
+              {cumpleanerosCount > 0 && (
+                <button
+                  onClick={() => setFiltroSoloCumpleanos(!filtroSoloCumpleanos)}
+                  className={`px-2.5 py-1 rounded-xl whitespace-nowrap font-semibold transition-all sm:hidden ${
+                    filtroSoloCumpleanos
+                      ? 'bg-amber-500 text-white shadow-2xs'
+                      : 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60'
+                  }`}
+                >
+                  🎂 {cumpleanerosCount}
+                </button>
+              )}
               {TIPOS_CONTACTO_LIST.map((tipo) => (
                 <button
                   key={tipo}
@@ -605,10 +630,7 @@ export default function DirectorioPage() {
                         return (
                           <div
                             key={contacto.id}
-                            onClick={() => {
-                              setContactoSeleccionado(contacto);
-                              setMobileShowDetail(true);
-                            }}
+                            onClick={() => handleSelectContacto(contacto)}
                             className={`px-4 py-3 flex items-center justify-between gap-3 cursor-pointer transition-all ${
                               isSelected
                                 ? 'bg-blue-50/80 border-l-4 border-blue-600 pl-3'
@@ -664,15 +686,19 @@ export default function DirectorioPage() {
                   </div>
                 ))
               ) : (
-                <div className="p-8 text-center text-gray-400 dark:text-gray-500 text-xs italic">
-                  No se encontraron contactos con este criterio.
+                <div className="text-center py-16 px-4 space-y-3">
+                  <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto text-gray-400">
+                    <User className="h-6 w-6" />
+                  </div>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    No se encontraron contactos con los filtros actuales
+                  </p>
                 </div>
               )}
             </div>
 
-            {/* Quick A-Z Alphabetical Sidebar Strip */}
-            <div className="w-5 py-2 flex flex-col items-center justify-between text-[9px] font-bold text-blue-600 select-none bg-gray-50/50 dark:bg-gray-800/30 border-l border-gray-100 dark:border-gray-800">
-              <button onClick={() => setLetraSeleccionada(null)} className="text-gray-400 dark:text-gray-500 hover:text-blue-600">#</button>
+            {/* iOS Right Side Alphabet Fast-Scroller Index */}
+            <div className="w-5 py-2 flex flex-col justify-between items-center text-[9px] font-bold text-blue-600 dark:text-blue-400 select-none shrink-0 bg-gray-50/50 dark:bg-gray-800/30 border-l border-gray-100 dark:border-gray-800/60 z-10">
               {ALFABETO.map((l) => (
                 <button
                   key={l}
@@ -694,7 +720,7 @@ export default function DirectorioPage() {
         {/* =========================================================================
             RIGHT COLUMN (7 COLS): iPHONE CONTACT CARD DETAIL & CHAT
            ========================================================================= */}
-        <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] ${
+        <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-none sm:rounded-2xl border-0 sm:border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[calc(100dvh-125px)] sm:h-[750px] ${
           mobileShowDetail ? 'flex animate-in slide-in-from-right-4 duration-200' : 'hidden lg:flex'
         }`}>
           {/* iOS Mobile Navigation Bar (< lg) */}
@@ -719,7 +745,7 @@ export default function DirectorioPage() {
             ) : <div className="w-10" />}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          <div ref={detailScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
             {contactoSeleccionado ? (
               <div className="space-y-6 animate-in fade-in">
               {/* iPhone Contact Header: Big Avatar & Name */}
@@ -1267,14 +1293,14 @@ export default function DirectorioPage() {
         </div>
       )}
 
-      {/* Mobile Floating Action Button (FAB): Bottom Right corner above bottom menu */}
+      {/* Mobile Floating Action Button (FAB): Solo símbolo + como se solicitó */}
       <div className="fixed bottom-20 right-4 z-40 sm:hidden">
         <button
           onClick={handleOpenCrearModal}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs py-3 px-4.5 rounded-full shadow-xl shadow-blue-600/40 border border-blue-500/30 transition-all cursor-pointer"
+          aria-label="Nuevo Contacto"
+          className="flex items-center justify-center w-12 h-12 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-full shadow-2xl shadow-blue-600/50 border-2 border-white/20 transition-all cursor-pointer"
         >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>Nuevo Contacto</span>
+          <Plus className="h-6 w-6 stroke-[2.5]" />
         </button>
       </div>
     </div>
