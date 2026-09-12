@@ -46,11 +46,9 @@ import {
   Trash2,
   CheckCheck,
   Smile,
-  Paperclip,
-  ArrowUpDown
+  Paperclip
 } from 'lucide-react';
 import { generateDocxBlob, downloadBlob } from '@/lib/export/docx-exporter';
-import { ImportExportModal } from '@/components/configuracion/import-export-tab';
 
 export type EstadoGestion = 'Recibida' | 'En Revisión' | 'En Trámite con Dependencia' | 'Resuelta';
 
@@ -167,8 +165,6 @@ const ESTADOS_KANBAN: EstadoGestion[] = ['Recibida', 'En Revisión', 'En Trámit
 export default function GestionesPage() {
   const [gestiones, setGestiones] = useState<GestionCiudadana[]>(INITIAL_GESTIONES);
   const [loading, setLoading] = useState(true);
-
-  const [isModalImportExportOpen, setIsModalImportExportOpen] = useState(false);
 
   const loadGestiones = async () => {
     try {
@@ -715,14 +711,6 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
     <div className="space-y-6">
       {/* Action Bar */}
       <div className="flex flex-wrap items-center justify-end gap-2.5">
-        <button
-          onClick={() => setIsModalImportExportOpen(true)}
-          className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs sm:text-sm font-semibold px-3.5 py-1.5 rounded-xl shadow-2xs transition-all cursor-pointer"
-        >
-          <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-          <span>Importar / Exportar</span>
-        </button>
-
         <button
           onClick={() => {
             setIsOcrProcessing(false);
@@ -1822,16 +1810,6 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
           </div>
         </div>
       )}
-
-      {/* MODAL IMPORTAR Y EXPORTAR GESTIONES */}
-      <ImportExportModal
-        isOpen={isModalImportExportOpen}
-        onClose={() => setIsModalImportExportOpen(false)}
-        initialModule="gestiones"
-        onImportSuccess={() => {
-          loadGestiones();
-        }}
-      />
     </div>
   );
 }

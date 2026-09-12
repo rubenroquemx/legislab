@@ -49,7 +49,6 @@ import {
   Search
 } from 'lucide-react';
 import Link from 'next/link';
-import { ImportExportModal } from '@/components/configuracion/import-export-tab';
 
 interface EventoLegislativo {
   id: string;
@@ -485,7 +484,6 @@ export default function AgendaPage() {
   // Modals & Active selections
   const [isModalCrearOpen, setIsModalCrearOpen] = useState(false);
   const [isModalCompartirOpen, setIsModalCompartirOpen] = useState(false);
-  const [isModalImportExportOpen, setIsModalImportExportOpen] = useState(false);
   const [eventoDetalle, setEventoDetalle] = useState<EventoLegislativo | null>(null);
   const [eventoAEditar, setEventoAEditar] = useState<EventoLegislativo | null>(null);
   const [eventoAEliminar, setEventoAEliminar] = useState<EventoLegislativo | null>(null);
@@ -1598,15 +1596,6 @@ export default function AgendaPage() {
                 <span>Conectar Google Calendar</span>
               </button>
             )}
-
-            <button
-              onClick={() => setIsModalImportExportOpen(true)}
-              title="Importar y Exportar eventos de Agenda"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-[11px] font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-2xs cursor-pointer"
-            >
-              <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Importar / Exportar</span>
-            </button>
 
             <button
               onClick={handleOpenCompartir}
@@ -3174,18 +3163,6 @@ export default function AgendaPage() {
           </div>
         </div>
       )}
-
-      {/* MODAL IMPORTAR Y EXPORTAR AGENDA */}
-      <ImportExportModal
-        isOpen={isModalImportExportOpen}
-        onClose={() => setIsModalImportExportOpen(false)}
-        initialModule="agenda"
-        onImportSuccess={() => {
-          loadAgendaData();
-          setToastMessage('✅ ¡Eventos importados exitosamente a la Agenda!');
-          setTimeout(() => setToastMessage(null), 5000);
-        }}
-      />
 
       {/* FLOATING TOAST NOTIFICATION BANNER */}
       {toastMessage && (

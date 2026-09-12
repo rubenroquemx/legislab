@@ -28,9 +28,8 @@ import {
   Calendar,
   Share2,
   PhoneCall,
-  ArrowUpDown
+  ChevronLeft
 } from 'lucide-react';
-import { ImportExportModal } from '@/components/configuracion/import-export-tab';
 
 export interface ObservacionContacto {
   id: string;
@@ -78,7 +77,7 @@ const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 export default function DirectorioPage() {
   const [contactos, setContactos] = useState<ContactoDirectorio[]>(INITIAL_CONTACTOS);
   const [loading, setLoading] = useState(true);
-  const [isModalImportExportOpen, setIsModalImportExportOpen] = useState(false);
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
   const loadContactos = async () => {
     try {
@@ -100,6 +99,7 @@ export default function DirectorioPage() {
           observaciones: [],
         }));
         setContactos(mapped);
+        setContactoSeleccionado((prev) => prev || mapped[0] || null);
       }
     } catch (err) {
       console.warn('Error loading contactos:', err);
@@ -309,6 +309,7 @@ export default function DirectorioPage() {
       };
       setContactos([nuevo, ...contactos]);
       setContactoSeleccionado(nuevo);
+      setMobileShowDetail(true);
     }
 
     setIsModalCrearOpen(false);
@@ -320,6 +321,7 @@ export default function DirectorioPage() {
     setModalDeleteId(null);
     if (contactoSeleccionado?.id === id) {
       setContactoSeleccionado(restantes[0] || null);
+      setMobileShowDetail(false);
     }
   };
 
@@ -378,14 +380,6 @@ export default function DirectorioPage() {
         )}
 
         <button
-          onClick={() => setIsModalImportExportOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-2xs cursor-pointer"
-        >
-          <ArrowUpDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-          <span>Importar / Exportar</span>
-        </button>
-
-        <button
           onClick={handleOpenCrearModal}
           className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-all"
         >
@@ -394,13 +388,17 @@ export default function DirectorioPage() {
         </button>
       </div>
 
-      {/* Main iPhone Style Master-Detail Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      {/* Main iPhone Style Master-Detail Layout with Mobile Slide Animation */}
+      <div className="relative w-full lg:grid lg:grid-cols-12 lg:gap-5 items-start overflow-hidden min-h-[750px] lg:overflow-visible">
         
         {/* =========================================================================
             LEFT COLUMN (5 COLS): iPHONE CONTACTS ALPHABETICAL LIST
            ========================================================================= */}
-        <div className="lg:col-span-5 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] transition-colors">
+        <div className={`w-full lg:col-span-5 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+          mobileShowDetail
+            ? '-translate-x-full absolute inset-0 opacity-0 pointer-events-none lg:relative lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
+            : 'translate-x-0 relative opacity-100'
+        }`}>
           {/* Top iOS Search Bar & Type Filter */}
           <div className="p-3.5 border-b border-gray-100 dark:border-gray-800 space-y-2.5 bg-gray-50/80 dark:bg-gray-800/40">
             <div className="relative">
@@ -457,7 +455,10 @@ export default function DirectorioPage() {
                         return (
                           <div
                             key={contacto.id}
-                            onClick={() => setContactoSeleccionado(contacto)}
+                            onClick={() => {
+                              setContactoSeleccionado(contacto);
+                              setMobileShowDetail(true);
+                            }}
                             className={`px-4 py-3 flex items-center justify-between gap-3 cursor-pointer transition-all ${
                               isSelected
                                 ? 'bg-blue-50/80 border-l-4 border-blue-600 pl-3'
@@ -537,9 +538,36 @@ export default function DirectorioPage() {
         {/* =========================================================================
             RIGHT COLUMN (7 COLS): iPHONE CONTACT CARD DETAIL & CHAT
            ========================================================================= */}
-        <div className="lg:col-span-7 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs p-6 space-y-6 h-[750px] overflow-y-auto transition-colors">
-          {contactoSeleccionado ? (
-            <div className="space-y-6 animate-in fade-in">
+        <div className={`w-full lg:col-span-7 bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs overflow-hidden flex flex-col h-[750px] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+          mobileShowDetail
+            ? 'translate-x-0 relative opacity-100'
+            : 'translate-x-full absolute inset-0 opacity-0 pointer-events-none lg:relative lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
+        }`}>
+          {/* iOS Mobile Navigation Bar (< lg) */}
+          <div className="lg:hidden flex items-center justify-between px-3.5 py-2.5 bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800 shrink-0 sticky top-0 z-20">
+            <button
+              onClick={() => setMobileShowDetail(false)}
+              className="inline-flex items-center gap-0.5 text-blue-600 dark:text-blue-400 font-semibold text-xs hover:opacity-80 active:scale-95 transition-all cursor-pointer -ml-1 px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            >
+              <ChevronLeft className="h-4 w-4 stroke-[2.5]" />
+              <span>Contactos</span>
+            </button>
+            <span className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate max-w-[160px]">
+              {contactoSeleccionado?.nombre || 'Detalle'}
+            </span>
+            {contactoSeleccionado ? (
+              <button
+                onClick={() => handleOpenEditarModal(contactoSeleccionado)}
+                className="text-blue-600 dark:text-blue-400 font-semibold text-xs hover:opacity-80 active:scale-95 transition-all cursor-pointer px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40"
+              >
+                Editar
+              </button>
+            ) : <div className="w-10" />}
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            {contactoSeleccionado ? (
+              <div className="space-y-6 animate-in fade-in">
               {/* iPhone Contact Header: Big Avatar & Name */}
               <div className="flex flex-col items-center text-center space-y-3 pt-2">
                 <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-white shadow-lg relative group bg-gray-100 dark:bg-gray-800">
@@ -813,11 +841,12 @@ export default function DirectorioPage() {
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 text-xs italic gap-2">
+            <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 text-xs italic gap-2 py-20">
               <Phone className="h-8 w-8 text-slate-300" />
               <span>Selecciona un contacto de la lista para ver su ficha completa.</span>
             </div>
           )}
+          </div>
         </div>
       </div>
 
@@ -1078,14 +1107,6 @@ export default function DirectorioPage() {
           </div>
         </div>
       )}
-
-      {/* MODAL: IMPORTAR / EXPORTAR */}
-      <ImportExportModal
-        isOpen={isModalImportExportOpen}
-        onClose={() => setIsModalImportExportOpen(false)}
-        initialModule="directorio"
-        onImportSuccess={() => loadContactos()}
-      />
     </div>
   );
 }
