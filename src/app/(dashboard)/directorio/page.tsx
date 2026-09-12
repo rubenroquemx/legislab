@@ -1340,7 +1340,7 @@ export default function DirectorioPage() {
       )}
 
       {/* Mobile Floating Action Button (FAB): Solo símbolo + como se solicitó */}
-      <div className="fixed bottom-20 right-4 z-40 sm:hidden">
+      <div className="fixed bottom-24 right-5 z-40 sm:hidden">
         <button
           onClick={handleOpenCrearModal}
           aria-label="Nuevo Contacto"

@@ -202,7 +202,7 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
   const userCargo = user?.cargo || (user?.isSuperAdmin ? 'Super Administrador SaaS' : 'Integrante de Despacho');
 
   return (
-    <header className="h-14 bg-white/90 backdrop-blur-2xl border-b border-[#E2E8F0] px-3 sm:px-5 flex items-center justify-between sticky top-0 z-30 select-none">
+    <header className="hidden lg:flex h-14 bg-white/90 backdrop-blur-2xl border-b border-[#E2E8F0] px-3 sm:px-5 items-center justify-between sticky top-0 z-30 select-none">
       {/* Left: Mobile Toggle & Sidebar Collapse & Active Office Switcher */}
       <div className="flex items-center gap-2 sm:gap-3 max-w-xl">
         <button
