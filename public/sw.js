@@ -1,5 +1,5 @@
-// LegisLab PWA Service Worker - v7 Cache-Buster & Network-First
-const CACHE_NAME = 'legislab-pwa-v7-' + Date.now();
+// LegisLab PWA Service Worker - v8 Stable Network-First
+const CACHE_NAME = 'legislab-pwa-v8';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/manifest.webmanifest',
