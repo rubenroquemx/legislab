@@ -221,9 +221,10 @@ export async function deleteGestion(id: string) {
 }
 
 export async function addNotaGestion(gestionId: string, nota: {
-  id: string;
-  fecha: string;
-  hora: string;
+  id?: string;
+  fecha?: string;
+  hora?: string;
+  createdAt?: string;
   autor: string;
   texto: string;
   esDiputado?: boolean;
@@ -249,7 +250,30 @@ export async function addNotaGestion(gestionId: string, nota: {
       }
     }
 
-    notasList.push(nota);
+    const now = new Date();
+    const fechaMx = now.toLocaleDateString('es-MX', {
+      timeZone: 'America/Mexico_City',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    const horaMx = now.toLocaleTimeString('es-MX', {
+      timeZone: 'America/Mexico_City',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const finalNota = {
+      id: nota.id || `nota-${Date.now()}`,
+      fecha: nota.fecha && nota.fecha !== 'Hoy' ? nota.fecha : fechaMx,
+      hora: nota.hora || horaMx,
+      createdAt: nota.createdAt || now.toISOString(),
+      autor: nota.autor,
+      texto: nota.texto,
+      esDiputado: nota.esDiputado ?? false,
+    };
+
+    notasList.push(finalNota);
 
     const updated = await db
       .update(gestiones)
@@ -260,6 +284,7 @@ export async function addNotaGestion(gestionId: string, nota: {
       .where(eq(gestiones.id, gestionId))
       .returning();
 
+    revalidatePath(`/gestiones/${gestionId}`);
     revalidatePath('/gestiones');
     return { success: true, data: updated[0] };
   } catch (error) {

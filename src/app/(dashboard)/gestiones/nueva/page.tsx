@@ -182,7 +182,7 @@ export default function NuevaGestionPage() {
             id: `doc-${Date.now()}`,
             nombre: 'Credencial_Elector_INE.jpg',
             tipo: 'INE / Identificación Oficial',
-            fecha: new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
+            fecha: new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short', year: 'numeric' }),
             tamano: '1.2 MB',
             urlDrive: ''
           }
@@ -190,8 +190,9 @@ export default function NuevaGestionPage() {
         notas: [
           {
             id: `nota-${Date.now()}`,
-            fecha: new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
-            hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+            fecha: new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short', year: 'numeric' }),
+            hora: new Date().toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' }),
+            createdAt: new Date().toISOString(),
             autor: 'Dip. Ruben Roque',
             texto: `Gestión ciudadana dada de alta con éxito en el rubro ${tipoFinal}. Canalización inicial orientada a ${dependenciaDestino}.`,
             esDiputado: true

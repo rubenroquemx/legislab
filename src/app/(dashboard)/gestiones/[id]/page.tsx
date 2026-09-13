@@ -144,14 +144,65 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
     await updateGestionStatus(gestion.id, nuevoEstado);
   };
 
+  const formatNotaTimestamp = (nota: any): string => {
+    if (nota.createdAt) {
+      try {
+        const d = new Date(nota.createdAt);
+        const f = d.toLocaleDateString('es-MX', {
+          timeZone: 'America/Mexico_City',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        });
+        const h = d.toLocaleTimeString('es-MX', {
+          timeZone: 'America/Mexico_City',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        return `${f} • ${h}`;
+      } catch {}
+    }
+
+    let f = nota.fecha;
+    if (!f || f === 'Hoy') {
+      f = new Date().toLocaleDateString('es-MX', {
+        timeZone: 'America/Mexico_City',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+
+    const h = nota.hora || '';
+    return h ? `${f} • ${h}` : f;
+  };
+
   const handleAgregarNota = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!gestion || !nuevaNotaTexto.trim()) return;
 
+    const now = new Date();
+    const userTz = typeof Intl !== 'undefined' && Intl.DateTimeFormat().resolvedOptions().timeZone 
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone 
+      : 'America/Mexico_City';
+
+    const fechaReal = now.toLocaleDateString('es-MX', {
+      timeZone: userTz,
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    const horaReal = now.toLocaleTimeString('es-MX', {
+      timeZone: userTz,
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
     const nuevaNota = {
       id: `nota-${Date.now()}`,
-      fecha: new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
-      hora: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      fecha: fechaReal,
+      hora: horaReal,
+      createdAt: now.toISOString(),
       autor: usuarioActivo.nombre,
       texto: nuevaNotaTexto.trim(),
       esDiputado: true,
@@ -359,14 +410,13 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
 
       {/* Two Column Layout: Bitácora de Observaciones & Expediente Digital de Drive */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Observaciones (Bitácora Interna) */}
+        {/* Observaciones */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-[#00a884]" />
-              <span>Bitácora de Observaciones ({gestion.notas?.length || 0})</span>
+              <span>Observaciones</span>
             </h3>
-            <span className="text-[11px] text-slate-400 font-medium">Seguimiento Interno</span>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3 max-h-80 overflow-y-auto min-h-[200px]">
@@ -375,7 +425,7 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
                 <div key={nota.id} className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-blue-900">{nota.autor}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">{nota.fecha} • {nota.hora}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">{formatNotaTimestamp(nota)}</span>
                   </div>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">{nota.texto}</p>
                 </div>
