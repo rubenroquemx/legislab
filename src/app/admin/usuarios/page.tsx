@@ -390,7 +390,7 @@ export default function SaasUsuariosPage() {
 
       {/* MODAL RESET PASSWORD */}
       {resetModalUser && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+        <div className="w-full my-6 animate-in fade-in">
           <div className="bg-white rounded-2xl border border-zinc-200 max-w-sm w-full p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
               <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
@@ -438,7 +438,7 @@ export default function SaasUsuariosPage() {
 
       {/* MODAL REASIGNAR DESPACHO */}
       {reassignModalUser && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+        <div className="w-full my-6 animate-in fade-in">
           <div className="bg-white rounded-2xl border border-zinc-200 max-w-sm w-full p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
               <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
@@ -488,7 +488,7 @@ export default function SaasUsuariosPage() {
 
       {/* MODAL ELIMINAR USUARIO */}
       {deleteModalUser && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+        <div className="w-full my-6 animate-in fade-in">
           <div className="bg-white rounded-2xl border border-zinc-200 max-w-sm w-full p-5 shadow-2xl text-center space-y-4">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto text-red-600">
               <AlertCircle className="w-5 h-5" />

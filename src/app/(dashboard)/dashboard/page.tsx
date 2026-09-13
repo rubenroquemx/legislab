@@ -1113,8 +1113,8 @@ export default function DashboardPage() {
 
       {/* MODAL 1: NUEVA TAREA */}
       {isModalTareaOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-zinc-200 space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white rounded-2xl w-full p-6 shadow-xl border border-zinc-200 space-y-4">
             <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
               <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
                 <CheckSquare className="h-4 w-4 text-emerald-600" />
@@ -1223,8 +1223,8 @@ export default function DashboardPage() {
 
       {/* MODAL 2: NUEVO EVENTO EN AGENDA */}
       {isModalEventoOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-zinc-200 space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white rounded-2xl w-full p-6 shadow-xl border border-zinc-200 space-y-4">
             <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
               <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
                 <CalendarIcon className="h-4 w-4 text-blue-600" />

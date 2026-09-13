@@ -765,7 +765,7 @@ export default function SaasDespachoDetailPage({
 
       {/* QR Code Modal */}
       {showQrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/50 backdrop-blur-xs">
+        <div className="w-full my-6 animate-in fade-in">
           <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-sm p-6 text-center space-y-4 shadow-xl relative">
             <h3 className="font-bold text-sm text-zinc-900">Vincular WhatsApp de {office?.name}</h3>
             <p className="text-xs text-zinc-500">

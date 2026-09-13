@@ -1154,8 +1154,8 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
 
       {/* MODAL 1: REGISTRAR GESTIÓN */}
       {isModalCrearOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-2xl w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-5 max-h-[92vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-5 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
@@ -1166,7 +1166,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                   <p className="text-xs text-slate-500 dark:text-slate-400">Captura los datos del ciudadano o extrae automáticamente con escaneo de INE.</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalCrearOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
+              <button onClick={() => setIsModalCrearOpen(false)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"><span>← Volver al Tablero</span></button>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 space-y-3">
@@ -1457,8 +1457,8 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
 
       {/* MODAL 2: EXPEDIENTE DIGITAL DEL CIUDADANO CON CHAT ESTILO WHATSAPP DE OBSERVACIONES */}
       {gestionSeleccionada && !isModalOficioOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-3xl w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-5 max-h-[92vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-5 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded">
@@ -1466,7 +1466,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                 </span>
                 <h2 className="text-base font-bold text-gray-900 dark:text-white">Expediente Digital del Ciudadano</h2>
               </div>
-              <button onClick={() => setGestionSeleccionada(null)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
+              <button onClick={() => setGestionSeleccionada(null)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"><span>← Volver al Listado</span></button>
             </div>
 
             {/* Citizen Header with Extracted Photo Avatar */}
@@ -1760,8 +1760,8 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
       
       {/* MODAL API KEY DE GEMINI */}
       {showKeyModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200 dark:border-gray-800 w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
@@ -1820,8 +1820,8 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
 
       {/* MODAL 3: GENERADOR DE OFICIOS */}
       {isModalOficioOpen && gestionSeleccionada && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-4xl w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-5 max-h-[92vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-5 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
@@ -1832,7 +1832,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                   <p className="text-xs text-slate-500 dark:text-slate-400">Generación oficial por demanda con técnica parlamentaria mexicana para {gestionSeleccionada.nombre}.</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOficioOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
+              <button onClick={() => setIsModalOficioOpen(false)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"><span>← Volver al Expediente</span></button>
             </div>
 
             <div className="p-4 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-800 space-y-3">
@@ -1969,8 +1969,8 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
 
       {/* MODAL 4: CARGAR NUEVA PLANTILLA */}
       {isModalNuevaPlantillaOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-lg w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <FileUp className="h-5 w-5 text-blue-600" />

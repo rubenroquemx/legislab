@@ -2060,8 +2060,8 @@ export default function AgendaPage() {
 
       {/* MODAL DETALLES DEL EVENTO */}
       {eventoDetalle && !eventoAEditar && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className={`h-3 w-3 rounded-full ${getGoogleEventColor(eventoDetalle.tipo).dot}`}></span>
@@ -2178,14 +2178,14 @@ export default function AgendaPage() {
 
       {/* MODAL CREAR EVENTO CON VALIDACIÓN DE HORA */}
       {isModalCrearOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Plus className="h-5 w-5 text-[#1a73e8]" />
                 Nuevo evento
               </h2>
-              <button onClick={() => setIsModalCrearOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
+              <button onClick={() => setIsModalCrearOpen(false)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"><span>← Volver al Tablero</span></button>
             </div>
 
             <form onSubmit={handleCrearEvento} className="space-y-4">
@@ -2500,8 +2500,8 @@ export default function AgendaPage() {
 
       {/* MODAL EDITAR EVENTO CON VALIDACIÓN DE HORA */}
       {eventoAEditar && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Edit3 className="h-5 w-5 text-[#1a73e8]" />
@@ -2802,8 +2802,8 @@ export default function AgendaPage() {
 
       {/* MODAL CONFIRMAR ELIMINACIÓN DE EVENTO */}
       {eventoAEliminar && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-start gap-3.5">
               <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
                 <AlertTriangle className="h-5 w-5" />
@@ -2844,8 +2844,8 @@ export default function AgendaPage() {
 
       {/* MODAL CONFIRMAR ELIMINACIÓN DE LUGAR FRECUENTE */}
       {sedeAEliminar && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-start gap-3.5">
               <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
                 <AlertTriangle className="h-5 w-5" />
@@ -2886,8 +2886,8 @@ export default function AgendaPage() {
 
       {/* MODAL CONFIRMAR ELIMINACIÓN DE TIPO DE EVENTO */}
       {tipoAEliminar && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-start gap-3.5">
               <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 shrink-0">
                 <AlertTriangle className="h-5 w-5" />
@@ -2927,8 +2927,8 @@ export default function AgendaPage() {
 
       {/* MODAL REAGENDAR EVENTO (DRAG & DROP) */}
       {reagendadoPendiente && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-start gap-3.5">
               <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-950/50 flex items-center justify-center text-[#1a73e8] shrink-0">
                 <CalendarRange className="h-5 w-5" />
@@ -2979,8 +2979,8 @@ export default function AgendaPage() {
 
       {/* MODAL COMPARTIR AGENDA POR WHATSAPP */}
       {isModalCompartirOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-[#0b8043] flex items-center justify-center text-white">
@@ -3079,8 +3079,8 @@ export default function AgendaPage() {
 
       {/* MODAL GOOGLE CALENDAR */}
       {isModalGCalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-4 sm:p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="h-9 w-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center border border-blue-200/80 dark:border-blue-900 shadow-2xs">

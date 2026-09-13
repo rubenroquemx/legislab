@@ -580,8 +580,8 @@ export default function GruposPage() {
           MODAL: NUEVO GRUPO (2 MODALIDADES: CREAR EN WHATSAPP vs VINCULAR EXISTENTE)
          ========================================================================= */}
       {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white rounded-3xl w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div>
                 <h3 className="text-base font-bold text-gray-900">Agregar / Crear Grupo</h3>

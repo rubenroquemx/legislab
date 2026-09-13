@@ -377,8 +377,8 @@ function SaasDespachosContent() {
 
       {/* Modal: Registrar Nuevo Usuario Principal & Despacho */}
       {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/50 backdrop-blur-xs">
-          <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-xl p-6 space-y-5 shadow-xl relative max-h-[90vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-xl p-6 space-y-5 shadow-xl relative overflow-visible">
             <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
               <div className="flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-zinc-900" />

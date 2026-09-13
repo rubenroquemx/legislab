@@ -643,8 +643,8 @@ ${generatedLinkData.url}`;
 
       {/* MODAL INVITAR / EDITAR USUARIO */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl space-y-4 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div>
                 <h2 className="text-base font-bold text-gray-900 dark:text-white">
@@ -786,8 +786,8 @@ ${generatedLinkData.url}`;
 
       {/* MODAL LINK DE ACTIVACIÓN GENERADO */}
       {isModalLinkOpen && generatedLinkData && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4 text-center">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl space-y-4 text-center">
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center mx-auto text-emerald-600">
               <CheckCircle2 className="w-6 h-6" />
             </div>
@@ -836,7 +836,7 @@ ${generatedLinkData.url}`;
 
       {/* MODAL ELIMINAR USUARIO */}
       {modalDeleteId && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+        <div className="w-full my-6 animate-in fade-in">
           <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-sm w-full p-5 shadow-2xl text-center space-y-4">
             <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/50 flex items-center justify-center mx-auto text-red-600">
               <AlertCircle className="w-5 h-5" />

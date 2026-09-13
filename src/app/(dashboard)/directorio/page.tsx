@@ -1083,14 +1083,14 @@ export default function DirectorioPage() {
 
       {/* MODAL: NUEVO / EDITAR CONTACTO */}
       {isModalCrearOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-xl w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4 max-h-[92vh] overflow-y-auto">
+        <div className="w-full my-6 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <PhoneCall className="h-5 w-5 text-blue-600" />
                 {contactoEnEdicion ? 'Editar Contacto del Directorio' : 'Nuevo Contacto en Directorio'}
               </h3>
-              <button onClick={() => setIsModalCrearOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
+              <button onClick={() => setIsModalCrearOpen(false)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"><span>← Volver al Tablero</span></button>
             </div>
 
             <form onSubmit={handleGuardarContacto} className="space-y-3.5 text-xs">
@@ -1310,7 +1310,7 @@ export default function DirectorioPage() {
 
       {/* MODAL: CONFIRMACIÓN DE ELIMINACIÓN */}
       {modalDeleteId && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 animate-in fade-in">
+        <div className="w-full my-6 animate-in fade-in">
           <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 max-w-sm w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4 text-center">
             <div className="h-12 w-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
               <Trash2 className="h-6 w-6" />
