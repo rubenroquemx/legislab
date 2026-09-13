@@ -548,13 +548,13 @@ export default function DirectorioPage() {
           </button>
         )}
 
-        <button
-          onClick={handleOpenCrearModal}
+        <Link
+          href="/directorio/nuevo"
           className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Nuevo Contacto</span>
-        </button>
+        </Link>
       </div>
 
       {/* Main iPhone Style Master-Detail Layout */}
@@ -1082,7 +1082,7 @@ export default function DirectorioPage() {
       </div>
 
       {/* MODAL: NUEVO / EDITAR CONTACTO */}
-      {isModalCrearOpen && (
+      {isModalCrearOpen && contactoEnEdicion && (
         <div className="w-full my-6 animate-in fade-in">
           <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">

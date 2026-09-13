@@ -847,13 +847,13 @@ export default function DashboardPage() {
           </div>
 
           <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
-            <button
-              onClick={() => setIsModalEventoOpen(true)}
+            <Link
+              href="/agenda/nuevo"
               className="inline-flex items-center gap-1 text-zinc-900 font-semibold hover:text-blue-600"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>+ Agregar Evento</span>
-            </button>
+            </Link>
             <Link
               href="/agenda"
               className="text-zinc-600 hover:text-zinc-900 font-medium"
@@ -881,13 +881,13 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <button
-              onClick={() => setIsModalTareaOpen(true)}
+            <Link
+              href="/tareas/nueva"
               className="p-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
               title="Nueva Tarea Personal"
             >
               <Plus className="h-4 w-4" />
-            </button>
+            </Link>
           </div>
 
           <div className="flex items-center justify-between gap-1 p-1 bg-zinc-100 rounded-xl text-xs font-medium">
@@ -1015,12 +1015,12 @@ export default function DashboardPage() {
           </div>
 
           <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
-            <button
-              onClick={() => setIsModalTareaOpen(true)}
+            <Link
+              href="/tareas/nueva"
               className="text-zinc-900 font-semibold hover:text-blue-600"
             >
               + Asignar Tarea
-            </button>
+            </Link>
             <Link
               href="/tareas"
               className="text-zinc-900 font-semibold hover:text-blue-600 flex items-center gap-1"

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   getGestiones, 
   createGestion, 
@@ -175,6 +177,7 @@ const TIPOS_GESTION_BASE = ['Salud', 'Educación', 'Obras Públicas', 'Apoyo Eco
 const ESTADOS_KANBAN: EstadoGestion[] = ['Recibida', 'En Revisión', 'En Trámite con Dependencia', 'Resuelta'];
 
 export default function GestionesPage() {
+  const router = useRouter();
   const [gestiones, setGestiones] = useState<GestionCiudadana[]>(INITIAL_GESTIONES);
   const [loading, setLoading] = useState(true);
 
@@ -856,18 +859,13 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setIsOcrProcessing(false);
-            setOcrSuccess(false);
-            setAvatarUrl('');
-            setIsModalCrearOpen(true);
-          }}
+        <Link
+          href="/gestiones/nueva"
           className="inline-flex items-center justify-center gap-2 bg-[#2563EB] hover:bg-[#1550BA] text-white text-ios-body font-semibold px-4 py-2 rounded-[12px] shadow-xs ios-press cursor-pointer self-start sm:self-auto"
         >
           <Plus className="h-4 w-4 stroke-[2]" />
           <span>Nueva Gestión</span>
-        </button>
+        </Link>
       </div>
 
       {/* Bar: View Switcher (Lista vs Kanban) + Filters & Search */}
@@ -970,7 +968,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                         key={ges.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, ges.id)}
-                        onClick={() => setGestionSeleccionada(ges)}
+                        onClick={() => router.push(`/gestiones/${ges.id}`)}
                         className="bg-white dark:bg-[#121824] p-4 rounded-xl border border-gray-200/80 dark:border-gray-800/90 shadow-xs hover:shadow-md hover:border-blue-300 transition-all cursor-grab active:cursor-grabbing space-y-2.5 group"
                       >
                         <div className="flex items-center justify-between">
@@ -1029,17 +1027,14 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                         </div>
 
                         <div className="flex items-center justify-between pt-1 text-[11px]">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAbrirGeneradorOficio(ges);
-                            }}
+                          <Link
+                            href={`/gestiones/${ges.id}`}
+                            onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold"
                           >
                             <FileText className="h-3 w-3" />
                             <span>Oficio IA</span>
-                          </button>
+                          </Link>
                           <span className="text-gray-400 dark:text-gray-500 text-[10px]">{ges.fecha}</span>
                         </div>
                       </div>
@@ -1080,7 +1075,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                   return (
                     <tr 
                       key={ges.id} 
-                      onClick={() => setGestionSeleccionada(ges)}
+                      onClick={() => router.push(`/gestiones/${ges.id}`)}
                       className="hover:bg-blue-50/30 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
                     >
                       <td className="py-4 px-4 font-mono font-bold text-blue-600">
@@ -1136,7 +1131,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                             <span>Oficio</span>
                           </button>
                           <button
-                            onClick={() => setGestionSeleccionada(ges)}
+                            onClick={() => router.push(`/gestiones/${ges.id}`)}
                             className="text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg"
                           >
                             Expediente

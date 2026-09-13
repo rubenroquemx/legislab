@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { 
   Users, 
   Plus, 
@@ -642,7 +643,7 @@ ${generatedLinkData.url}`;
       )}
 
       {/* MODAL INVITAR / EDITAR USUARIO */}
-      {isModalOpen && (
+      {isModalOpen && usuarioEnEdicion && (
         <div className="w-full my-6 animate-in fade-in">
           <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl space-y-4 overflow-visible">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">

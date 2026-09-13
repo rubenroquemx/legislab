@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { getTareas, createTarea, updateTareaStatus, deleteTarea } from '@/app/actions/tareas';
 import { getTodayMexicoCity, formatDateToYYYYMMDD, getCurrentTimeMexicoCity } from '@/lib/date-utils';
 import { 
@@ -351,13 +352,13 @@ export default function TareasPage() {
     <div className="space-y-6">
       {/* Action Bar */}
       <div className="flex items-center justify-end gap-2.5">
-        <button
-          onClick={handleOpenCrearModal}
+        <Link
+          href="/tareas/nueva"
           className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-1.5 rounded-xl shadow-xs transition-all"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Nueva Tarea</span>
-        </button>
+        </Link>
       </div>
 
       {/* Stats Cards */}
@@ -742,149 +743,6 @@ export default function TareasPage() {
       )}
 
       {/* MODAL 1: NUEVA / EDITAR TAREA CON SELECTORES DE FECHA Y HORA */}
-      {isModalCrearOpen && (
-        <div className="w-full my-6 animate-in fade-in">
-          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200/80 dark:border-gray-800 w-full p-6 shadow-2xl border border-gray-200/80 dark:border-gray-800 space-y-4 overflow-visible">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <CheckSquare className="h-5 w-5 text-blue-600" />
-                {tareaEnEdicion ? 'Editar Tarea del Equipo' : 'Asignar Nueva Tarea'}
-              </h3>
-              <button onClick={() => setIsModalCrearOpen(false)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"><span>← Volver al Tablero</span></button>
-            </div>
-
-            <form onSubmit={handleGuardarTarea} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Título de la Tarea <span className="text-red-500">*</span></label>
-                <input
-                  required
-                  type="text"
-                  value={formTitulo}
-                  onChange={(e) => setFormTitulo(e.target.value)}
-                  placeholder="Ej: Elaborar dictamen de comisiones unidas..."
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 font-medium focus:bg-white focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Integrante Responsable <span className="text-red-500">*</span></label>
-                <select
-                  value={formUsuarioId}
-                  onChange={(e) => setFormUsuarioId(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 font-semibold"
-                >
-                  {USUARIOS_EQUIPO.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      👤 {u.nombre} — ({u.cargo})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Prioridad</label>
-                  <select
-                    value={formPrioridad}
-                    onChange={(e) => setFormPrioridad(e.target.value as any)}
-                    className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100"
-                  >
-                    <option value="Alta">Alta</option>
-                    <option value="Media">Media</option>
-                    <option value="Baja">Baja</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Estado</label>
-                  <select
-                    value={formEstatus}
-                    onChange={(e) => setFormEstatus(e.target.value as any)}
-                    className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 font-semibold"
-                  >
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="En Proceso">En Proceso</option>
-                    <option value="En Revisión">En Revisión</option>
-                    <option value="Completada">Completada</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Módulo</label>
-                  <select
-                    value={formModulo}
-                    onChange={(e) => setFormModulo(e.target.value)}
-                    className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100"
-                  >
-                    {MODULOS_SISTEMA_LIST.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Selectores Nativos de Fecha y Hora */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-800">
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-blue-600" />
-                    <span>Selector de Fecha Límite <span className="text-red-500">*</span></span>
-                  </label>
-                  <input
-                    required
-                    type="date"
-                    value={formFechaLimite}
-                    onChange={(e) => setFormFechaLimite(e.target.value)}
-                    className="w-full p-2 bg-white border border-gray-300 dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 font-medium focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-blue-600" />
-                    <span>Selector de Hora Límite <span className="text-red-500">*</span></span>
-                  </label>
-                  <input
-                    required
-                    type="time"
-                    value={formHoraLimite}
-                    onChange={(e) => setFormHoraLimite(e.target.value)}
-                    className="w-full p-2 bg-white border border-gray-300 dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 font-medium focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">Instrucciones y Requisitos de Entrega</label>
-                <textarea
-                  rows={3}
-                  value={formDesc}
-                  onChange={(e) => setFormDesc(e.target.value)}
-                  placeholder="Detalles de la tarea, antecedentes, requerimientos y entregables..."
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-lg text-gray-800 dark:text-gray-100 leading-relaxed"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalCrearOpen(false)}
-                  className="px-3.5 py-2 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 rounded-lg"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm"
-                >
-                  {tareaEnEdicion ? 'Guardar Cambios' : 'Asignar Tarea'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* MODAL 2: DETALLE DE TAREA & CHAT DE OBSERVACIONES ESTILO WHATSAPP */}
       {tareaChatSeleccionada && (
         <div className="w-full my-6 animate-in fade-in">

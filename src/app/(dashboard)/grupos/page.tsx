@@ -233,16 +233,13 @@ export default function GruposPage() {
           <span>{sincronizando ? "Sincronizando..." : "Sincronización Automática"}</span>
         </button>
 
-        <button
-          onClick={() => {
-            setModalMode('crear_en_whatsapp');
-            setShowNewModal(true);
-          }}
+        <Link
+          href="/grupos/nuevo"
           className="flex items-center gap-2 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Nuevo / Agregar Grupo</span>
-        </button>
+        </Link>
       </div>
 
       {/* ALERTA EN CASO DE QUE WHATSAPP ESTÉ DESCONECTADO */}
