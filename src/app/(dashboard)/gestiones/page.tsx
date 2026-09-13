@@ -363,21 +363,6 @@ export default function GestionesPage() {
   });
 
   // OCR INE con Gemini Vision & Extracción Inteligente
-  const handleSimulateOcrIne = () => {
-    setIsOcrProcessing(true);
-    setTimeout(() => {
-      setNombre('Guadalupe del Carmen Ramos Jiménez');
-      setCurp('RAJG850619MTBLNR01');
-      setDireccion('Av. Gregorio Méndez Magaña #1420');
-      setColonia('Col. Nueva Villahermosa');
-      setMunicipio('Centro (Villahermosa)');
-      setSeccionElectoral('0342');
-      setTelefono('993 765 4321');
-      setAvatarUrl('https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80');
-      setIsOcrProcessing(false);
-      setOcrSuccess(true);
-    }, 800);
-  };
 
   const processIneImage = async (base64: string, fileType: string) => {
     setIsOcrProcessing(true);
@@ -1244,15 +1229,6 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                 >
                   <Camera className="h-4 w-4" />
                   <span>📸 Tomar Foto con Cámara</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSimulateOcrIne}
-                  disabled={isOcrProcessing}
-                  className="text-[11px] font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline px-2 py-1"
-                >
-                  (Cargar datos de prueba)
                 </button>
               </div>
 
