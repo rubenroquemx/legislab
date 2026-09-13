@@ -31,6 +31,7 @@ import {
 } from '@/app/actions/gestiones';
 import { generateDocxBlob, downloadBlob } from '@/lib/export/docx-exporter';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { normalizeEstadoGestion, ESTADOS_KANBAN } from '@/lib/gestiones-utils';
 
 const PLANTILLAS_PREDETERMINADAS = [
   {
@@ -67,7 +68,7 @@ const PLANTILLAS_PREDETERMINADAS = [
   },
 ];
 
-const ESTADOS_KANBAN = ['Recibida', 'En Revisión', 'En Trámite con Dependencia', 'Resuelta'];
+// ESTADOS_KANBAN imported from @/lib/gestiones-utils
 
 export default function GestionDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -111,6 +112,7 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
             }
             setGestion({
               ...found,
+              estatus: normalizeEstadoGestion(found.estatus),
               documentos: Array.isArray(docs) ? docs : [],
               notas: Array.isArray(nts) ? nts : []
             });
