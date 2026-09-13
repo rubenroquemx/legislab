@@ -6,69 +6,32 @@ import { useRouter } from 'next/navigation';
 import { 
   FolderKanban, 
   ChevronLeft, 
-  Camera, 
   MessageCircle, 
   FolderOpen, 
   ExternalLink, 
   FileText, 
-  Trash2, 
-  CheckCheck, 
   Send, 
-  Sparkles, 
-  Landmark, 
-  Check, 
-  Copy, 
-  Download, 
-  FileUp,
-  Upload
+  AlertTriangle,
+  Upload,
+  Download,
+  CheckCircle2,
+  RefreshCw,
+  File,
+  Image,
+  Loader2
 } from 'lucide-react';
 import { 
   getGestiones, 
   updateGestionStatus, 
-  addNotaGestion, 
-  addDocumentoGestion,
-  addOficioGestion
+  addNotaGestion 
 } from '@/app/actions/gestiones';
-import { generateDocxBlob, downloadBlob } from '@/lib/export/docx-exporter';
+import { 
+  getGoogleDriveStatusAction,
+  getGestionDriveExpedienteAction,
+  uploadDocumentToGestionDriveAction 
+} from '@/app/actions/drive';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { normalizeEstadoGestion, ESTADOS_KANBAN } from '@/lib/gestiones-utils';
-
-const PLANTILLAS_PREDETERMINADAS = [
-  {
-    id: 'plan-1',
-    titulo: 'Canalización de Salud (Medicamentos, Cirugías y Prótesis)',
-    dependenciaPredeterminada: 'Secretaría de Salud del Estado',
-    destinatarioSugerido: 'Dra. Patricia Oramas Palma',
-    cargoSugerido: 'Secretaria de Salud y Directora General del IMSS-Bienestar Tabasco',
-    descripcionMuestra: 'Solicitud urgente de intervención médica, abastecimiento de medicamento de alta especialidad o programación quirúrgica.',
-  },
-  {
-    id: 'plan-2',
-    titulo: 'Petición de Infraestructura y Obras Públicas (Pavimentación / Drenaje)',
-    dependenciaPredeterminada: 'SOTOP (Secretaría de Ordenamiento Territorial y Obras Públicas)',
-    destinatarioSugerido: 'Ing. Daniel Casasús Ruz',
-    cargoSugerido: 'Secretario de Ordenamiento Territorial y Obras Públicas',
-    descripcionMuestra: 'Canalización de peticiones ciudadanas para rehabilitación de carpetas asfálticas, desazolve de cárcamos y luminarias.',
-  },
-  {
-    id: 'plan-3',
-    titulo: 'Solicitud de Apoyo Social y Aparatos Ortopédicos (DIF)',
-    dependenciaPredeterminada: 'Sistema DIF Estatal',
-    destinatarioSugerido: 'Lic. Celina Ocaña de la Fuente',
-    cargoSugerido: 'Directora General del Sistema DIF Tabasco',
-    descripcionMuestra: 'Petición de sillas de ruedas, aparatos auditivos, andaderas y paquetes de asistencia prioritaria a grupos vulnerables.',
-  },
-  {
-    id: 'plan-4',
-    titulo: 'Gestión Educativa, Mobiliario y Mantenimiento Escolar',
-    dependenciaPredeterminada: 'Secretaría de Educación',
-    destinatarioSugerido: 'Dra. Egla Cornelio Landero',
-    cargoSugerido: 'Secretaria de Educación de Tabasco',
-    descripcionMuestra: 'Petición de equipamiento de aulas, techumbres cívicas y rehabilitación de planteles de educación básica.',
-  },
-];
-
-// ESTADOS_KANBAN imported from @/lib/gestiones-utils
 
 export default function GestionDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -76,23 +39,64 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
   const [gestion, setGestion] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // WhatsApp notes
+  // Drive state
+  const [driveStatus, setDriveStatus] = useState<{
+    connected: boolean;
+    email?: string;
+    folderUrl?: string | null;
+    folderName?: string | null;
+    files: any[];
+    error?: string;
+  }>({
+    connected: false,
+    email: '',
+    folderUrl: null,
+    folderName: null,
+    files: [],
+  });
+  const [loadingDrive, setLoadingDrive] = useState(true);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string | null>(null);
+  const [uploadErrorMsg, setUploadErrorMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Bitácora notes
   const [nuevaNotaTexto, setNuevaNotaTexto] = useState('');
   const chatBottomRef = useRef<HTMLDivElement>(null);
-
-  // Oficio generator
-  const [isGenerandoOficio, setIsGenerandoOficio] = useState(false);
-  const [plantillaSeleccionadaId, setPlantillaSeleccionadaId] = useState('plan-1');
-  const [oficioDestinatario, setOficioDestinatario] = useState('Dra. Patricia Oramas Palma');
-  const [oficioCargo, setOficioCargo] = useState('Secretaria de Salud');
-  const [oficioDependencia, setOficioDependencia] = useState('Secretaría de Salud del Estado');
-  const [oficioTextoGenerado, setOficioTextoGenerado] = useState('');
-  const [copiadoOficio, setCopiadoOficio] = useState(false);
 
   const usuarioActivo = {
     nombre: 'Dip. Ruben Roque',
     cargo: 'Diputado Local (Titular)',
     foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+  };
+
+  const loadDriveExpediente = async (gestionId: string) => {
+    try {
+      setLoadingDrive(true);
+      const res = await getGestionDriveExpedienteAction(gestionId);
+      if (res && res.success) {
+        setDriveStatus({
+          connected: Boolean(res.connected),
+          email: res.email || '',
+          folderUrl: res.folderUrl || null,
+          folderName: res.folderName || null,
+          files: res.files || [],
+        });
+        if (res.folderUrl) {
+          setGestion((prev: any) => prev ? { ...prev, driveFolderUrl: res.folderUrl } : prev);
+        }
+      } else {
+        setDriveStatus(prev => ({
+          ...prev,
+          connected: Boolean(res?.connected),
+          error: res?.error,
+        }));
+      }
+    } catch (err) {
+      console.warn('Error loading Drive expediente:', err);
+    } finally {
+      setLoadingDrive(false);
+    }
   };
 
   useEffect(() => {
@@ -116,6 +120,9 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
               documentos: Array.isArray(docs) ? docs : [],
               notas: Array.isArray(nts) ? nts : []
             });
+
+            // Cargar expediente de Google Drive
+            await loadDriveExpediente(found.id);
           }
         }
       } catch (err) {
@@ -156,66 +163,50 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
     await addNotaGestion(gestion.id, nuevaNota);
   };
 
-  const handleGenerarTextoOficio = () => {
-    if (!gestion) return;
-    const plan = PLANTILLAS_PREDETERMINADAS.find(p => p.id === plantillaSeleccionadaId);
-    const folioOficio = `OFC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const fechaLarga = new Date().toLocaleDateString('es-MX', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !gestion) return;
 
-    const texto = `H. CONGRESO DEL ESTADO DE TABASCO
-LXVI LEGISLATURA | DIPUTADO RUBEN ROQUE
-DESPACHO DE ENLACE PARLAMENTARIO Y ATENCIÓN CIUDADANA
+    setUploadingFile(true);
+    setUploadSuccessMsg(null);
+    setUploadErrorMsg(null);
 
-OFICIO NO.: ${folioOficio}
-ASUNTO: Canalización Urgente de Gestión Ciudadana (${plan?.titulo || gestion.categoria})
-FECHA: Villahermosa, Tabasco; a ${fechaLarga}.
-
-${oficioDestinatario.toUpperCase()}
-${oficioCargo.toUpperCase()}
-${oficioDependencia.toUpperCase()}
-PRESENTE.
-
-Por medio de la presente, reciba un cordial y respetuoso saludo. Me dirijo a usted en mi calidad de Diputado de la LXVI Legislatura, con el propósito de canalizar formalmente la petición presentada ante esta representación popular por el ciudadano(a):
-
-  • NOMBRE DEL SOLICITANTE: ${gestion.solicitante.toUpperCase()}
-  • CURP: ${gestion.curp || 'NO ESPECIFICADO'}
-  • SECCIÓN ELECTORAL: ${gestion.seccionElectoral || 'NO ESPECIFICADA'}
-  • DOMICILIO: ${gestion.direccion || 'Conocido'}, ${gestion.colonia || ''}, ${gestion.municipio || 'Centro'}
-  • TELÉFONO DE CONTACTO: ${gestion.telefono || 'Sin teléfono'}
-
-MOTIVO DE LA GESTIÓN:
-${gestion.asunto || 'Apoyo institucional solicitado para atención prioritaria.'}
-
-Por lo anteriormente expuesto y conocedor de su permanente compromiso y vocación de servicio público, solicito a usted de la manera más atenta tenga a bien instruir a quien corresponda la valoración, trámite y resolución conducente de la presente solicitud ciudadana.
-
-Agradeciendo de antemano la gentileza de su atención institucional, quedo a sus distinguidas órdenes.
-
-ATENTAMENTE,
-"Sufragio Efectivo. No Reelección"
-
-___________________________________________________
-DIP. RUBEN ROQUE
-DIPUTADO LOCAL | LXVI LEGISLATURA
-CONGRESO DEL ESTADO DE TABASCO`;
-
-    setOficioTextoGenerado(texto);
-    setIsGenerandoOficio(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await uploadDocumentToGestionDriveAction(gestion.id, formData);
+      if (res.success && res.file) {
+        setUploadSuccessMsg(`"${file.name}" guardado exitosamente en Google Drive.`);
+        await loadDriveExpediente(gestion.id);
+        setTimeout(() => setUploadSuccessMsg(null), 4000);
+      } else {
+        setUploadErrorMsg(res.error || 'No se pudo subir el archivo.');
+        setTimeout(() => setUploadErrorMsg(null), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      setUploadErrorMsg('Error de red al subir archivo.');
+      setTimeout(() => setUploadErrorMsg(null), 5000);
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
-  const handleDescargarDocx = async () => {
-    if (!oficioTextoGenerado) return;
-    const blob = await generateDocxBlob(oficioTextoGenerado, 'Oficio de Canalización');
-    downloadBlob(blob, `Oficio_${gestion.solicitante.replace(/\s+/g, '_')}.docx`);
-  };
+  const getFileIcon = (mimeType?: string, fileName?: string) => {
+    const name = (fileName || '').toLowerCase();
+    const type = (mimeType || '').toLowerCase();
 
-  const handleCopiarTexto = () => {
-    navigator.clipboard.writeText(oficioTextoGenerado);
-    setCopiadoOficio(true);
-    setTimeout(() => setCopiadoOficio(false), 2500);
+    if (type.includes('image') || name.match(/\.(jpg|jpeg|png|webp|gif)$/)) {
+      return <Image className="h-5 w-5 text-emerald-600 shrink-0" />;
+    }
+    if (type.includes('pdf') || name.endsWith('.pdf')) {
+      return <FileText className="h-5 w-5 text-red-600 shrink-0" />;
+    }
+    if (type.includes('word') || type.includes('document') || name.match(/\.(docx?|odt|txt)$/)) {
+      return <FileText className="h-5 w-5 text-blue-600 shrink-0" />;
+    }
+    return <File className="h-5 w-5 text-slate-500 shrink-0" />;
   };
 
   if (loading) {
@@ -257,7 +248,7 @@ CONGRESO DEL ESTADO DE TABASCO`;
               </span>
               <h1 className="text-xl font-bold text-slate-900 tracking-tight">{gestion.solicitante}</h1>
             </div>
-            <p className="text-xs text-slate-500">Expediente digital, bitácora de seguimiento y oficios de canalización.</p>
+            <p className="text-xs text-slate-500">Expediente digital en Google Drive y bitácora de seguimiento ciudadano.</p>
           </div>
         </div>
 
@@ -274,6 +265,30 @@ CONGRESO DEL ESTADO DE TABASCO`;
           </select>
         </div>
       </div>
+
+      {/* Alerta si Google Drive no está conectado */}
+      {driveStatus.connected === false && (
+        <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2.5 bg-amber-100 text-amber-800 rounded-xl shrink-0">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-bold text-amber-950">Google Drive no está conectado al despacho</h4>
+              <p className="text-[11px] text-amber-800/90 leading-relaxed font-medium">
+                Para que la carpeta con el folio <strong className="font-mono">{gestion.folio}</strong> se cree automáticamente y permita respaldar los documentos en la nube, es necesario vincular Google Drive.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/configuracion?tab=conexiones"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all shrink-0"
+          >
+            <span>Conectar Google Drive</span>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* Citizen Card Summary */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center gap-5">
@@ -316,15 +331,15 @@ CONGRESO DEL ESTADO DE TABASCO`;
             </a>
           )}
 
-          {gestion.driveFolderUrl && (
+          {(driveStatus.folderUrl || gestion.driveFolderUrl) && (
             <a
-              href={gestion.driveFolderUrl}
+              href={driveStatus.folderUrl || gestion.driveFolderUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-4 py-2 rounded-xl border border-slate-300 shadow-2xs transition-colors"
             >
               <FolderOpen className="h-4 w-4 text-blue-600" />
-              <span>Drive</span>
+              <span>Carpeta Drive</span>
               <ExternalLink className="h-3 w-3" />
             </a>
           )}
@@ -342,16 +357,16 @@ CONGRESO DEL ESTADO DE TABASCO`;
         </p>
       </div>
 
-      {/* Two Column Layout: Bitácora de Observaciones & Oficio Generator */}
+      {/* Two Column Layout: Bitácora de Observaciones & Expediente Digital de Drive */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Observaciones (WhatsApp Style) */}
+        {/* Observaciones (Bitácora Interna) */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-[#00a884]" />
               <span>Bitácora de Observaciones ({gestion.notas?.length || 0})</span>
             </h3>
-            <span className="text-[11px] text-slate-400 font-medium">Chat Interno</span>
+            <span className="text-[11px] text-slate-400 font-medium">Seguimiento Interno</span>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3 max-h-80 overflow-y-auto min-h-[200px]">
@@ -390,104 +405,221 @@ CONGRESO DEL ESTADO DE TABASCO`;
           </form>
         </div>
 
-        {/* Oficio Generator */}
+        {/* Expediente Digital de Google Drive */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-indigo-600" />
-              <span>Generador de Oficios Oficiales</span>
-            </h3>
-            <button
-              type="button"
-              onClick={handleGenerarTextoOficio}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Generar con IA</span>
-            </button>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Plantilla de Canalización</label>
-              <select
-                value={plantillaSeleccionadaId}
-                onChange={(e) => {
-                  setPlantillaSeleccionadaId(e.target.value);
-                  const p = PLANTILLAS_PREDETERMINADAS.find(pl => pl.id === e.target.value);
-                  if (p) {
-                    setOficioDestinatario(p.destinatarioSugerido);
-                    setOficioCargo(p.cargoSugerido);
-                    setOficioDependencia(p.dependenciaPredeterminada);
-                  }
-                }}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium"
-              >
-                {PLANTILLAS_PREDETERMINADAS.map((p) => (
-                  <option key={p.id} value={p.id}>📄 {p.titulo}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Destinatario</label>
-                <input
-                  type="text"
-                  value={oficioDestinatario}
-                  onChange={(e) => setOficioDestinatario(e.target.value)}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium"
-                />
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                <FolderOpen className="h-4 w-4" />
               </div>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Dependencia</label>
-                <input
-                  type="text"
-                  value={oficioDependencia}
-                  onChange={(e) => setOficioDependencia(e.target.value)}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium"
-                />
+                <h3 className="text-sm font-bold text-slate-900">Expediente en Google Drive</h3>
+                <p className="text-[11px] text-slate-500 font-medium">Almacenamiento oficial en la nube por folio</p>
               </div>
             </div>
 
-            {isGenerandoOficio ? (
-              <div className="space-y-3 pt-2">
-                <textarea
-                  rows={8}
-                  value={oficioTextoGenerado}
-                  onChange={(e) => setOficioTextoGenerado(e.target.value)}
-                  className="w-full p-3 font-mono text-[11px] bg-slate-50 border border-slate-200 rounded-xl leading-relaxed text-slate-800"
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCopiarTexto}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold text-xs transition-colors"
-                  >
-                    {copiadoOficio ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                    <span>{copiadoOficio ? 'Copiado' : 'Copiar'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDescargarDocx}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs shadow-xs transition-colors"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Descargar .docx</span>
-                  </button>
-                </div>
+            {driveStatus.connected ? (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Sincronizado</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => loadDriveExpediente(gestion.id)}
+                  disabled={loadingDrive}
+                  title="Actualizar archivos de Drive"
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${loadingDrive ? 'animate-spin text-blue-600' : ''}`} />
+                </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={handleGenerarTextoOficio}
-                className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors"
-              >
-                <Sparkles className="h-4 w-4" />
-                <span>Redactar Oficio Oficial para este Ciudadano</span>
-              </button>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                <AlertTriangle className="h-3 w-3 text-amber-600" />
+                <span>Sin Conectar</span>
+              </span>
             )}
           </div>
+
+          {!driveStatus.connected ? (
+            /* ALERTA: GOOGLE DRIVE NO CONECTADO */
+            <div className="space-y-4 pt-1">
+              <div className="p-4 rounded-xl bg-amber-50/90 border border-amber-200 text-amber-950 space-y-2.5">
+                <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Google Drive no está conectado al despacho</span>
+                </div>
+                <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                  Para que el expediente digital con folio <strong className="font-mono text-amber-950">{gestion.folio}</strong> cree su carpeta oficial en la nube y permita almacenar los documentos del ciudadano (<strong className="text-amber-950">{gestion.solicitante}</strong>), es indispensable vincular la cuenta de Google Drive.
+                </p>
+                <div className="pt-1">
+                  <Link
+                    href="/configuracion?tab=conexiones"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all"
+                  >
+                    <span>Conectar Google Drive Ahora</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5 text-xs text-slate-600">
+                <p className="font-semibold text-slate-800">Al conectar Google Drive obtendrás:</p>
+                <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-500">
+                  <li>Creación automática de la carpeta <code className="text-blue-700 font-semibold">{gestion.folio} - {gestion.solicitante}</code>.</li>
+                  <li>Subida y respaldo directo de INE, comprobantes de domicilio y cartas de petición.</li>
+                  <li>Acceso seguro y sincronizado para todo el equipo de trabajo del despacho.</li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            /* EXPEDIENTE CONECTADO */
+            <div className="space-y-4">
+              {/* Carpeta Header */}
+              <div className="p-3.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/50 rounded-xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono font-bold bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                      FOLIO {gestion.folio}
+                    </span>
+                    <span className="text-xs font-bold text-slate-900 truncate">
+                      {driveStatus.folderName || `${gestion.folio} - ${gestion.solicitante}`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {driveStatus.email ? `Cuenta vinculada: ${driveStatus.email}` : 'Carpeta oficial en Google Drive'}
+                  </p>
+                </div>
+
+                {(driveStatus.folderUrl || gestion.driveFolderUrl) && (
+                  <a
+                    href={driveStatus.folderUrl || gestion.driveFolderUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-700 rounded-lg border border-blue-200 text-xs font-bold shadow-2xs transition-colors shrink-0"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5 text-blue-600" />
+                    <span>Abrir en Drive</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+
+              {/* Zona de Carga de Archivos */}
+              <div className="space-y-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleUploadFile}
+                  disabled={uploadingFile}
+                />
+                <div 
+                  onClick={() => !uploadingFile && fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+                    uploadingFile 
+                      ? 'border-blue-300 bg-blue-50/50 cursor-not-allowed' 
+                      : 'border-slate-200 hover:border-blue-400 hover:bg-blue-50/30'
+                  }`}
+                >
+                  {uploadingFile ? (
+                    <div className="flex items-center justify-center gap-2 text-xs font-semibold text-blue-700 py-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      <span>Subiendo archivo y sincronizando con Google Drive...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-1 py-1">
+                      <div className="p-2 bg-blue-50 text-blue-600 rounded-full">
+                        <Upload className="h-4 w-4" />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800">
+                        Haz clic para subir un documento al expediente
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        PDF, JPG, PNG, DOCX (Se almacena directamente en la carpeta de Drive)
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {uploadSuccessMsg && (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-medium flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span>{uploadSuccessMsg}</span>
+                  </div>
+                )}
+                {uploadErrorMsg && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs font-medium flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+                    <span>{uploadErrorMsg}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Lista de Documentos del Expediente */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">
+                  <span>Documentos en el Expediente ({driveStatus.files.length})</span>
+                  {loadingDrive && <span className="text-[10px] text-blue-600 font-normal">Sincronizando...</span>}
+                </div>
+
+                {driveStatus.files && driveStatus.files.length > 0 ? (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {driveStatus.files.map((file: any) => (
+                      <div
+                        key={file.id || file.nombre}
+                        className="p-3 bg-slate-50/70 hover:bg-slate-100/80 rounded-xl border border-slate-200/80 flex items-center justify-between gap-3 transition-colors text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {getFileIcon(file.tipo, file.nombre)}
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-800 truncate" title={file.nombre}>
+                              {file.nombre}
+                            </p>
+                            <p className="text-[10px] text-slate-400 font-mono">
+                              {file.tamano || 'Archivo'} • {file.fecha || 'Hoy'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {file.urlDrive && (
+                            <a
+                              href={file.urlDrive}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-200/70 text-slate-700 rounded-lg border border-slate-200 text-[11px] font-semibold transition-colors"
+                              title="Ver en Google Drive"
+                            >
+                              <span>Ver</span>
+                              <ExternalLink className="h-3 w-3 text-slate-500" />
+                            </a>
+                          )}
+                          {file.webContentLink && (
+                            <a
+                              href={file.webContentLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-white transition-colors"
+                              title="Descargar"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200 p-4 space-y-1">
+                    <p className="text-xs text-slate-500 font-medium">No hay documentos en la carpeta de este expediente.</p>
+                    <p className="text-[11px] text-slate-400">Sube la credencial INE, comprobantes o cartas para respaldarlos en Drive.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

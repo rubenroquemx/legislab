@@ -251,3 +251,125 @@ export async function createDriveSubfolder(
     return null;
   }
 }
+
+/**
+ * Extrae el ID de una carpeta de Google Drive a partir de una URL o identificador
+ */
+export function extractDriveFolderId(folderUrl?: string | null): string | null {
+  if (!folderUrl) return null;
+  const match = folderUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) return match[1];
+  if (/^[a-zA-Z0-9_-]{15,}$/.test(folderUrl.trim())) return folderUrl.trim();
+  return null;
+}
+
+/**
+ * Lista los archivos contenidos dentro de una carpeta de Google Drive
+ */
+export async function listFilesInDriveFolder(
+  accessToken: string,
+  folderId: string
+): Promise<Array<{
+  id: string;
+  name: string;
+  mimeType: string;
+  size?: string;
+  webViewLink?: string;
+  webContentLink?: string;
+  createdTime?: string;
+}>> {
+  try {
+    const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,size,webViewLink,webContentLink,iconLink,thumbnailLink,createdTime)&orderBy=createdTime desc`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (!res.ok) {
+      console.warn('Error listing files in Drive folder:', await res.text());
+      return [];
+    }
+
+    const data = await res.json();
+    return data.files || [];
+  } catch (error) {
+    console.error('Error in listFilesInDriveFolder:', error);
+    return [];
+  }
+}
+
+/**
+ * Sube un archivo directamente a una carpeta de Google Drive usando la API REST v3 multipart
+ */
+export async function uploadFileToDriveFolder(
+  accessToken: string,
+  parentFolderId: string,
+  fileName: string,
+  mimeType: string,
+  fileBuffer: Buffer
+): Promise<{
+  fileId: string;
+  fileName: string;
+  webViewLink: string;
+  webContentLink?: string;
+  size?: string;
+} | null> {
+  try {
+    const boundary = '-------LegisLabDriveUploadBoundary' + Date.now();
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const closeDelimiter = `\r\n--${boundary}--`;
+
+    const metadata = {
+      name: fileName,
+      parents: [parentFolderId],
+      mimeType: mimeType || 'application/octet-stream',
+    };
+
+    const multipartRequestBody = Buffer.concat([
+      Buffer.from(
+        delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        `Content-Type: ${mimeType || 'application/octet-stream'}\r\n` +
+        'Content-Transfer-Encoding: base64\r\n\r\n'
+      ),
+      Buffer.from(fileBuffer.toString('base64')),
+      Buffer.from(closeDelimiter)
+    ]);
+
+    const res = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,webViewLink,webContentLink',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+          'Content-Length': multipartRequestBody.length.toString(),
+        },
+        body: multipartRequestBody,
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Error uploading file to Drive:', err);
+      return null;
+    }
+
+    const data = await res.json();
+    return {
+      fileId: data.id,
+      fileName: data.name,
+      webViewLink: data.webViewLink || `https://drive.google.com/file/d/${data.id}/view`,
+      webContentLink: data.webContentLink,
+      size: data.size,
+    };
+  } catch (error) {
+    console.error('Error in uploadFileToDriveFolder:', error);
+    return null;
+  }
+}
+

@@ -8,6 +8,7 @@ import {
   updateGestionStatus,
   toggleArchiveGestionAction
 } from '@/app/actions/gestiones';
+import { getGoogleDriveStatusAction } from '@/app/actions/drive';
 import { MEXICO_TIMEZONE, getTodayMexicoCity } from '@/lib/date-utils';
 import { 
   Plus, 
@@ -22,7 +23,10 @@ import {
   CheckCircle2,
   Clock,
   X,
-  Filter
+  Filter,
+  AlertTriangle,
+  ExternalLink,
+  FolderOpen
 } from 'lucide-react';
 import { 
   EstadoGestion, 
@@ -100,6 +104,7 @@ export default function GestionesPage() {
   const [filtroEstatus, setFiltroEstatus] = useState<string>('Todos');
   const [filtroTipo, setFiltroTipo] = useState<string>('Todos');
   const [filtroArchivo, setFiltroArchivo] = useState<'todos' | 'activas' | 'archivadas'>('todos');
+  const [driveConnected, setDriveConnected] = useState<boolean | null>(null);
 
   // Filtros de Rango de Fechas estilo Airbnb
   const [filtroRecepcionDesde, setFiltroRecepcionDesde] = useState<string>('');
@@ -233,6 +238,9 @@ export default function GestionesPage() {
 
   useEffect(() => {
     loadGestiones();
+    getGoogleDriveStatusAction()
+      .then(res => setDriveConnected(Boolean(res?.connected)))
+      .catch(() => setDriveConnected(false));
   }, []);
 
   // Filter logic con Rango de Fechas estilo Airbnb
@@ -414,6 +422,30 @@ export default function GestionesPage() {
           <span>Nueva Gestión</span>
         </Link>
       </div>
+
+      {/* Alerta si Google Drive no está conectado al despacho */}
+      {driveConnected === false && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2.5 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 rounded-xl shrink-0">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-bold text-amber-950 dark:text-amber-200">Google Drive no está conectado al despacho</h4>
+              <p className="text-[11px] text-amber-800/90 dark:text-amber-300/80 leading-relaxed font-medium">
+                Para que cada gestión genere automáticamente su carpeta oficial por número de folio (<span className="font-mono font-semibold">GES-2026-XXXX</span>) y los expedientes del ciudadano se guarden en la nube, es necesario conectar la cuenta institucional de Google Drive.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/configuracion?tab=conexiones"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all shrink-0"
+          >
+            <span>Conectar Google Drive</span>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* Bar: View Switcher (Lista vs Kanban) + Filters & Search */}
       <div className="bg-white dark:bg-[#121824] p-3 sm:p-4 rounded-[14px] border border-[#E5E5EA]/80 dark:border-gray-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-3">

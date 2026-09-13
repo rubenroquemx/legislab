@@ -1,9 +1,16 @@
 'use server';
 
-import { db, offices } from '@/db';
+import { db, offices, gestiones } from '@/db';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { refreshDriveAccessToken, createDriveSubfolder } from '@/lib/google-drive';
+import { 
+  refreshDriveAccessToken, 
+  createDriveSubfolder,
+  getOrCreateRootDriveFolder,
+  listFilesInDriveFolder,
+  uploadFileToDriveFolder,
+  extractDriveFolderId
+} from '@/lib/google-drive';
 import { getActiveOfficeId } from '@/lib/session-office';
 
 /**
@@ -39,6 +46,7 @@ async function getValidDriveTokenForOffice(officeId?: string): Promise<{
   accessToken: string;
   rootFolderId: string | null;
   rootFolderUrl: string | null;
+  office: any;
 } | null> {
   try {
     const office = await resolveOffice(officeId);
@@ -70,10 +78,33 @@ async function getValidDriveTokenForOffice(officeId?: string): Promise<{
       }
     }
 
+    let rootFolderId = office.googleDriveFolderId;
+    let rootFolderUrl = office.googleDriveFolderUrl;
+
+    // Asegurar carpeta raíz si no existe aún
+    if (!rootFolderId && currentAccessToken) {
+      try {
+        const root = await getOrCreateRootDriveFolder(currentAccessToken, `LegisLab - ${office.name || 'Despacho'}`);
+        rootFolderId = root.folderId;
+        rootFolderUrl = root.folderUrl;
+        await db
+          .update(offices)
+          .set({
+            googleDriveFolderId: rootFolderId,
+            googleDriveFolderUrl: rootFolderUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(offices.id, office.id));
+      } catch (fErr) {
+        console.warn('Could not auto-create root folder in getValidDriveTokenForOffice:', fErr);
+      }
+    }
+
     return {
       accessToken: currentAccessToken,
-      rootFolderId: office.googleDriveFolderId,
-      rootFolderUrl: office.googleDriveFolderUrl,
+      rootFolderId,
+      rootFolderUrl,
+      office,
     };
   } catch (e) {
     console.warn('getValidDriveTokenForOffice error:', e);
@@ -208,3 +239,247 @@ export async function createGestionDriveFolderAction(
     return { success: false, error: error?.message || 'Error al crear carpeta en Google Drive' };
   }
 }
+
+/**
+ * Asegura que una gestión tenga su carpeta correspondiente en Google Drive con su folio
+ */
+export async function ensureGestionDriveFolderAction(gestionId: string, officeId?: string) {
+  try {
+    const [gestion] = await db
+      .select()
+      .from(gestiones)
+      .where(eq(gestiones.id, gestionId))
+      .limit(1);
+
+    if (!gestion) {
+      return { success: false, error: 'Gestión no encontrada' };
+    }
+
+    const drive = await getValidDriveTokenForOffice(officeId || gestion.officeId);
+    if (!drive || !drive.rootFolderId) {
+      return {
+        success: false,
+        connected: false,
+        error: 'Google Drive no está conectado al despacho',
+        folderUrl: gestion.driveFolderUrl || null,
+      };
+    }
+
+    // Si ya tiene driveFolderUrl válido
+    if (gestion.driveFolderUrl) {
+      const folderId = extractDriveFolderId(gestion.driveFolderUrl);
+      return {
+        success: true,
+        connected: true,
+        folderUrl: gestion.driveFolderUrl,
+        folderId,
+        folderName: `${gestion.folio} - ${gestion.solicitante.trim()}`,
+      };
+    }
+
+    // Crear la carpeta en Drive para este folio
+    const subfolderName = `${gestion.folio} - ${gestion.solicitante.trim()}`;
+    const folder = await createDriveSubfolder(drive.accessToken, drive.rootFolderId, subfolderName);
+
+    if (!folder) {
+      return { success: false, connected: true, error: 'No se pudo crear la subcarpeta en Drive' };
+    }
+
+    await db
+      .update(gestiones)
+      .set({
+        driveFolderUrl: folder.folderUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(gestiones.id, gestion.id));
+
+    revalidatePath(`/gestiones/${gestion.id}`);
+    revalidatePath('/gestiones');
+
+    return {
+      success: true,
+      connected: true,
+      folderUrl: folder.folderUrl,
+      folderId: folder.folderId,
+      folderName: subfolderName,
+    };
+  } catch (error: any) {
+    console.error('Error ensuring gestion Drive folder:', error);
+    return { success: false, error: error?.message || 'Error al verificar carpeta de Drive' };
+  }
+}
+
+/**
+ * Obtiene el expediente de Google Drive de una gestión (archivos, url, estado de conexión)
+ */
+export async function getGestionDriveExpedienteAction(gestionId: string, officeId?: string) {
+  try {
+    const [gestion] = await db
+      .select()
+      .from(gestiones)
+      .where(eq(gestiones.id, gestionId))
+      .limit(1);
+
+    if (!gestion) {
+      return { success: false, error: 'Gestión no encontrada' };
+    }
+
+    const driveStatus = await getGoogleDriveStatusAction(officeId || gestion.officeId);
+    if (!driveStatus.connected) {
+      // Documentos registrados localmente en la gestión
+      let localDocs: any[] = [];
+      if (gestion.documentos) {
+        try {
+          localDocs = typeof gestion.documentos === 'string' ? JSON.parse(gestion.documentos) : gestion.documentos;
+        } catch {}
+      }
+
+      return {
+        success: true,
+        connected: false,
+        email: '',
+        folderUrl: gestion.driveFolderUrl || null,
+        folderName: `${gestion.folio} - ${gestion.solicitante}`,
+        files: localDocs,
+      };
+    }
+
+    // Asegurar carpeta
+    const ensured = await ensureGestionDriveFolderAction(gestionId, officeId);
+    const drive = await getValidDriveTokenForOffice(officeId || gestion.officeId);
+
+    let driveFiles: any[] = [];
+    if (ensured.folderId && drive?.accessToken) {
+      const fetched = await listFilesInDriveFolder(drive.accessToken, ensured.folderId);
+      driveFiles = fetched.map((f) => ({
+        id: f.id,
+        nombre: f.name,
+        tipo: f.mimeType,
+        tamano: f.size ? `${(Number(f.size) / (1024 * 1024)).toFixed(2)} MB` : 'Archivo',
+        fecha: f.createdTime ? new Date(f.createdTime).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Hoy',
+        urlDrive: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
+        webContentLink: f.webContentLink,
+        source: 'google-drive',
+      }));
+    }
+
+    // También incluir documentos en gestion.documentos si no están en driveFiles
+    let dbDocs: any[] = [];
+    if (gestion.documentos) {
+      try {
+        dbDocs = typeof gestion.documentos === 'string' ? JSON.parse(gestion.documentos) : gestion.documentos;
+      } catch {}
+    }
+
+    const combined = [...driveFiles];
+    for (const d of dbDocs) {
+      if (!combined.some(f => f.nombre === d.nombre || f.id === d.id)) {
+        combined.push(d);
+      }
+    }
+
+    return {
+      success: true,
+      connected: true,
+      email: driveStatus.email,
+      folderUrl: ensured.folderUrl || gestion.driveFolderUrl,
+      folderId: ensured.folderId,
+      folderName: `${gestion.folio} - ${gestion.solicitante}`,
+      files: combined,
+    };
+  } catch (error: any) {
+    console.error('Error fetching gestion drive expediente:', error);
+    return { success: false, error: error?.message || 'Error al consultar expediente de Drive' };
+  }
+}
+
+/**
+ * Sube un documento al expediente de una gestión directamente en su carpeta de Google Drive
+ */
+export async function uploadDocumentToGestionDriveAction(gestionId: string, formData: FormData, officeId?: string) {
+  try {
+    const file = formData.get('file') as File | null;
+    if (!file) {
+      return { success: false, error: 'No se subió ningún archivo' };
+    }
+
+    const [gestion] = await db
+      .select()
+      .from(gestiones)
+      .where(eq(gestiones.id, gestionId))
+      .limit(1);
+
+    if (!gestion) {
+      return { success: false, error: 'Gestión no encontrada' };
+    }
+
+    const drive = await getValidDriveTokenForOffice(officeId || gestion.officeId);
+    if (!drive || !drive.rootFolderId) {
+      return { success: false, connected: false, error: 'Google Drive no está conectado al despacho' };
+    }
+
+    const ensured = await ensureGestionDriveFolderAction(gestionId, officeId);
+    if (!ensured.success || !ensured.folderId) {
+      return { success: false, error: ensured.error || 'No se pudo crear o localizar la carpeta de Drive' };
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const uploaded = await uploadFileToDriveFolder(
+      drive.accessToken,
+      ensured.folderId,
+      file.name,
+      file.type,
+      buffer
+    );
+
+    if (!uploaded) {
+      return { success: false, error: 'No se pudo subir el archivo a Google Drive' };
+    }
+
+    // Actualizar documentos en base de datos
+    let currentDocs: any[] = [];
+    if (gestion.documentos) {
+      try {
+        currentDocs = typeof gestion.documentos === 'string' ? JSON.parse(gestion.documentos) : gestion.documentos;
+      } catch {}
+    }
+
+    const newDoc = {
+      id: uploaded.fileId,
+      nombre: file.name,
+      tipo: file.type || 'Documento',
+      fecha: new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
+      tamano: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      urlDrive: uploaded.webViewLink,
+      webContentLink: uploaded.webContentLink,
+      source: 'google-drive',
+    };
+
+    currentDocs.unshift(newDoc);
+
+    await db
+      .update(gestiones)
+      .set({
+        documentos: JSON.stringify(currentDocs),
+        driveFolderUrl: ensured.folderUrl || gestion.driveFolderUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(gestiones.id, gestion.id));
+
+    revalidatePath(`/gestiones/${gestion.id}`);
+    revalidatePath('/gestiones');
+
+    return {
+      success: true,
+      connected: true,
+      file: newDoc,
+      folderUrl: ensured.folderUrl,
+    };
+  } catch (error: any) {
+    console.error('Error uploading document to Drive:', error);
+    return { success: false, error: error?.message || 'Error al procesar subida de archivo a Drive' };
+  }
+}
+

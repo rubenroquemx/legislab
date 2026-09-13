@@ -5,6 +5,7 @@ import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getActiveOfficeId } from '@/lib/session-office';
 import { GoogleGenAI } from '@google/genai';
+import { createGestionDriveFolderAction } from './drive';
 
 export async function getFirstOfficeId(): Promise<string> {
   return await getActiveOfficeId();
@@ -50,13 +51,26 @@ export async function createGestion(data: {
   oficios?: any[];
   notas?: any[];
   notasInternas?: string;
+  folio?: string;
   officeId?: string;
 }) {
   try {
     const officeId = await getActiveOfficeId(data.officeId);
     const year = new Date().getFullYear();
     const randomFolioSuffix = Math.floor(1000 + Math.random() * 9000);
-    const folio = `GES-${year}-${randomFolioSuffix}`;
+    const folio = data.folio || `GES-${year}-${randomFolioSuffix}`;
+
+    let driveFolderUrl = data.driveFolderUrl || null;
+    if (!driveFolderUrl) {
+      try {
+        const driveRes = await createGestionDriveFolderAction(folio, data.solicitante, officeId);
+        if (driveRes.success && driveRes.folderUrl) {
+          driveFolderUrl = driveRes.folderUrl;
+        }
+      } catch (dErr) {
+        console.warn('Could not auto-create Drive folder for gestion:', dErr);
+      }
+    }
 
     const newEntry: NewGestion = {
       officeId,
@@ -76,7 +90,7 @@ export async function createGestion(data: {
       categoria: data.categoria || 'General',
       estatus: data.estatus || 'Recibida',
       dependenciaCanalizada: data.dependenciaCanalizada || null,
-      driveFolderUrl: data.driveFolderUrl || null,
+      driveFolderUrl,
       documentos: data.documentos ? JSON.stringify(data.documentos) : null,
       oficios: data.oficios ? JSON.stringify(data.oficios) : null,
       notas: data.notas ? JSON.stringify(data.notas) : null,

@@ -11,6 +11,7 @@ import {
   Sparkles, 
   CheckCircle2, 
   AlertCircle,
+  AlertTriangle,
   FolderOpen
 } from 'lucide-react';
 import { 
@@ -19,7 +20,7 @@ import {
   saveGeminiApiKeyAction,
   getGeminiApiKeyStatusAction
 } from '@/app/actions/gestiones';
-import { createGestionDriveFolderAction } from '@/app/actions/drive';
+import { createGestionDriveFolderAction, getGoogleDriveStatusAction } from '@/app/actions/drive';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 const TIPOS_GESTION_BASE = [
@@ -63,12 +64,16 @@ export default function NuevaGestionPage() {
   const [inputGeminiKey, setInputGeminiKey] = useState('');
   const [savingKey, setSavingKey] = useState(false);
   const [pendingIneFile, setPendingIneFile] = useState<{ base64: string; type: string } | null>(null);
+  const [driveConnected, setDriveConnected] = useState<boolean | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getGeminiApiKeyStatusAction().then(setGeminiApiKeyStatus).catch(console.warn);
+    getGoogleDriveStatusAction()
+      .then(res => setDriveConnected(Boolean(res?.connected)))
+      .catch(() => setDriveConnected(false));
   }, []);
 
   const processIneImage = async (base64: string, fileType: string) => {
@@ -151,12 +156,13 @@ export default function NuevaGestionPage() {
     setIsSubmitting(true);
 
     const tipoFinal = isCustomTipo ? customTipoInput.trim() || 'General' : tipo;
+    const year = new Date().getFullYear();
+    const randomFolioSuffix = Math.floor(1000 + Math.random() * 9000);
+    const folio = `GES-${year}-${randomFolioSuffix}`;
 
     try {
-      const resDrive = await createGestionDriveFolderAction(`GES-${Date.now().toString().slice(-4)}`, nombre.trim());
-      const driveFolderUrl = resDrive.success && resDrive.folderUrl ? resDrive.folderUrl : '';
-
       const res = await createGestion({
+        folio,
         asunto: descripcion || `Solicitud de ${tipoFinal}`,
         solicitante: nombre.trim(),
         curp: curp.trim(),
@@ -171,7 +177,6 @@ export default function NuevaGestionPage() {
         categoria: tipoFinal,
         estatus: 'Recibida',
         dependenciaCanalizada: dependenciaDestino.trim(),
-        driveFolderUrl,
         documentos: avatarUrl ? [
           {
             id: `doc-${Date.now()}`,
@@ -179,7 +184,7 @@ export default function NuevaGestionPage() {
             tipo: 'INE / Identificación Oficial',
             fecha: new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
             tamano: '1.2 MB',
-            urlDrive: driveFolderUrl || 'https://drive.google.com'
+            urlDrive: ''
           }
         ] : [],
         notas: [
@@ -230,6 +235,34 @@ export default function NuevaGestionPage() {
           </div>
         </div>
       </div>
+
+      {/* Google Drive Status Banner */}
+      {driveConnected === false && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-start sm:items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+            <p className="text-amber-900 font-medium leading-relaxed">
+              <strong>Google Drive no conectado:</strong> Esta gestión se guardará en el sistema, pero su expediente digital y carpeta oficial en la nube no se podrán crear automáticamente hasta vincular Drive.
+            </p>
+          </div>
+          <Link
+            href="/configuracion?tab=conexiones"
+            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold shadow-xs transition-colors shrink-0"
+          >
+            Conectar Drive
+          </Link>
+        </div>
+      )}
+
+      {driveConnected === true && (
+        <div className="px-4 py-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-emerald-800 font-medium">
+            <FolderOpen className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>Google Drive Vinculado: Se creará automáticamente la carpeta oficial con el número de folio asignado.</span>
+          </div>
+          <span className="text-[11px] text-emerald-700 font-bold bg-white px-2 py-0.5 rounded border border-emerald-200 shrink-0">Expediente Cloud Activo</span>
+        </div>
+      )}
 
       {/* OCR Scanner Card */}
       <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4">
