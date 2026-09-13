@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { getActiveOfficeId } from '@/lib/session-office';
 import { GoogleGenAI } from '@google/genai';
 import { createGestionDriveFolderAction } from './drive';
+import { formatFechaHistorial, formatHoraHistorial, appendHistorialToMeta, type EventoHistorial } from '@/lib/gestiones-utils';
 
 export async function getFirstOfficeId(): Promise<string> {
   return await getActiveOfficeId();
@@ -52,6 +53,10 @@ export async function createGestion(data: {
   notas?: any[];
   notasInternas?: string;
   folio?: string;
+  responsableId?: string | null;
+  responsableNombre?: string;
+  creadorNombre?: string;
+  creadorId?: string | null;
   officeId?: string;
 }) {
   try {
@@ -72,6 +77,30 @@ export async function createGestion(data: {
       }
     }
 
+    let meta: any = {};
+    if (data.notasInternas) {
+      try { meta = JSON.parse(data.notasInternas); } catch {}
+    }
+
+    const creadorNombre = data.creadorNombre || 'Dip. Ruben Roque';
+    meta.creadorNombre = creadorNombre;
+    meta.creadorId = data.creadorId || null;
+    if (data.responsableNombre) {
+      meta.responsableNombre = data.responsableNombre;
+    }
+
+    const fechaNow = new Date();
+    const eventoCreacion: EventoHistorial = {
+      id: `hist-${Date.now()}`,
+      fechaDisplay: formatFechaHistorial(fechaNow),
+      horaDisplay: formatHoraHistorial(fechaNow),
+      usuario: creadorNombre,
+      accion: 'agregó esta gestión.',
+      tipo: 'creacion',
+      createdAt: fechaNow.toISOString(),
+    };
+    meta.historial = [eventoCreacion, ...(Array.isArray(meta.historial) ? meta.historial : [])];
+
     const newEntry: NewGestion = {
       officeId,
       folio,
@@ -91,10 +120,11 @@ export async function createGestion(data: {
       estatus: data.estatus || 'Recibida',
       dependenciaCanalizada: data.dependenciaCanalizada || null,
       driveFolderUrl,
+      responsableId: data.responsableId || null,
       documentos: data.documentos ? JSON.stringify(data.documentos) : null,
       oficios: data.oficios ? JSON.stringify(data.oficios) : null,
       notas: data.notas ? JSON.stringify(data.notas) : null,
-      notasInternas: data.notasInternas || null,
+      notasInternas: JSON.stringify(meta),
     };
 
     const inserted = await db.insert(gestiones).values(newEntry).returning();
@@ -109,7 +139,7 @@ export async function createGestion(data: {
   }
 }
 
-export async function updateGestionStatus(id: string, nuevoEstado: string) {
+export async function updateGestionStatus(id: string, nuevoEstado: string, usuarioNombre?: string) {
   try {
     const activeOfficeId = await getActiveOfficeId();
 
@@ -119,10 +149,11 @@ export async function updateGestionStatus(id: string, nuevoEstado: string) {
       .where(eq(gestiones.id, id))
       .limit(1);
 
-    let meta: any = {};
-    if (curr?.notasInternas) {
-      try { meta = JSON.parse(curr.notasInternas); } catch {}
-    }
+    const { meta } = appendHistorialToMeta(curr?.notasInternas, {
+      usuario: usuarioNombre || 'Usuario del Despacho',
+      accion: `cambió el estatus a "${nuevoEstado}".`,
+      tipo: 'estatus',
+    });
 
     if (nuevoEstado === 'Resuelta' && !meta.fechaResolucion) {
       meta.fechaResolucion = new Date().toISOString();
@@ -138,12 +169,136 @@ export async function updateGestionStatus(id: string, nuevoEstado: string) {
       .where(eq(gestiones.id, id))
       .returning();
 
+    revalidatePath(`/gestiones/${id}`);
     revalidatePath('/gestiones');
     revalidatePath('/dashboard');
     return { success: true, data: updated[0] };
   } catch (error) {
     console.error('Error updating gestion status:', error);
     return { success: false, error: 'No se pudo actualizar el estado de la gestión' };
+  }
+}
+
+export async function updateGestionResponsableAction(
+  gestionId: string,
+  responsableId: string | null,
+  responsableNombre?: string,
+  usuarioActual?: string
+) {
+  try {
+    const [curr] = await db
+      .select({ notasInternas: gestiones.notasInternas })
+      .from(gestiones)
+      .where(eq(gestiones.id, gestionId))
+      .limit(1);
+
+    const accionTexto = responsableNombre
+      ? `asignó esta gestión a ${responsableNombre}.`
+      : 'desasignó el responsable de esta gestión.';
+
+    const { meta } = appendHistorialToMeta(curr?.notasInternas, {
+      usuario: usuarioActual || 'Usuario del Despacho',
+      accion: accionTexto,
+      tipo: 'asignacion',
+    });
+
+    meta.responsableId = responsableId || null;
+    meta.responsableNombre = responsableNombre || null;
+
+    const updated = await db
+      .update(gestiones)
+      .set({
+        responsableId: responsableId || null,
+        notasInternas: JSON.stringify(meta),
+        updatedAt: new Date(),
+      })
+      .where(eq(gestiones.id, gestionId))
+      .returning();
+
+    revalidatePath(`/gestiones/${gestionId}`);
+    revalidatePath('/gestiones');
+    revalidatePath('/dashboard');
+    return { success: true, data: updated[0] };
+  } catch (error) {
+    console.error('Error updating responsable de gestion:', error);
+    return { success: false, error: 'No se pudo actualizar el responsable de la gestión' };
+  }
+}
+
+export async function updateGestionDataAction(
+  gestionId: string,
+  data: {
+    asunto?: string;
+    solicitante?: string;
+    curp?: string;
+    claveElector?: string;
+    seccionElectoral?: string;
+    direccion?: string;
+    colonia?: string;
+    municipio?: string;
+    telefono?: string;
+    email?: string;
+    prioridad?: string;
+    categoria?: string;
+    estatus?: string;
+    dependenciaCanalizada?: string;
+    responsableId?: string | null;
+    responsableNombre?: string;
+  },
+  usuarioActual?: string
+) {
+  try {
+    const [curr] = await db
+      .select({ notasInternas: gestiones.notasInternas })
+      .from(gestiones)
+      .where(eq(gestiones.id, gestionId))
+      .limit(1);
+
+    const { meta } = appendHistorialToMeta(curr?.notasInternas, {
+      usuario: usuarioActual || 'Usuario del Despacho',
+      accion: 'actualizó los datos de la gestión.',
+      tipo: 'edicion',
+    });
+
+    if (data.responsableNombre !== undefined) {
+      meta.responsableNombre = data.responsableNombre || null;
+      meta.responsableId = data.responsableId || null;
+    }
+
+    const updates: any = {
+      updatedAt: new Date(),
+      notasInternas: JSON.stringify(meta),
+    };
+
+    if (data.asunto !== undefined) updates.asunto = data.asunto;
+    if (data.solicitante !== undefined) updates.solicitante = data.solicitante;
+    if (data.curp !== undefined) updates.curp = data.curp || null;
+    if (data.claveElector !== undefined) updates.claveElector = data.claveElector || null;
+    if (data.seccionElectoral !== undefined) updates.seccionElectoral = data.seccionElectoral || null;
+    if (data.direccion !== undefined) updates.direccion = data.direccion || null;
+    if (data.colonia !== undefined) updates.colonia = data.colonia;
+    if (data.municipio !== undefined) updates.municipio = data.municipio;
+    if (data.telefono !== undefined) updates.telefono = data.telefono || null;
+    if (data.email !== undefined) updates.email = data.email || null;
+    if (data.prioridad !== undefined) updates.prioridad = data.prioridad;
+    if (data.categoria !== undefined) updates.categoria = data.categoria;
+    if (data.estatus !== undefined) updates.estatus = data.estatus;
+    if (data.dependenciaCanalizada !== undefined) updates.dependenciaCanalizada = data.dependenciaCanalizada || null;
+    if (data.responsableId !== undefined) updates.responsableId = data.responsableId || null;
+
+    const updated = await db
+      .update(gestiones)
+      .set(updates)
+      .where(eq(gestiones.id, gestionId))
+      .returning();
+
+    revalidatePath(`/gestiones/${gestionId}`);
+    revalidatePath('/gestiones');
+    revalidatePath('/dashboard');
+    return { success: true, data: updated[0] };
+  } catch (error) {
+    console.error('Error updating gestion data:', error);
+    return { success: false, error: 'No se pudo actualizar los datos de la gestión' };
   }
 }
 
@@ -275,10 +430,18 @@ export async function addNotaGestion(gestionId: string, nota: {
 
     notasList.push(finalNota);
 
+    const { meta } = appendHistorialToMeta(existing[0].notasInternas, {
+      usuario: nota.autor,
+      accion: 'agregó una observación.',
+      tipo: 'observacion',
+      fecha: now,
+    });
+
     const updated = await db
       .update(gestiones)
       .set({
         notas: JSON.stringify(notasList),
+        notasInternas: JSON.stringify(meta),
         updatedAt: new Date(),
       })
       .where(eq(gestiones.id, gestionId))
