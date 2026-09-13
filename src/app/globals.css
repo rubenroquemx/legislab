@@ -4,45 +4,45 @@
 
 @layer base {
   :root {
-    --color-primary: #0B172D;
-    --color-primary-hover: #152542;
-    --color-secondary: #1B62E3;
-    --color-secondary-hover: #1550BA;
-    --color-accent: #CA7B20;
-    --color-accent-hover: #AF6818;
-    --color-background: #F3F5F9;
+    --color-primary: #0F172A;
+    --color-primary-hover: #1E293B;
+    --color-secondary: #2563EB;
+    --color-secondary-hover: #1D4ED8;
+    --color-accent: #D97706;
+    --color-accent-hover: #B45309;
+    --color-background: #F8FAFC;
     --color-surface: #FFFFFF;
-    --color-neutral: #68768A;
+    --color-neutral: #64748B;
     --color-border: #E2E8F0;
-    --color-text-primary: #0B172D;
-    --color-text-secondary: #68768A;
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #64748B;
 
-    --background: 220 20% 97%;
-    --foreground: 218 61% 11%;
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 218 61% 11%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 218 61% 11%;
-    --primary: 218 61% 11%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 219 79% 50%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 216 28% 95%;
-    --muted-foreground: 216 14% 47%;
-    --accent: 33 74% 46%;
-    --accent-foreground: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 219 79% 50%;
-    --radius: 0.875rem;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
   }
 }
 
 body {
-  background-color: #F3F5F9;
-  color: #0B172D;
+  background-color: #F8FAFC;
+  color: #0F172A;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

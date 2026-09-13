@@ -24,6 +24,7 @@ import { getAgendaEventos, createAgendaEvento } from '@/app/actions/agenda';
 import { getGestiones } from '@/app/actions/gestiones';
 import { getContactos } from '@/app/actions/directorio';
 import { getTodayMexicoCity } from '@/lib/date-utils';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 interface EventoAgenda {
   id: string;
@@ -331,10 +332,10 @@ export default function DashboardPage() {
       
       {/* iOS Large Title Header */}
       <div className="space-y-1 pt-1 pb-1">
-        <h1 className="text-ios-large-title font-bold text-[#0B172D] tracking-tight">
+        <h1 className="text-ios-large-title font-bold text-[#0F172A] tracking-tight">
           Escritorio
         </h1>
-        <p className="text-ios-subhead text-[#8E8E93]">
+        <p className="text-ios-subhead text-[#94A3B8]">
           Panel de control legislativo y atención ciudadana
         </p>
       </div>
@@ -347,20 +348,20 @@ export default function DashboardPage() {
         {/* 1.1 Gestiones Nuevas */}
         <Link 
           href="/gestiones"
-          className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#1B62E3]/40 transition-all flex flex-col justify-between group ios-press"
+          className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#2563EB]/40 transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-ios-footnote font-semibold text-[#8E8E93] tracking-wide uppercase">Gestiones Nuevas</span>
-            <div className="h-8 w-8 rounded-[10px] bg-[#1B62E3]/10 text-[#1B62E3] flex items-center justify-center">
+            <span className="text-ios-footnote font-semibold text-[#94A3B8] tracking-wide uppercase">Gestiones Nuevas</span>
+            <div className="h-8 w-8 rounded-[10px] bg-[#2563EB]/10 text-[#2563EB] flex items-center justify-center">
               <FolderKanban className="h-4 w-4 stroke-[1.75]" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-ios-title1 font-bold tracking-tight text-[#0B172D]">{gestionesNuevasCount}</span>
-              <span className="text-ios-caption1 text-[#8E8E93]">solicitudes</span>
+              <span className="text-ios-title1 font-bold tracking-tight text-[#0F172A]">{gestionesNuevasCount}</span>
+              <span className="text-ios-caption1 text-[#94A3B8]">solicitudes</span>
             </div>
-            <span className="text-ios-caption2 font-semibold text-[#1B62E3] bg-[#1B62E3]/10 px-2 py-0.5 rounded-full">
+            <span className="text-ios-caption2 font-semibold text-[#2563EB] bg-[#2563EB]/10 px-2 py-0.5 rounded-full">
               Recibidas
             </span>
           </div>
@@ -371,15 +372,15 @@ export default function DashboardPage() {
           className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#CA7B20]/40 transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-ios-footnote font-semibold text-[#8E8E93] tracking-wide uppercase">Gestiones en Proceso</span>
+            <span className="text-ios-footnote font-semibold text-[#94A3B8] tracking-wide uppercase">Gestiones en Proceso</span>
             <div className="h-8 w-8 rounded-[10px] bg-[#CA7B20]/10 text-[#CA7B20] flex items-center justify-center">
               <Clock className="h-4 w-4 stroke-[1.75]" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-ios-title1 font-bold tracking-tight text-[#0B172D]">{gestionesEnProcesoCount}</span>
-              <span className="text-ios-caption1 text-[#8E8E93]">en trámite</span>
+              <span className="text-ios-title1 font-bold tracking-tight text-[#0F172A]">{gestionesEnProcesoCount}</span>
+              <span className="text-ios-caption1 text-[#94A3B8]">en trámite</span>
             </div>
             <span className="text-ios-caption2 font-semibold text-[#CA7B20] bg-[#CA7B20]/10 px-2 py-0.5 rounded-full">
               En Trámite
@@ -390,20 +391,20 @@ export default function DashboardPage() {
         {/* 1.3 Tareas Nuevas */}
         <Link 
           href="/tareas"
-          className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#1B62E3]/40 transition-all flex flex-col justify-between group ios-press"
+          className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#2563EB]/40 transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-ios-footnote font-semibold text-[#8E8E93] tracking-wide uppercase">Tareas Nuevas</span>
-            <div className="h-8 w-8 rounded-[10px] bg-[#1B62E3]/10 text-[#1B62E3] flex items-center justify-center">
+            <span className="text-ios-footnote font-semibold text-[#94A3B8] tracking-wide uppercase">Tareas Nuevas</span>
+            <div className="h-8 w-8 rounded-[10px] bg-[#2563EB]/10 text-[#2563EB] flex items-center justify-center">
               <CheckSquare className="h-4 w-4 stroke-[1.75]" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-ios-title1 font-bold tracking-tight text-[#0B172D]">{tareasNuevasCount}</span>
-              <span className="text-ios-caption1 text-[#8E8E93]">por iniciar</span>
+              <span className="text-ios-title1 font-bold tracking-tight text-[#0F172A]">{tareasNuevasCount}</span>
+              <span className="text-ios-caption1 text-[#94A3B8]">por iniciar</span>
             </div>
-            <span className="text-ios-caption2 font-semibold text-[#1B62E3] bg-[#1B62E3]/10 px-2 py-0.5 rounded-full">
+            <span className="text-ios-caption2 font-semibold text-[#2563EB] bg-[#2563EB]/10 px-2 py-0.5 rounded-full">
               Pendientes
             </span>
           </div>
@@ -415,15 +416,15 @@ export default function DashboardPage() {
           className="bg-white border border-[#E5E5EA]/80 rounded-[16px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-[#34C759]/40 transition-all flex flex-col justify-between group ios-press"
         >
           <div className="flex items-center justify-between">
-            <span className="text-ios-footnote font-semibold text-[#8E8E93] tracking-wide uppercase">Tareas en Proceso</span>
+            <span className="text-ios-footnote font-semibold text-[#94A3B8] tracking-wide uppercase">Tareas en Proceso</span>
             <div className="h-8 w-8 rounded-[10px] bg-[#34C759]/10 text-[#34C759] flex items-center justify-center">
               <Flame className="h-4 w-4 stroke-[1.75]" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-ios-title1 font-bold tracking-tight text-[#0B172D]">{tareasEnProcesoCount}</span>
-              <span className="text-ios-caption1 text-[#8E8E93]">en curso</span>
+              <span className="text-ios-title1 font-bold tracking-tight text-[#0F172A]">{tareasEnProcesoCount}</span>
+              <span className="text-ios-caption1 text-[#94A3B8]">en curso</span>
             </div>
             <span className="text-ios-caption2 font-semibold text-[#34C759] bg-[#34C759]/10 px-2 py-0.5 rounded-full">
               En Ejecución
@@ -446,7 +447,7 @@ export default function DashboardPage() {
               <h2 className="text-base font-bold text-zinc-900 tracking-tight">
                 Rendimiento de Gestiones Ciudadanas
               </h2>
-              <span className="text-[10px] font-semibold text-zinc-600 bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-slate-600 bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded-full">
                 Últimos {diasFiltroGrafico} días
               </span>
             </div>
@@ -519,19 +520,19 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-1">
           <div className="p-3 bg-zinc-50/70 border border-zinc-200/60 rounded-xl">
-            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Total Recibidas</span>
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Recibidas</span>
             <p className="text-lg font-bold text-blue-600 mt-0.5">{totalRecibidasPeriodo}</p>
           </div>
           <div className="p-3 bg-zinc-50/70 border border-zinc-200/60 rounded-xl">
-            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Total Resueltas</span>
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Resueltas</span>
             <p className="text-lg font-bold text-emerald-600 mt-0.5">{totalResueltasPeriodo}</p>
           </div>
           <div className="p-3 bg-zinc-50/70 border border-zinc-200/60 rounded-xl">
-            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Promedio en Proceso</span>
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Promedio en Proceso</span>
             <p className="text-lg font-bold text-purple-600 mt-0.5">{promedioEnProcesoPeriodo} / día</p>
           </div>
           <div className="p-3 bg-zinc-50/70 border border-zinc-200/60 rounded-xl">
-            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Eficacia de Resolución</span>
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Eficacia de Resolución</span>
             <p className="text-lg font-bold text-zinc-900 mt-0.5">{tasaResolucionPeriodo}%</p>
           </div>
         </div>
@@ -804,7 +805,7 @@ export default function DashboardPage() {
                   className="p-3.5 rounded-2xl border border-zinc-200/70 bg-zinc-50/50 hover:bg-white hover:border-zinc-300 hover:shadow-2xs transition-all space-y-2 group relative"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-zinc-200">
+                    <span className="text-xs font-medium text-slate-600 uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-zinc-200">
                       {ev.tipo}
                     </span>
                     <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">

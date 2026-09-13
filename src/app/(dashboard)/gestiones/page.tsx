@@ -60,6 +60,7 @@ import {
   Paperclip
 } from 'lucide-react';
 import { generateDocxBlob, downloadBlob } from '@/lib/export/docx-exporter';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 export type EstadoGestion = 'Recibida' | 'En Revisión' | 'En Trámite con Dependencia' | 'Resuelta';
 
@@ -847,10 +848,10 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
       {/* iOS Large Title Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 pb-1">
         <div className="space-y-0.5">
-          <h1 className="text-ios-large-title font-bold text-[#0B172D] tracking-tight">
+          <h1 className="text-ios-large-title font-bold text-[#0F172A] tracking-tight">
             Gestiones Ciudadanas
           </h1>
-          <p className="text-ios-subhead text-[#8E8E93]">
+          <p className="text-ios-subhead text-[#94A3B8]">
             Trámite de solicitudes, expedientes digitales y oficios con IA
           </p>
         </div>
@@ -862,7 +863,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
             setAvatarUrl('');
             setIsModalCrearOpen(true);
           }}
-          className="inline-flex items-center justify-center gap-2 bg-[#1B62E3] hover:bg-[#1550BA] text-white text-ios-body font-semibold px-4 py-2 rounded-[12px] shadow-xs ios-press cursor-pointer self-start sm:self-auto"
+          className="inline-flex items-center justify-center gap-2 bg-[#2563EB] hover:bg-[#1550BA] text-white text-ios-body font-semibold px-4 py-2 rounded-[12px] shadow-xs ios-press cursor-pointer self-start sm:self-auto"
         >
           <Plus className="h-4 w-4 stroke-[2]" />
           <span>Nueva Gestión</span>
@@ -877,8 +878,8 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
               onClick={() => setVistaModo('kanban')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] transition-all ios-press ${
                 vistaModo === 'kanban'
-                  ? 'bg-white text-[#0B172D] shadow-xs font-bold'
-                  : 'text-[#8E8E93] hover:text-[#0B172D]'
+                  ? 'bg-white text-[#0F172A] shadow-xs font-bold'
+                  : 'text-[#94A3B8] hover:text-[#0F172A]'
               }`}
             >
               <Kanban className="h-3.5 w-3.5 stroke-[1.75]" />
@@ -888,8 +889,8 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
               onClick={() => setVistaModo('lista')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] transition-all ios-press ${
                 vistaModo === 'lista'
-                  ? 'bg-white text-[#0B172D] shadow-xs font-bold'
-                  : 'text-[#8E8E93] hover:text-[#0B172D]'
+                  ? 'bg-white text-[#0F172A] shadow-xs font-bold'
+                  : 'text-[#94A3B8] hover:text-[#0F172A]'
               }`}
             >
               <LayoutList className="h-3.5 w-3.5 stroke-[1.75]" />
@@ -1162,13 +1163,13 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-gray-900 dark:text-white">Nueva Gestión y Expediente Digital</h2>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Captura los datos del ciudadano o extrae automáticamente con escaneo de INE.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Captura los datos del ciudadano o extrae automáticamente con escaneo de INE.</p>
                 </div>
               </div>
               <button onClick={() => setIsModalCrearOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
             </div>
 
-            <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-800/80 dark:via-indigo-950/40 dark:to-slate-900/80 border border-blue-200 dark:border-blue-900/50 space-y-3">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
                   <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -1176,7 +1177,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                 </span>
                 
                 {geminiApiKeyStatus.configured ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     Gemini Vision Activo (Modo Real)
                   </span>
@@ -1184,14 +1185,14 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                   <button
                     type="button"
                     onClick={() => setShowKeyModal(true)}
-                    className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-2.5 py-0.5 rounded-full border border-amber-300 transition-colors"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 bg-amber-100 hover:bg-amber-200 px-2.5 py-0.5 rounded-full border border-amber-300 transition-colors"
                   >
                     ⚠️ Configurar GEMINI_API_KEY
                   </button>
                 )}
               </div>
 
-              <p className="text-[11px] text-blue-900/80 dark:text-blue-300/80 leading-relaxed">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Toma una fotografía o sube el archivo de la credencial de elector. La inteligencia artificial extraerá y verificará automáticamente el <strong>Rostro</strong>, <strong>Nombre</strong>, <strong>CURP</strong>, <strong>Dirección</strong> y <strong>Sección Electoral</strong>.
               </p>
 
@@ -1265,7 +1266,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                   </div>
                   <div>
                     <span className="text-xs font-bold text-gray-900 dark:text-white block">Fotografía del INE Extraída con IA</span>
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400 block">Esta imagen se usará como avatar oficial de la gestión y expediente.</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 block">Esta imagen se usará como avatar oficial de la gestión y expediente.</span>
                   </div>
                 </div>
               )}
@@ -1768,7 +1769,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white">Clave Google Gemini Requerida</h3>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Para visión artificial y OCR en vivo de INE</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Para visión artificial y OCR en vivo de INE</p>
                 </div>
               </div>
               <button onClick={() => setShowKeyModal(false)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
@@ -1828,7 +1829,7 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-gray-900 dark:text-white">Redacción de Oficio de Canalización con IA</h2>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Generación oficial por demanda con técnica parlamentaria mexicana para {gestionSeleccionada.nombre}.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Generación oficial por demanda con técnica parlamentaria mexicana para {gestionSeleccionada.nombre}.</p>
                 </div>
               </div>
               <button onClick={() => setIsModalOficioOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>

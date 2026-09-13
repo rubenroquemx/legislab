@@ -208,7 +208,7 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="lg:hidden p-2 text-[#68768A] hover:text-[#0B172D] hover:bg-[#F3F5F9] rounded-xl transition-all duration-120 ios-press cursor-pointer"
+          className="lg:hidden p-2 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] rounded-xl transition-all duration-120 ios-press cursor-pointer"
           title="Abrir menú"
         >
           <Menu className="h-5 w-5 stroke-[2]" />
@@ -218,7 +218,7 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
           <button
             type="button"
             onClick={onToggleSidebarCollapse}
-            className="hidden lg:flex p-2 text-[#68768A] hover:text-[#0B172D] hover:bg-[#F3F5F9] rounded-xl transition-all duration-120 ios-press cursor-pointer"
+            className="hidden lg:flex p-2 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] rounded-xl transition-all duration-120 ios-press cursor-pointer"
             title={isSidebarCollapsed ? "Expandir barra lateral" : "Colapsar barra lateral"}
           >
             <PanelLeft className="h-4 w-4" />
@@ -231,16 +231,16 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
             <button
               type="button"
               onClick={() => setOfficeDropdownOpen(!officeDropdownOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#F3F5F9] hover:bg-[#E8ECF2] text-[#0B172D] rounded-xl border border-[#E2E8F0] transition-all duration-120 shadow-2xs ios-press group max-w-[220px] sm:max-w-xs truncate cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#F8FAFC] hover:bg-[#E8ECF2] text-[#0F172A] rounded-xl border border-[#E2E8F0] transition-all duration-120 shadow-2xs ios-press group max-w-[220px] sm:max-w-xs truncate cursor-pointer"
               title="Cambiar despacho activo"
             >
-              <Building2 className="w-3.5 h-3.5 text-[#1B62E3] shrink-0" />
+              <Building2 className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />
               <span className="truncate">{activeOffice?.name || 'Seleccionar Despacho'}</span>
-              <ChevronDown className="w-3 h-3 text-[#68768A] group-hover:text-[#0B172D] shrink-0" />
+              <ChevronDown className="w-3 h-3 text-[#64748B] group-hover:text-[#0F172A] shrink-0" />
             </button>
           ) : (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#F3F5F9] text-[#0B172D] rounded-xl border border-[#E2E8F0] max-w-[240px] truncate">
-              <Building2 className="w-3.5 h-3.5 text-[#68768A] shrink-0" />
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#F8FAFC] text-[#0F172A] rounded-xl border border-[#E2E8F0] max-w-[240px] truncate">
+              <Building2 className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
               <span className="truncate">{activeOffice?.name || 'Despacho Parlamentario'}</span>
             </div>
           )}
@@ -250,13 +250,13 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
             <div className="absolute left-0 mt-2 w-80 bg-white rounded-2xl border border-[#E2E8F0] shadow-xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95">
               <div className="px-3 py-2 border-b border-[#F0F2F5] flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-[#0B172D]">Despachos Registrados</p>
-                  <p className="text-[10px] text-[#68768A]">Modo Superadmin Multi-tenant</p>
+                  <p className="text-xs font-bold text-[#0F172A]">Despachos Registrados</p>
+                  <p className="text-[10px] text-[#64748B]">Modo Superadmin Multi-tenant</p>
                 </div>
                 <Link
                   href="/admin/despachos"
                   onClick={() => setOfficeDropdownOpen(false)}
-                  className="text-[10px] font-semibold text-[#1B62E3] hover:underline"
+                  className="text-[10px] font-semibold text-[#2563EB] hover:underline"
                 >
                   Gestionar todos
                 </Link>
@@ -274,21 +274,21 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
                       className={cn(
                         "w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors",
                         isCurrent
-                          ? "bg-[#EBF2FC] text-[#0B172D] font-semibold"
-                          : "hover:bg-[#F3F5F9] text-[#0B172D]"
+                          ? "bg-[#EBF2FC] text-[#0F172A] font-semibold"
+                          : "hover:bg-[#F8FAFC] text-[#0F172A]"
                       )}
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <p className="text-xs truncate">{off.name}</p>
-                        <p className="text-[10px] text-[#68768A] truncate">{off.titularName} • {off.district || off.state}</p>
+                        <p className="text-[10px] text-[#64748B] truncate">{off.titularName} • {off.district || off.state}</p>
                       </div>
                       {isCurrent ? (
-                        <div className="flex items-center gap-1 text-[10px] font-bold text-[#1B62E3] shrink-0 bg-[#EBF2FC] px-1.5 py-0.5 rounded border border-[#1B62E3]/20">
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-[#2563EB] shrink-0 bg-[#EBF2FC] px-1.5 py-0.5 rounded border border-[#2563EB]/20">
                           <Check className="w-3 h-3" />
                           <span>Activo</span>
                         </div>
                       ) : (
-                        <span className="text-[10px] text-[#68768A] uppercase font-mono">{off.plan}</span>
+                        <span className="text-[10px] text-[#64748B] uppercase font-mono">{off.plan}</span>
                       )}
                     </button>
                   );
@@ -299,7 +299,7 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
                 <Link
                   href="/admin/despachos?action=new"
                   onClick={() => setOfficeDropdownOpen(false)}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold text-[#1B62E3] hover:bg-[#EBF2FC] rounded-lg transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold text-[#2563EB] hover:bg-[#EBF2FC] rounded-lg transition-colors"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>+ Registrar Nuevo Despacho</span>
@@ -311,13 +311,13 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
 
         {/* Quick Search */}
         <div className="relative w-full hidden md:block max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#68768A]" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#64748B]" />
           <input
             type="text"
             placeholder="Buscar en el despacho..."
-            className="w-full pl-8 pr-10 py-1.5 text-xs bg-[#F3F5F9] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#1B62E3] focus:bg-white transition-all text-[#0B172D] placeholder:text-[#68768A]"
+            className="w-full pl-8 pr-10 py-1.5 text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl focus:outline-none focus:border-[#2563EB] focus:bg-white transition-all text-[#0F172A] placeholder:text-[#64748B]"
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[10px] font-mono text-[#68768A] bg-white border border-[#E2E8F0] px-1.5 py-0.2 rounded-md shadow-2xs">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[10px] font-mono text-[#64748B] bg-white border border-[#E2E8F0] px-1.5 py-0.2 rounded-md shadow-2xs">
             <span>⌘K</span>
           </div>
         </div>
@@ -333,13 +333,13 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
             onClick={() => setNotificationsOpen(!notificationsOpen)}
             className={cn(
               "relative p-2 rounded-xl transition-colors ios-press cursor-pointer",
-              notificationsOpen ? "bg-[#EBF2FC] text-[#1B62E3]" : "text-[#68768A] hover:text-[#0B172D] hover:bg-[#F3F5F9]"
+              notificationsOpen ? "bg-[#EBF2FC] text-[#2563EB]" : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
             )}
             title="Notificaciones Push"
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#1B62E3] rounded-full ring-2 ring-white"></span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#2563EB] rounded-full ring-2 ring-white"></span>
             )}
           </button>
 
@@ -348,9 +348,9 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
             <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-[#E2E8F0] shadow-xl z-50 p-4 space-y-3 animate-in fade-in zoom-in-95">
               <div className="flex items-center justify-between border-b border-[#F0F2F5] pb-2.5">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-bold text-[#0B172D]">Notificaciones</h3>
+                  <h3 className="text-xs font-bold text-[#0F172A]">Notificaciones</h3>
                   {unreadCount > 0 && (
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-[#EBF2FC] text-[#1B62E3] rounded-full">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-[#EBF2FC] text-[#2563EB] rounded-full">
                       {unreadCount} nuevas
                     </span>
                   )}
@@ -359,7 +359,7 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
                 <button
                   type="button"
                   onClick={handleMarkAllRead}
-                  className="text-[11px] text-[#1B62E3] hover:underline font-medium"
+                  className="text-[11px] text-[#2563EB] hover:underline font-medium"
                 >
                   Marcar leídas
                 </button>
@@ -370,11 +370,11 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
                 "p-3 rounded-xl border text-xs space-y-2",
                 permissionState === 'granted'
                   ? "bg-[#EBF9EE] border-[#34C759]/30 text-[#1B5E20]"
-                  : "bg-[#F3F5F9] border-[#E2E8F0] text-[#0B172D]"
+                  : "bg-[#F8FAFC] border-[#E2E8F0] text-[#0F172A]"
               )}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <Smartphone className="h-4 w-4 text-[#68768A]" />
+                    <Smartphone className="h-4 w-4 text-[#64748B]" />
                     <span>Notificaciones Push Web</span>
                   </div>
 
@@ -382,7 +382,7 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
                     "text-[10px] font-mono px-1.5 py-0.2 rounded font-bold",
                     permissionState === 'granted'
                       ? "bg-emerald-100 text-emerald-800"
-                      : "bg-[#E2E8F0] text-[#68768A]"
+                      : "bg-[#E2E8F0] text-[#64748B]"
                   )}>
                     {permissionState === 'granted' ? '✓ Activas' : 'Inactivas'}
                   </span>
@@ -390,13 +390,13 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
 
                 {permissionState !== 'granted' ? (
                   <div>
-                    <p className="text-[11px] text-[#68768A] leading-tight mb-2">
+                    <p className="text-[11px] text-[#64748B] leading-tight mb-2">
                       Recibe alertas en la pantalla de bloqueo de tu iPhone o Android.
                     </p>
                     <button
                       type="button"
                       onClick={handleRequestPermission}
-                      className="w-full py-1.5 px-3 bg-[#1B62E3] hover:bg-[#1550BA] text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
+                      className="w-full py-1.5 px-3 bg-[#2563EB] hover:bg-[#1550BA] text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
                     >
                       🔔 Activar Notificaciones en este Dispositivo
                     </button>
@@ -407,7 +407,7 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
                     <button
                       type="button"
                       onClick={() => handleSendTestNotification()}
-                      className="text-[11px] font-bold text-[#1B62E3] hover:underline"
+                      className="text-[11px] font-bold text-[#2563EB] hover:underline"
                     >
                       {testSent ? '✓ Enviada al móvil' : 'Probar Notificación'}
                     </button>
@@ -424,22 +424,22 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
                     onClick={() => setNotificationsOpen(false)}
                     className={cn(
                       "p-2.5 flex items-start gap-2.5 rounded-xl transition-colors text-left group block",
-                      !notif.read ? "bg-[#F3F5F9]/80 hover:bg-[#E8ECF2]" : "hover:bg-[#F3F5F9]"
+                      !notif.read ? "bg-[#F8FAFC]/80 hover:bg-[#E8ECF2]" : "hover:bg-[#F8FAFC]"
                     )}
                   >
-                    <div className="p-1.5 rounded-lg bg-white border border-[#E2E8F0] shrink-0 text-[#68768A] mt-0.5">
+                    <div className="p-1.5 rounded-lg bg-white border border-[#E2E8F0] shrink-0 text-[#64748B] mt-0.5">
                       {notif.type === 'whatsapp' && <MessageSquare className="h-3.5 w-3.5 text-[#34C759]" />}
                       {notif.type === 'gestion' && <FolderKanban className="h-3.5 w-3.5 text-[#CA7B20]" />}
-                      {notif.type === 'agenda' && <Calendar className="h-3.5 w-3.5 text-[#1B62E3]" />}
+                      {notif.type === 'agenda' && <Calendar className="h-3.5 w-3.5 text-[#2563EB]" />}
                       {notif.type === 'cumpleanos' && <Cake className="h-3.5 w-3.5 text-[#CA7B20]" />}
                     </div>
 
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex items-center justify-between gap-1">
-                        <p className="text-xs font-semibold text-[#0B172D] truncate">{notif.title}</p>
-                        <span className="text-[10px] text-[#68768A] font-mono shrink-0">{notif.time}</span>
+                        <p className="text-xs font-semibold text-[#0F172A] truncate">{notif.title}</p>
+                        <span className="text-[10px] text-[#64748B] font-mono shrink-0">{notif.time}</span>
                       </div>
-                      <p className="text-[11px] text-[#68768A] line-clamp-2 leading-relaxed">{notif.desc}</p>
+                      <p className="text-[11px] text-[#64748B] line-clamp-2 leading-relaxed">{notif.desc}</p>
                     </div>
                   </Link>
                 ))}
@@ -463,23 +463,23 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
             />
             <div className="hidden sm:block text-left">
               <div className="flex items-center gap-1">
-                <p className="text-xs font-semibold text-[#0B172D] leading-tight truncate max-w-[120px]">{userName}</p>
+                <p className="text-xs font-semibold text-[#0F172A] leading-tight truncate max-w-[120px]">{userName}</p>
                 {user?.isSuperAdmin && (
-                  <span className="text-[9px] font-bold bg-[#E8ECF2] text-[#0B172D] px-1 rounded border border-[#0B172D]/20">Super</span>
+                  <span className="text-[9px] font-bold bg-[#E8ECF2] text-[#0F172A] px-1 rounded border border-[#0F172A]/20">Super</span>
                 )}
               </div>
-              <p className="text-[10px] text-[#68768A] leading-tight truncate max-w-[120px]">{userCargo}</p>
+              <p className="text-[10px] text-[#64748B] leading-tight truncate max-w-[120px]">{userCargo}</p>
             </div>
-            <ChevronDown className="w-3 h-3 text-[#68768A] hidden sm:block" />
+            <ChevronDown className="w-3 h-3 text-[#64748B] hidden sm:block" />
           </button>
 
           {/* PROFILE DROPDOWN */}
           {profileDropdownOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-[#E2E8F0] shadow-xl z-50 p-3 space-y-2 animate-in fade-in zoom-in-95">
               <div className="border-b border-[#F0F2F5] pb-2.5">
-                <p className="text-xs font-bold text-[#0B172D]">{userName}</p>
-                <p className="text-[11px] text-[#68768A] truncate">{user?.email || 'usuario@congreso.gob.mx'}</p>
-                <p className="text-[10px] text-[#68768A] mt-0.5 font-medium">{activeOffice?.name}</p>
+                <p className="text-xs font-bold text-[#0F172A]">{userName}</p>
+                <p className="text-[11px] text-[#64748B] truncate">{user?.email || 'usuario@congreso.gob.mx'}</p>
+                <p className="text-[10px] text-[#64748B] mt-0.5 font-medium">{activeOffice?.name}</p>
               </div>
 
               <div className="space-y-1">
@@ -487,9 +487,9 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
                   <Link
                     href="/admin"
                     onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-[#0B172D] hover:bg-[#EBF2FC] transition-colors"
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FC] transition-colors"
                   >
-                    <ShieldCheck className="w-4 h-4 text-[#1B62E3] shrink-0" />
+                    <ShieldCheck className="w-4 h-4 text-[#2563EB] shrink-0" />
                     <span>Consola Superadmin SaaS</span>
                   </Link>
                 )}
@@ -497,18 +497,18 @@ export function Navbar({ onOpenMobileMenu, onToggleSidebarCollapse, isSidebarCol
                 <Link
                   href="/configuracion"
                   onClick={() => setProfileDropdownOpen(false)}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-[#0B172D] hover:bg-[#F3F5F9] transition-colors"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
                 >
-                  <Settings className="w-4 h-4 text-[#68768A] shrink-0" />
+                  <Settings className="w-4 h-4 text-[#64748B] shrink-0" />
                   <span>Configuración del Despacho</span>
                 </Link>
 
                 <Link
                   href="/usuarios"
                   onClick={() => setProfileDropdownOpen(false)}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-[#0B172D] hover:bg-[#F3F5F9] transition-colors"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
                 >
-                  <User className="w-4 h-4 text-[#68768A] shrink-0" />
+                  <User className="w-4 h-4 text-[#64748B] shrink-0" />
                   <span>Equipo y Usuarios</span>
                 </Link>
               </div>

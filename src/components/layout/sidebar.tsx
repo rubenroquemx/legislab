@@ -169,8 +169,8 @@ export function Sidebar({
 
     return (
       <div className={cn(
-        "flex flex-col h-full text-[#0B172D] select-none",
-        isMobile ? "bg-[#F2F2F7]/95 backdrop-blur-2xl" : "bg-[#F3F5F9] border-r border-[#E2E8F0]"
+        "flex flex-col h-full text-[#0F172A] select-none",
+        isMobile ? "bg-[#F2F2F7]/95 backdrop-blur-2xl" : "bg-[#F8FAFC] border-r border-[#E2E8F0]"
       )}>
         
         {/* Header con Logo y botón de cerrar */}
@@ -193,14 +193,14 @@ export function Sidebar({
             {!isCol && (
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-[#0B172D] text-ios-headline tracking-tight">
+                  <span className="font-bold text-[#0F172A] text-ios-headline tracking-tight">
                     LegisLab
                   </span>
-                  <span className="text-[10px] font-mono text-[#68768A] bg-white border border-[#E5E5EA] px-1.5 py-0.5 rounded-[4px] font-semibold">
+                  <span className="text-[10px] font-mono text-[#64748B] bg-white border border-[#E5E5EA] px-1.5 py-0.5 rounded-[4px] font-semibold">
                     PRO
                   </span>
                 </div>
-                <span className="text-ios-caption2 text-[#8E8E93] leading-none">
+                <span className="text-ios-caption2 text-[#94A3B8] leading-none">
                   Gestión Parlamentaria
                 </span>
               </div>
@@ -211,7 +211,7 @@ export function Sidebar({
           {isMobile && onCloseMobile && (
             <button
               onClick={onCloseMobile}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-[#E5E5EA] text-[#0B172D] active:scale-95 active:opacity-70 transition-transform"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-[#E5E5EA] text-[#0F172A] active:scale-95 active:opacity-70 transition-transform"
               aria-label="Cerrar menú"
             >
               <X className="h-4 w-4 stroke-[2.2]" />
@@ -223,7 +223,7 @@ export function Sidebar({
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="p-2 text-[#68768A] hover:text-[#0B172D] rounded-[10px] hover:bg-white/80 active:scale-95 transition-all"
+              className="p-2 text-[#64748B] hover:text-[#0F172A] rounded-[10px] hover:bg-white/80 active:scale-95 transition-all"
               title="Colapsar menú lateral"
             >
               <PanelLeftClose className="h-4 w-4 stroke-[1.75]" />
@@ -246,21 +246,21 @@ export function Sidebar({
                   onClick={() => isMobile && onCloseMobile?.()}
                   className={cn(
                     'w-full flex items-center justify-between min-h-[44px] px-3.5 py-2.5 ios-row-tap group',
-                    isDashboardActive ? 'bg-[#1B62E3]/10 text-[#1B62E3]' : 'text-[#0B172D]'
+                    isDashboardActive ? 'bg-[#2563EB]/10 text-[#2563EB]' : 'text-[#0F172A]'
                   )}
                 >
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-7 h-7 rounded-[7px] flex items-center justify-center shrink-0 shadow-xs",
-                      isDashboardActive ? "bg-[#1B62E3] text-white" : "bg-[#0B172D] text-white"
+                      isDashboardActive ? "bg-[#2563EB] text-white" : "bg-[#0F172A] text-white"
                     )}>
                       <LayoutDashboard className="h-4 w-4 stroke-[1.75]" />
                     </div>
-                    <span className={cn("text-ios-body font-medium", isDashboardActive ? "text-[#1B62E3] font-semibold" : "text-[#0B172D]")}>
+                    <span className={cn("text-ios-body font-medium", isDashboardActive ? "text-[#2563EB] font-semibold" : "text-[#0F172A]")}>
                       Escritorio
                     </span>
                   </div>
-                  <ChevronRight className={cn("h-4 w-4 stroke-[1.5]", isDashboardActive ? "text-[#1B62E3]" : "text-[#C7C7CC]")} />
+                  <ChevronRight className={cn("h-4 w-4 stroke-[1.5]", isDashboardActive ? "text-[#2563EB]" : "text-[#C7C7CC]")} />
                 </Link>
               </div>
             </div>
@@ -271,7 +271,7 @@ export function Sidebar({
                 title="Escritorio"
                 className={cn(
                   'w-10 h-10 rounded-[10px] flex items-center justify-center transition-all ios-press',
-                  isDashboardActive ? 'bg-[#1B62E3] text-white shadow-xs' : 'bg-white text-[#68768A] hover:text-[#0B172D]'
+                  isDashboardActive ? 'bg-[#2563EB] text-white shadow-xs' : 'bg-white text-[#64748B] hover:text-[#0F172A]'
                 )}
               >
                 <LayoutDashboard className="h-5 w-5 stroke-[1.75]" />
@@ -283,7 +283,7 @@ export function Sidebar({
           {visibleSections.map((section) => (
             <div key={section.sectionTitle} className="space-y-1">
               {!isCol ? (
-                <h4 className="px-3.5 text-ios-footnote font-semibold text-[#8E8E93] tracking-wide uppercase">
+                <h4 className="px-3.5 text-ios-footnote font-semibold text-[#94A3B8] tracking-wide uppercase">
                   {section.sectionTitle}
                 </h4>
               ) : (
@@ -303,19 +303,19 @@ export function Sidebar({
                         onClick={() => isMobile && onCloseMobile?.()}
                         className={cn(
                           'w-full flex items-center justify-between min-h-[44px] px-3.5 py-2.5 ios-row-tap',
-                          isActive ? 'bg-[#1B62E3]/10 text-[#1B62E3]' : 'text-[#0B172D]'
+                          isActive ? 'bg-[#2563EB]/10 text-[#2563EB]' : 'text-[#0F172A]'
                         )}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className={cn(
                             "w-7 h-7 rounded-[7px] flex items-center justify-center shrink-0 shadow-xs",
-                            isActive ? "bg-[#1B62E3] text-white" : "bg-[#F3F5F9] text-[#68768A]"
+                            isActive ? "bg-[#2563EB] text-white" : "bg-[#F8FAFC] text-[#64748B]"
                           )}>
                             <Icon className="h-4 w-4 stroke-[1.75]" />
                           </div>
                           <span className={cn(
                             "text-ios-body truncate",
-                            isActive ? "text-[#1B62E3] font-semibold" : "text-[#0B172D] font-normal"
+                            isActive ? "text-[#2563EB] font-semibold" : "text-[#0F172A] font-normal"
                           )}>
                             {item.name}
                           </span>
@@ -330,12 +330,12 @@ export function Sidebar({
                           {item.badge && (
                             <span className={cn(
                               'text-ios-caption1 font-semibold px-2 py-0.5 rounded-full',
-                              isActive ? 'bg-[#1B62E3] text-white' : 'bg-[#E5E5EA] text-[#68768A]'
+                              isActive ? 'bg-[#2563EB] text-white' : 'bg-[#E5E5EA] text-[#64748B]'
                             )}>
                               {item.badge}
                             </span>
                           )}
-                          <ChevronRight className={cn("h-4 w-4 stroke-[1.5]", isActive ? "text-[#1B62E3]" : "text-[#C7C7CC]")} />
+                          <ChevronRight className={cn("h-4 w-4 stroke-[1.5]", isActive ? "text-[#2563EB]" : "text-[#C7C7CC]")} />
                         </div>
                       </Link>
                     );
@@ -354,12 +354,12 @@ export function Sidebar({
                         title={item.name}
                         className={cn(
                           'w-10 h-10 rounded-[10px] flex items-center justify-center relative transition-all ios-press',
-                          isActive ? 'bg-[#1B62E3] text-white shadow-xs' : 'bg-white text-[#68768A] hover:text-[#0B172D]'
+                          isActive ? 'bg-[#2563EB] text-white shadow-xs' : 'bg-white text-[#64748B] hover:text-[#0F172A]'
                         )}
                       >
                         <Icon className="h-5 w-5 stroke-[1.75]" />
                         {item.badge && (
-                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#1B62E3] ring-2 ring-white"></span>
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#2563EB] ring-2 ring-white"></span>
                         )}
                       </Link>
                     );
@@ -380,7 +380,7 @@ export function Sidebar({
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="p-2 text-[#68768A] hover:text-[#0B172D] hover:bg-[#F3F5F9] rounded-[10px] transition-colors w-full flex justify-center"
+              className="p-2 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] rounded-[10px] transition-colors w-full flex justify-center"
               title="Expandir barra lateral"
             >
               <PanelLeftOpen className="h-5 w-5 stroke-[1.75]" />
@@ -393,10 +393,10 @@ export function Sidebar({
                 <Link
                   href="/admin"
                   onClick={() => isMobile && onCloseMobile?.()}
-                  className="w-full flex items-center justify-between min-h-[44px] px-3.5 py-2.5 ios-row-tap text-[#0B172D]"
+                  className="w-full flex items-center justify-between min-h-[44px] px-3.5 py-2.5 ios-row-tap text-[#0F172A]"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-[7px] bg-[#0B172D] text-white flex items-center justify-center shrink-0">
+                    <div className="w-7 h-7 rounded-[7px] bg-[#0F172A] text-white flex items-center justify-center shrink-0">
                       <ShieldCheck className="h-4 w-4 stroke-[1.75]" />
                     </div>
                     <span className="text-ios-body font-medium">Consola SaaS Admin</span>

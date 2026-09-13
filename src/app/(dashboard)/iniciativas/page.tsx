@@ -15,6 +15,7 @@ import {
   Download
 } from 'lucide-react';
 import { generateDocxBlob, downloadBlob } from '@/lib/export/docx-exporter';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 interface IniciativaItem {
   id: number;
@@ -152,7 +153,7 @@ export default function IniciativasPage() {
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
               <div className="space-y-1.5 max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2.5 py-0.5 rounded">
+                  <span className="text-xs font-medium uppercase tracking-wider bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2.5 py-0.5 rounded">
                     {item.tipo}
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">•</span>
