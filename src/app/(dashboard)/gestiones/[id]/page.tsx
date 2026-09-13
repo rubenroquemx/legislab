@@ -66,45 +66,10 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
   const [menuAsignarOpen, setMenuAsignarOpen] = useState(false);
 
   // Modales
-  const [modalEditarOpen, setModalEditarOpen] = useState(false);
   const [modalEliminarOpen, setModalEliminarOpen] = useState(false);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [archivoAEliminar, setArchivoAEliminar] = useState<any | null>(null);
   const [isDeletingFile, setIsDeletingFile] = useState(false);
-
-  // Formulario de edición
-  const [formEdicion, setFormEdicion] = useState<{
-    asunto: string;
-    solicitante: string;
-    curp: string;
-    claveElector: string;
-    seccionElectoral: string;
-    direccion: string;
-    colonia: string;
-    municipio: string;
-    telefono: string;
-    email: string;
-    prioridad: string;
-    categoria: string;
-    dependenciaCanalizada: string;
-    responsableId: string;
-  }>({
-    asunto: '',
-    solicitante: '',
-    curp: '',
-    claveElector: '',
-    seccionElectoral: '',
-    direccion: '',
-    colonia: 'Centro',
-    municipio: 'Centro',
-    telefono: '',
-    email: '',
-    prioridad: 'Media',
-    categoria: 'General',
-    dependenciaCanalizada: '',
-    responsableId: '',
-  });
 
   // Drive state
   const [driveStatus, setDriveStatus] = useState<{
@@ -449,75 +414,7 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
     );
   };
 
-  const handleAbrirModalEditar = () => {
-    if (!gestion) return;
-    setFormEdicion({
-      asunto: gestion.asunto || '',
-      solicitante: gestion.solicitante || '',
-      curp: gestion.curp || '',
-      claveElector: gestion.claveElector || '',
-      seccionElectoral: gestion.seccionElectoral || '',
-      direccion: gestion.direccion || '',
-      colonia: gestion.colonia || 'Centro',
-      municipio: gestion.municipio || 'Centro',
-      telefono: gestion.telefono || '',
-      email: gestion.email || '',
-      prioridad: gestion.prioridad || 'Media',
-      categoria: gestion.categoria || 'General',
-      dependenciaCanalizada: gestion.dependenciaCanalizada || '',
-      responsableId: gestion.responsableId || '',
-    });
-    setModalEditarOpen(true);
-  };
-
-  const handleGuardarEdicion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!gestion) return;
-
-    setIsSavingEdit(true);
-    try {
-      const respUser = usuariosDespacho.find((u: any) => u.id === formEdicion.responsableId);
-      const responsableNombre = respUser ? respUser.name : undefined;
-
-      const res = await updateGestionDataAction(
-        gestion.id,
-        {
-          ...formEdicion,
-          responsableId: formEdicion.responsableId || null,
-          responsableNombre,
-        },
-        currentUserName
-      );
-
-      if (res.success) {
-        setGestion((prev: any) => ({
-          ...prev,
-          ...formEdicion,
-          responsableId: formEdicion.responsableId || null,
-          responsableNombre: responsableNombre || null,
-        }));
-
-        const now = new Date();
-        const nuevoEvento: EventoHistorial = {
-          id: `hist-${Date.now()}`,
-          fechaDisplay: formatFechaHistorial(now),
-          horaDisplay: formatHoraHistorial(now),
-          usuario: currentUserName,
-          accion: 'actualizó los datos de la gestión.',
-          tipo: 'edicion',
-          createdAt: now.toISOString(),
-        };
-        setHistorial((prev) => [nuevoEvento, ...prev]);
-        setModalEditarOpen(false);
-      }
-    } catch (err) {
-      console.error('Error saving edition:', err);
-    } finally {
-      setIsSavingEdit(false);
-    }
-  };
-
-    const handleConfirmarEliminarArchivo = async () => {
+  const handleConfirmarEliminarArchivo = async () => {
     if (!archivoAEliminar || !gestion) return;
     setIsDeletingFile(true);
     try {
@@ -747,15 +644,14 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Botón Editar Gestión */}
-          <button
-            type="button"
-            onClick={handleAbrirModalEditar}
+          {/* Botón Editar Gestión -> Página dedicada */}
+          <Link
+            href={`/gestiones/${gestion.id}/editar`}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-xl border border-slate-200/80 shadow-2xs transition-all active:scale-95"
           >
             <Pencil className="h-3.5 w-3.5 text-blue-600" />
             <span>Editar Gestión</span>
-          </button>
+          </Link>
 
           {/* Botón Eliminar Gestión (Permisos controlados) */}
           <button
@@ -1271,229 +1167,7 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      {/* Modal: Editar Gestión */}
-      {modalEditarOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Editar Gestión</h3>
-                <p className="text-xs text-slate-500 font-medium">Actualiza los datos del solicitante y la canalización institucional</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalEditarOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleGuardarEdicion} className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Nombre del Solicitante *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formEdicion.solicitante}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, solicitante: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">CURP</label>
-                  <input
-                    type="text"
-                    value={formEdicion.curp}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, curp: e.target.value.toUpperCase() })}
-                    maxLength={18}
-                    className="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Clave de Elector</label>
-                  <input
-                    type="text"
-                    value={formEdicion.claveElector}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, claveElector: e.target.value.toUpperCase() })}
-                    maxLength={18}
-                    className="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Sección Electoral</label>
-                  <input
-                    type="text"
-                    value={formEdicion.seccionElectoral}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, seccionElectoral: e.target.value })}
-                    placeholder="Ej: 0451"
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Teléfono / WhatsApp</label>
-                  <input
-                    type="tel"
-                    value={formEdicion.telefono}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, telefono: e.target.value })}
-                    placeholder="9931234567"
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Correo Electrónico</label>
-                  <input
-                    type="email"
-                    value={formEdicion.email}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, email: e.target.value })}
-                    placeholder="ciudadano@correo.com"
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Dirección / Calle</label>
-                  <input
-                    type="text"
-                    value={formEdicion.direccion}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, direccion: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Colonia</label>
-                  <input
-                    type="text"
-                    value={formEdicion.colonia}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, colonia: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Municipio</label>
-                  <input
-                    type="text"
-                    value={formEdicion.municipio}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, municipio: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Prioridad</label>
-                  <select
-                    value={formEdicion.prioridad}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, prioridad: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-semibold"
-                  >
-                    <option value="Baja">Baja</option>
-                    <option value="Media">Media</option>
-                    <option value="Alta">Alta</option>
-                    <option value="Urgente">Urgente</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Categoría</label>
-                  <select
-                    value={formEdicion.categoria}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, categoria: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-semibold"
-                  >
-                    {TIPOS_GESTION_BASE.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                    <option value="General">General</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Asignado a:</label>
-                  <select
-                    value={formEdicion.responsableId}
-                    onChange={(e) => setFormEdicion({ ...formEdicion, responsableId: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium"
-                  >
-                    <option value="">Sin Asignar</option>
-                    {usuariosDespacho.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} {u.cargo ? `(${u.cargo})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Dependencia Canalizada</label>
-                <input
-                  type="text"
-                  value={formEdicion.dependenciaCanalizada}
-                  onChange={(e) => setFormEdicion({ ...formEdicion, dependenciaCanalizada: e.target.value })}
-                  placeholder="Ej: Secretaría de Salud del Estado"
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Asunto y Petición *</label>
-                <textarea
-                  required
-                  rows={3}
-                  value={formEdicion.asunto}
-                  onChange={(e) => setFormEdicion({ ...formEdicion, asunto: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium resize-none leading-relaxed"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setModalEditarOpen(false)}
-                  disabled={isSavingEdit}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingEdit}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
-                >
-                  {isSavingEdit ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span>Guardando...</span>
-                    </>
-                  ) : (
-                    <span>Guardar Cambios</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-            {/* Modal: Advertencia / Confirmar Eliminar Archivo del Expediente */}
+      {/* Modal: Advertencia / Confirmar Eliminar Archivo del Expediente */}
       {archivoAEliminar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
