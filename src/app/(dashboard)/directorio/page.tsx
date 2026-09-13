@@ -172,7 +172,16 @@ export default function DirectorioPage() {
             colonia: '',
             municipio: 'Centro',
             fechaCumpleanos: d.fechaNacimiento || '',
-            tipoContacto: (d.categoria as any) || 'Funcionario Estatal',
+            tipoContacto: (() => {
+              const cat = (d.categoria || '').trim().toLowerCase();
+              if (cat.includes('ciudadano') || cat.includes('gestion')) return 'Ciudadano / Gestión';
+              if (cat.includes('alcalde') || cat.includes('municipal')) return 'Alcalde / Municipal';
+              if (cat.includes('legislador') || cat.includes('diputado')) return 'Legislador / Diputado';
+              if (cat.includes('líder') || cat.includes('lider') || cat.includes('comunitario')) return 'Líder Comunitario';
+              if (cat.includes('medio') || cat.includes('prensa')) return 'Medio de Comunicación';
+              if (cat.includes('empresa')) return 'Empresarial';
+              return (d.categoria as any) || 'Funcionario Estatal';
+            })(),
             avatarUrl: d.foto || '',
             observaciones: obs,
           };

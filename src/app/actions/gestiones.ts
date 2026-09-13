@@ -1,6 +1,6 @@
 'use server';
 
-import { db, gestiones, iniciativas, iaGenerations, systemSettings, type NewGestion, type NewIniciativa } from '@/db';
+import { db, gestiones, iniciativas, iaGenerations, systemSettings, directorioContactos, type NewGestion, type NewIniciativa } from '@/db';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getActiveOfficeId } from '@/lib/session-office';
@@ -128,6 +128,61 @@ export async function createGestion(data: {
     };
 
     const inserted = await db.insert(gestiones).values(newEntry).returning();
+
+    // Alta automática del contacto en el Directorio bajo la categoría "Ciudadano / Gestión"
+    try {
+      const cleanPhone = (data.telefono || '').replace(/\D/g, '');
+      const existingContacts = await db
+        .select()
+        .from(directorioContactos)
+        .where(eq(directorioContactos.officeId, officeId));
+
+      const found = existingContacts.find(c => {
+        const cPhone = (c.telefono || '').replace(/\D/g, '');
+        const matchPhone = cleanPhone && cPhone && cleanPhone.length >= 7 && cleanPhone === cPhone;
+        const matchName = c.nombre.trim().toLowerCase() === data.solicitante.trim().toLowerCase();
+        return matchPhone || matchName;
+      });
+
+      const obsInicial = [
+        {
+          id: `obs-${Date.now()}`,
+          fecha: new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short' }),
+          hora: new Date().toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' }),
+          autor: creadorNombre,
+          texto: `Contacto registrado automáticamente por inicio de gestión con folio ${folio} (${data.asunto || 'Petición'}).`,
+          esDiputado: true,
+        }
+      ];
+
+      if (!found) {
+        await db.insert(directorioContactos).values({
+          officeId,
+          nombre: data.solicitante.trim(),
+          cargo: 'Ciudadano Solicitante',
+          organizacion: data.colonia ? `${data.colonia}, ${data.municipio || 'Centro'}` : 'Atención Ciudadana',
+          categoria: 'Ciudadano / Gestión',
+          telefono: data.telefono?.trim() || 'Sin teléfono',
+          email: data.email?.trim() || null,
+          foto: data.avatarUrl || null,
+          direccion: data.direccion?.trim() || (data.colonia ? `${data.colonia}, ${data.municipio || ''}` : null),
+          observaciones: JSON.stringify(obsInicial),
+        });
+      } else {
+        const updates: any = {};
+        if (!found.foto && data.avatarUrl) updates.foto = data.avatarUrl;
+        if (!found.categoria || found.categoria === 'Gabinete Estatal') {
+          updates.categoria = 'Ciudadano / Gestión';
+        }
+        if (Object.keys(updates).length > 0) {
+          await db.update(directorioContactos).set(updates).where(eq(directorioContactos.id, found.id));
+        }
+      }
+      revalidatePath('/directorio');
+    } catch (dirErr) {
+      console.warn('Could not auto-register contact in Directorio for gestion:', dirErr);
+    }
+
     revalidatePath('/gestiones');
     revalidatePath('/atencion-ciudadana');
     revalidatePath('/dashboard');
@@ -631,7 +686,8 @@ Instrucciones:
 1. Determina si la imagen corresponde a una credencial para votar mexicana (INE / IFE) auténtica y legible.
 2. Si NO es una credencial del INE o la imagen es ilegible/borrosa, pon "esCredencialIneValida": false y deja los demás campos vacíos.
 3. Si SÍ es una credencial del INE, pon "esCredencialIneValida": true y extrae con total exactitud todos los campos visibles.
-4. Responde ÚNICAMENTE con un JSON válido sin markdown, sin backticks y sin texto adicional.
+4. LOCALIZA LA FOTOGRAFÍA O RETRATO DEL CIUDADANO en la credencial y devuelve sus coordenadas de recuadro (bounding box) normalizadas de 0 a 1000 en el campo "fotoBoundingBox": [ymin, xmin, ymax, xmax] (donde ymin es el borde superior del rostro/foto, xmin el izquierdo, ymax el inferior y xmax el derecho).
+5. Responde ÚNICAMENTE con un JSON válido sin markdown, sin backticks y sin texto adicional.
 
 Estructura JSON requerida:
 {
@@ -649,7 +705,8 @@ Estructura JSON requerida:
   "estado": "Estado (ej: TABASCO)",
   "codigoPostal": "Código postal de 5 dígitos",
   "direccionCompleta": "Dirección completa concatenada",
-  "vigencia": "Año de vigencia"
+  "vigencia": "Año de vigencia",
+  "fotoBoundingBox": [ymin, xmin, ymax, xmax]
 }`;
 
     const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, '');

@@ -34,6 +34,60 @@ const TIPOS_GESTION_BASE = [
   'Medio Ambiente'
 ];
 
+
+/**
+ * Recorta con HTML Canvas la fotografía / rostro del ciudadano detectada por IA en la credencial
+ */
+const cropCitizenPhoto = (base64: string, box?: [number, number, number, number] | null): Promise<string> => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') return resolve(base64);
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const naturalW = img.naturalWidth || img.width;
+        const naturalH = img.naturalHeight || img.height;
+
+        // Bounding box por defecto para credencial INE mexicana (cuadrante izquierdo donde va la foto)
+        let ymin = 200, xmin = 40, ymax = 780, xmax = 350;
+        if (box && Array.isArray(box) && box.length === 4) {
+          const [bYmin, bXmin, bYmax, bXmax] = box;
+          if (bYmax > bYmin && bXmax > bXmin) {
+            // Añadir margen sutil para buen encuadre
+            ymin = Math.max(0, bYmin - 15);
+            xmin = Math.max(0, bXmin - 15);
+            ymax = Math.min(1000, bYmax + 15);
+            xmax = Math.min(1000, bXmax + 15);
+          }
+        }
+
+        const sx = Math.max(0, (xmin / 1000) * naturalW);
+        const sy = Math.max(0, (ymin / 1000) * naturalH);
+        const sw = Math.min(naturalW - sx, ((xmax - xmin) / 1000) * naturalW);
+        const sh = Math.min(naturalH - sy, ((ymax - ymin) / 1000) * naturalH);
+
+        if (sw > 30 && sh > 30) {
+          const canvas = document.createElement('canvas');
+          canvas.width = 320;
+          canvas.height = 320;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 320, 320);
+            const cropped = canvas.toDataURL('image/jpeg', 0.88);
+            resolve(cropped);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Error cropping citizen photo with canvas:', err);
+      }
+      resolve(base64);
+    };
+    img.onerror = () => resolve(base64);
+    img.src = base64;
+  });
+};
+
 export default function NuevaGestionPage() {
   const router = useRouter();
 
@@ -43,6 +97,8 @@ export default function NuevaGestionPage() {
   const [telefono, setTelefono] = useState('');
   const [municipio, setMunicipio] = useState('Centro (Villahermosa)');
   const [curp, setCurp] = useState('');
+  const [claveElector, setClaveElector] = useState('');
+  const [fullIneBase64, setFullIneBase64] = useState<string | null>(null);
   const [direccion, setDireccion] = useState('');
   const [colonia, setColonia] = useState('');
   const [seccionElectoral, setSeccionElectoral] = useState('');
@@ -93,6 +149,17 @@ export default function NuevaGestionPage() {
         if (d.calle || d.direccionCompleta) setDireccion(d.calle || d.direccionCompleta);
         if (d.colonia) setColonia(d.colonia);
         if (d.municipio) setMunicipio(d.municipio);
+        if (d.claveElector) setClaveElector(d.claveElector);
+        
+        // Mapear con IA el rostro/foto del ciudadano de la credencial
+        try {
+          const croppedFace = await cropCitizenPhoto(base64, d.fotoBoundingBox);
+          setAvatarUrl(croppedFace);
+        } catch (cropErr) {
+          console.warn('Could not crop citizen face:', cropErr);
+          setAvatarUrl(base64);
+        }
+
         setLastExtractedCitizen(nombreFinal || 'Ciudadano');
         setOcrSuccess(true);
         setGeminiApiKeyStatus({ configured: true });
@@ -118,6 +185,7 @@ export default function NuevaGestionPage() {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = reader.result as string;
+        setFullIneBase64(base64);
         setAvatarUrl(base64);
         await processIneImage(base64, file.type || 'image/jpeg');
       };
@@ -166,7 +234,7 @@ export default function NuevaGestionPage() {
         asunto: descripcion || `Solicitud de ${tipoFinal}`,
         solicitante: nombre.trim(),
         curp: curp.trim(),
-        claveElector: '',
+        claveElector: claveElector.trim(),
         seccionElectoral: seccionElectoral.trim(),
         direccion: direccion.trim(),
         colonia: colonia.trim(),
@@ -177,7 +245,7 @@ export default function NuevaGestionPage() {
         categoria: tipoFinal,
         estatus: 'Recibida',
         dependenciaCanalizada: dependenciaDestino.trim(),
-        documentos: avatarUrl ? [
+        documentos: fullIneBase64 || avatarUrl ? [
           {
             id: `doc-${Date.now()}`,
             nombre: 'Credencial_Elector_INE.jpg',
@@ -379,15 +447,29 @@ export default function NuevaGestionPage() {
         )}
 
         {avatarUrl && (
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-blue-600 shrink-0 shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={avatarUrl} alt="Rostro extraído" className="h-full w-full object-cover" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-xl border border-blue-200 shadow-2xs animate-in fade-in">
+            <div className="flex items-center gap-3.5">
+              <div className="h-14 w-14 rounded-full overflow-hidden border-2 border-blue-600 shrink-0 shadow-sm ring-2 ring-blue-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={avatarUrl} alt="Foto del ciudadano extraída" className="h-full w-full object-cover" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Fotografía del Ciudadano Mapeada por IA</span>
+                </span>
+                <span className="text-[11px] text-slate-600 block leading-relaxed">
+                  Rostro identificado e integrado automáticamente como foto del expediente y del contacto en el directorio.
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-xs font-bold text-slate-900 block">Fotografía Oficial Extraída del INE</span>
-              <span className="text-xs text-slate-500 block">Se registrará como avatar oficial del expediente digital.</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="self-start sm:self-center text-[11px] font-semibold text-blue-700 hover:text-blue-800 bg-white hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 shadow-2xs transition-colors shrink-0"
+            >
+              Cambiar Foto
+            </button>
           </div>
         )}
       </div>
@@ -427,7 +509,7 @@ export default function NuevaGestionPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">CURP</label>
             <input
@@ -435,6 +517,17 @@ export default function NuevaGestionPage() {
               value={curp}
               onChange={(e) => setCurp(e.target.value)}
               placeholder="Ej: MOHJ820415HTBLRN09"
+              className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-slate-900 uppercase font-mono"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Clave de Elector</label>
+            <input
+              type="text"
+              value={claveElector}
+              onChange={(e) => setClaveElector(e.target.value.toUpperCase())}
+              placeholder="Ej: MRHNJN82041527H900"
+              maxLength={18}
               className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-slate-900 uppercase font-mono"
             />
           </div>
