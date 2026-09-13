@@ -1,6 +1,6 @@
 'use server';
 
-import { db, gestiones, iniciativas, iaGenerations, type NewGestion, type NewIniciativa } from '@/db';
+import { db, gestiones, iniciativas, iaGenerations, systemSettings, type NewGestion, type NewIniciativa } from '@/db';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getActiveOfficeId } from '@/lib/session-office';
@@ -296,89 +296,134 @@ export async function addOficioGestion(gestionId: string, oficio: {
 }
 
 // -------------------------------------------------------------
+// GEMINI API KEY CONFIGURATION
+// -------------------------------------------------------------
+export async function getGeminiApiKeyStatusAction() {
+  const envKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (envKey && envKey.trim().length > 10) return { configured: true, source: 'env' };
+
+  try {
+    const settings = await db.select().from(systemSettings).where(eq(systemSettings.id, 'global')).limit(1);
+    if (settings[0]?.geminiApiKey && settings[0].geminiApiKey.trim().length > 10) {
+      return { configured: true, source: 'db' };
+    }
+  } catch {}
+
+  return { configured: false };
+}
+
+export async function saveGeminiApiKeyAction(apiKey: string) {
+  try {
+    const cleanKey = apiKey.trim();
+    if (!cleanKey || cleanKey.length < 10) {
+      return { success: false, error: 'Clave de API inválida' };
+    }
+
+    await db
+      .insert(systemSettings)
+      .values({
+        id: 'global',
+        geminiApiKey: cleanKey,
+      })
+      .onConflictDoUpdate({
+        target: systemSettings.id,
+        set: {
+          geminiApiKey: cleanKey,
+          updatedAt: new Date(),
+        },
+      });
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error saving Gemini API key:', err);
+    return { success: false, error: 'No se pudo guardar la clave de API' };
+  }
+}
+
+// -------------------------------------------------------------
 // EXTRAER DATOS DE CREDENCIAL INE (GEMINI VISION OCR)
 // -------------------------------------------------------------
 export async function extractIneDataAction(fileBase64: string, mimeType: string = 'image/jpeg') {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  let apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
-  if (apiKey) {
+  if (!apiKey || apiKey.trim().length < 10) {
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      const prompt = `Eres un sistema OCR especializado de alta precisión para documentos oficiales mexicanos.
-Analiza detenidamente la imagen de esta Credencial para Votar del Instituto Nacional Electoral (INE / IFE) de México.
-Extrae con total exactitud todos los campos legibles y responde ÚNICAMENTE con un objeto JSON válido (sin formato markdown ni texto adicional).
+      const settings = await db.select().from(systemSettings).where(eq(systemSettings.id, 'global')).limit(1);
+      if (settings[0]?.geminiApiKey && settings[0].geminiApiKey.trim().length > 10) {
+        apiKey = settings[0].geminiApiKey.trim();
+      }
+    } catch {}
+  }
 
-Estructura requerida:
+  if (!apiKey || apiKey.trim().length < 10) {
+    return {
+      success: false,
+      error: 'NO_API_KEY',
+      message: 'Se requiere configurar una clave de Google Gemini (GEMINI_API_KEY) para escanear y extraer datos en vivo de credenciales reales.',
+    };
+  }
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = `Eres un sistema OCR de inteligencia artificial especializado en documentos oficiales de identificación de México (Credencial para Votar INE / IFE emitidas por el Instituto Nacional Electoral).
+Analiza detalladamente la fotografía o documento proporcionado.
+Extrae ÚNICAMENTE la información real y legible visible en el documento. Responde EXCLUSIVAMENTE con un JSON válido sin markdown, sin backticks y sin explicaciones.
+
+Estructura JSON:
 {
-  "nombre": "Nombres del titular (ej: GUADALUPE DEL CARMEN)",
-  "primerApellido": "Primer apellido / Paterno (ej: RAMOS)",
-  "segundoApellido": "Segundo apellido / Materno (ej: JIMENEZ)",
-  "nombreCompleto": "Nombre completo legible en orden: Nombres ApellidoPaterno ApellidoMaterno",
-  "curp": "Clave Única de Registro de Población (18 caracteres)",
-  "claveElector": "Clave de Elector (18 caracteres)",
-  "seccionElectoral": "Número de sección electoral (4 dígitos)",
-  "calle": "Calle y número exterior / interior",
-  "colonia": "Colonia o barrio",
+  "nombre": "Nombres del ciudadano",
+  "primerApellido": "Primer apellido / Paterno",
+  "segundoApellido": "Segundo apellido / Materno",
+  "nombreCompleto": "Nombre completo en orden: Nombres PrimerApellido SegundoApellido",
+  "curp": "CURP de 18 caracteres",
+  "claveElector": "Clave de Elector de 18 caracteres",
+  "seccionElectoral": "Sección electoral de 4 dígitos",
+  "calle": "Calle y número exterior/interior",
+  "colonia": "Colonia o localidad",
   "municipio": "Municipio o Alcaldía",
   "estado": "Estado (ej: TABASCO)",
-  "codigoPostal": "Código Postal (5 dígitos)",
+  "codigoPostal": "Código postal de 5 dígitos",
   "direccionCompleta": "Dirección completa concatenada",
-  "vigencia": "Año de vigencia (ej: 2024-2034)"
+  "vigencia": "Año de vigencia"
 }
 Si un campo no es visible o no se puede leer con seguridad, deja una cadena vacía "".`;
 
-      const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
+    const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                inlineData: {
-                  mimeType,
-                  data: cleanBase64,
-                },
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType,
+                data: cleanBase64,
               },
-              { text: prompt },
-            ],
-          },
-        ],
-      });
+            },
+            { text: prompt },
+          ],
+        },
+      ],
+    });
 
-      const text = response.text || '';
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return { success: true, data: parsed };
-      }
-    } catch (err) {
-      console.warn('Error en Gemini Vision INE extraction:', err);
+    const text = response.text || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return { success: true, data: parsed };
+    } else {
+      return { success: false, error: 'PARSE_ERROR', message: 'No se pudieron extraer datos legibles de la imagen proporcionada.' };
     }
+  } catch (err: any) {
+    console.error('Error en Gemini Vision INE extraction:', err);
+    return {
+      success: false,
+      error: 'GEMINI_ERROR',
+      message: err?.message || 'Error al conectar con la API de Google Gemini.',
+    };
   }
-
-  // Motor de contingencia con datos estructurados de alta fidelidad
-  return {
-    success: true,
-    data: {
-      nombre: 'Guadalupe del Carmen',
-      primerApellido: 'Ramos',
-      segundoApellido: 'Jiménez',
-      nombreCompleto: 'Guadalupe del Carmen Ramos Jiménez',
-      curp: 'RAJG850619MTBLNR01',
-      claveElector: 'RMJMGN85061927M400',
-      seccionElectoral: '0342',
-      calle: 'Av. Gregorio Méndez Magaña #1420',
-      colonia: 'Col. Nueva Villahermosa',
-      municipio: 'Centro (Villahermosa)',
-      estado: 'Tabasco',
-      codigoPostal: '86070',
-      direccionCompleta: 'Av. Gregorio Méndez Magaña #1420, Col. Nueva Villahermosa, C.P. 86070, Centro, Tabasco',
-      vigencia: '2024-2034',
-    },
-    isFallback: true,
-  };
 }
 
 // -------------------------------------------------------------

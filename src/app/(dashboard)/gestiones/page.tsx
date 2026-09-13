@@ -9,7 +9,9 @@ import {
   addNotaGestion, 
   addDocumentoGestion, 
   addOficioGestion, 
-  extractIneDataAction 
+  extractIneDataAction,
+  saveGeminiApiKeyAction,
+  getGeminiApiKeyStatusAction
 } from '@/app/actions/gestiones';
 import { createGestionDriveFolderAction, getGoogleDriveStatusAction } from '@/app/actions/drive';
 import { getCurrentTimeMexicoCity, MEXICO_TIMEZONE } from '@/lib/date-utils';
@@ -287,6 +289,11 @@ export default function GestionesPage() {
   // OCR state
   const [isOcrProcessing, setIsOcrProcessing] = useState(false);
   const [ocrSuccess, setOcrSuccess] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [inputGeminiKey, setInputGeminiKey] = useState('');
+  const [savingKey, setSavingKey] = useState(false);
+  const [pendingIneFile, setPendingIneFile] = useState<{ base64: string; type: string } | null>(null);
 
   // Upload in dossier state
   const [isUploadingDossierDoc, setIsUploadingDossierDoc] = useState(false);
@@ -309,7 +316,6 @@ export default function GestionesPage() {
   const [nuevaPlantillaDest, setNuevaPlantillaDest] = useState('');
   const [nuevaPlantillaCargo, setNuevaPlantillaCargo] = useState('');
   const [nuevaPlantillaDesc, setNuevaPlantillaDesc] = useState('');
-
   // Drag in Kanban
   const [draggedGestionId, setDraggedGestionId] = useState<string | null>(null);
 
@@ -370,40 +376,75 @@ export default function GestionesPage() {
     }, 800);
   };
 
+  const processIneImage = async (base64: string, fileType: string) => {
+    setIsOcrProcessing(true);
+    setOcrError(null);
+    setOcrSuccess(false);
+
+    try {
+      const res = await extractIneDataAction(base64, fileType || 'image/jpeg');
+      if (res.success && res.data) {
+        const d = res.data;
+        if (d.nombreCompleto) {
+          setNombre(d.nombreCompleto);
+        } else if (d.nombre) {
+          setNombre(`${d.nombre} ${d.primerApellido || ''} ${d.segundoApellido || ''}`.trim());
+        }
+        if (d.curp) setCurp(d.curp);
+        if (d.seccionElectoral) setSeccionElectoral(d.seccionElectoral);
+        if (d.calle || d.direccionCompleta) setDireccion(d.calle || d.direccionCompleta);
+        if (d.colonia) setColonia(d.colonia);
+        if (d.municipio) setMunicipio(d.municipio);
+        setOcrSuccess(true);
+      } else if (res.error === 'NO_API_KEY') {
+        setPendingIneFile({ base64, type: fileType });
+        setShowKeyModal(true);
+      } else {
+        setOcrError(res.message || 'No se pudieron extraer los datos con IA.');
+      }
+    } catch (err: any) {
+      console.warn('Error processing INE file:', err);
+      setOcrError('Ocurrió un error al procesar la imagen con IA.');
+    } finally {
+      setIsOcrProcessing(false);
+    }
+  };
+
   const handleFileUploadRegistration = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIsOcrProcessing(true);
     try {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = reader.result as string;
         setAvatarUrl(base64);
-
-        const res = await extractIneDataAction(base64, file.type || 'image/jpeg');
-        if (res.success && res.data) {
-          const d = res.data;
-          if (d.nombreCompleto) {
-            setNombre(d.nombreCompleto);
-          } else if (d.nombre) {
-            setNombre(`${d.nombre} ${d.primerApellido || ''} ${d.segundoApellido || ''}`.trim());
-          }
-          if (d.curp) setCurp(d.curp);
-          if (d.seccionElectoral) setSeccionElectoral(d.seccionElectoral);
-          if (d.calle || d.direccionCompleta) setDireccion(d.calle || d.direccionCompleta);
-          if (d.colonia) setColonia(d.colonia);
-          if (d.municipio) setMunicipio(d.municipio);
-          setOcrSuccess(true);
-        }
-        setIsOcrProcessing(false);
-      };
-      reader.onerror = () => {
-        setIsOcrProcessing(false);
+        await processIneImage(base64, file.type || 'image/jpeg');
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      console.warn('Error processing INE file:', err);
-      setIsOcrProcessing(false);
+      console.warn('Error reading file:', err);
+    }
+  };
+
+  const handleSaveGeminiKeyAndRetry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputGeminiKey.trim()) return;
+    setSavingKey(true);
+    try {
+      const res = await saveGeminiApiKeyAction(inputGeminiKey.trim());
+      if (res.success) {
+        setShowKeyModal(false);
+        if (pendingIneFile) {
+          await processIneImage(pendingIneFile.base64, pendingIneFile.type);
+          setPendingIneFile(null);
+        }
+      } else {
+        alert(res.error || 'No se pudo guardar la clave');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingKey(false);
     }
   };
 
@@ -1682,6 +1723,67 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                 Cerrar Expediente
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      
+      {/* MODAL API KEY DE GEMINI */}
+      {showKeyModal && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#121824] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Clave Google Gemini Requerida</h3>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Para visión artificial y OCR en vivo de INE</p>
+                </div>
+              </div>
+              <button onClick={() => setShowKeyModal(false)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+
+            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+              Para analizar fotos reales de credenciales del INE en tiempo real, ingresa tu clave API gratuita de <strong>Google Gemini</strong>. Se guardará de forma segura en la configuración del sistema.
+            </p>
+
+            <form onSubmit={handleSaveGeminiKeyAndRetry} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">
+                  GEMINI_API_KEY / Google AI Studio Key
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={inputGeminiKey}
+                  onChange={(e) => setInputGeminiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-mono"
+                />
+                <span className="text-[10px] text-gray-400 mt-1 block">
+                  Puedes obtener una clave gratuita en <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" className="text-blue-600 underline">aistudio.google.com</a>
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowKeyModal(false)}
+                  className="px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 rounded-lg"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingKey || !inputGeminiKey.trim()}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg shadow-sm"
+                >
+                  {savingKey ? 'Guardando...' : 'Guardar y Escanear INE'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -361,6 +361,7 @@ export async function ensureDatabaseTables(connectionString: string) {
         platform_name TEXT NOT NULL DEFAULT 'LegisLab SaaS',
         evolution_api_url TEXT DEFAULT 'https://evoapi.rubenroque.com.mx',
         evolution_api_key TEXT DEFAULT '429683C4C977415CAAFCCE10F7D57E11',
+        gemini_api_key TEXT,
         maintenance_mode BOOLEAN DEFAULT false NOT NULL,
         global_announcement TEXT,
         announcement_type TEXT DEFAULT 'info',
@@ -369,6 +370,8 @@ export async function ensureDatabaseTables(connectionString: string) {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       )
     `;
+
+    await sql`ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS gemini_api_key TEXT`;
 
     // 13. Audit Logs
     await sql`

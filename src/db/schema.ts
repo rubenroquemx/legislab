@@ -393,6 +393,7 @@ export const systemSettings = pgTable('system_settings', {
   platformName: text('platform_name').notNull().default('LegisLab SaaS'),
   evolutionApiUrl: text('evolution_api_url').default('https://evoapi.rubenroque.com.mx'),
   evolutionApiKey: text('evolution_api_key').default('429683C4C977415CAAFCCE10F7D57E11'),
+  geminiApiKey: text('gemini_api_key'),
   maintenanceMode: boolean('maintenance_mode').default(false).notNull(),
   globalAnnouncement: text('global_announcement'),
   announcementType: text('announcement_type').default('info'), // 'info' | 'warning' | 'alert'
