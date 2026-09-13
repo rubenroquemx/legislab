@@ -209,6 +209,7 @@ export const gestiones = pgTable('gestiones', {
   notas: text('notas'), // JSON array de NotaObservacion
   notasInternas: text('notas_internas'),
   responsableId: text('responsable_id').references(() => users.id, { onDelete: 'set null' }),
+  asignados: text('asignados'), // JSON array de usuarios asignados [{ id, name, email, cargo, image }]
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
 });

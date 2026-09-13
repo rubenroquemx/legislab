@@ -23,6 +23,9 @@ import {
   Pencil,
   History,
   UserCheck,
+  Users,
+  Check,
+  Plus,
   X,
   AlertOctagon
 } from 'lucide-react';
@@ -32,6 +35,7 @@ import {
   addNotaGestion,
   deleteGestion,
   updateGestionResponsableAction,
+  updateGestionAsignadosAction,
   updateGestionDataAction
 } from '@/app/actions/gestiones';
 import { getOfficeUsersAction } from '@/app/actions/usuarios';
@@ -59,6 +63,7 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState(true);
   const [usuariosDespacho, setUsuariosDespacho] = useState<any[]>([]);
   const [historial, setHistorial] = useState<EventoHistorial[]>([]);
+  const [menuAsignarOpen, setMenuAsignarOpen] = useState(false);
 
   // Modales
   const [modalEditarOpen, setModalEditarOpen] = useState(false);
@@ -234,12 +239,23 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
               ];
             }
 
+            let asigs: any[] = [];
+            if (found.asignados) {
+              try { asigs = typeof found.asignados === 'string' ? JSON.parse(found.asignados) : found.asignados; } catch {}
+            } else if (meta.asignados) {
+              asigs = Array.isArray(meta.asignados) ? meta.asignados : [];
+            } else if (found.responsableId && usersRes.users) {
+              const matched = usersRes.users.find((u: any) => u.id === found.responsableId);
+              if (matched) asigs = [{ id: matched.id, name: matched.name, cargo: matched.cargo, image: matched.image }];
+            }
+
             setHistorial(histList);
             setGestion({
               ...found,
               estatus: normalizeEstadoGestion(found.estatus),
               documentos: Array.isArray(docs) ? docs : [],
               notas: Array.isArray(nts) ? nts : [],
+              asignados: asigs,
               responsableId: found.responsableId || meta.responsableId || null,
               responsableNombre: meta.responsableNombre || null,
               creadorNombre: meta.creadorNombre || null,
@@ -257,6 +273,122 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
     }
     load();
   }, [resolvedParams.id]);
+
+  // Sincronización silenciosa en segundo plano tipo AJAX cada 5 segundos
+  useEffect(() => {
+    if (!resolvedParams?.id) return;
+    let isSubscribed = true;
+
+    const silentSync = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const res = await getGestiones();
+        if (!isSubscribed || !res.success || !res.data) return;
+        const found = res.data.find((g: any) => g.id === resolvedParams.id);
+        if (!found) return;
+
+        let docs: any[] = [];
+        if (found.documentos) {
+          try { docs = typeof found.documentos === 'string' ? JSON.parse(found.documentos) : found.documentos; } catch {}
+        }
+        let nts: any[] = [];
+        if (found.notas) {
+          try { nts = typeof found.notas === 'string' ? JSON.parse(found.notas) : found.notas; } catch {}
+        }
+        let meta: any = {};
+        if (found.notasInternas) {
+          try { meta = JSON.parse(found.notasInternas); } catch {}
+        }
+        let asigs: any[] = [];
+        if (found.asignados) {
+          try { asigs = typeof found.asignados === 'string' ? JSON.parse(found.asignados) : found.asignados; } catch {}
+        } else if (meta.asignados) {
+          asigs = Array.isArray(meta.asignados) ? meta.asignados : [];
+        }
+
+        setGestion((prev: any) => {
+          if (!prev) return prev;
+          const prevNotasLen = prev.notas?.length || 0;
+          const prevDocsLen = prev.documentos?.length || 0;
+          const prevAsigsLen = prev.asignados?.length || 0;
+
+          if (
+            prev.estatus !== found.estatus ||
+            prevNotasLen !== nts.length ||
+            prevDocsLen !== docs.length ||
+            prevAsigsLen !== asigs.length ||
+            prev.responsableId !== found.responsableId
+          ) {
+            return {
+              ...prev,
+              ...found,
+              estatus: normalizeEstadoGestion(found.estatus),
+              documentos: Array.isArray(docs) ? docs : [],
+              notas: Array.isArray(nts) ? nts : [],
+              asignados: asigs,
+              responsableId: found.responsableId || meta.responsableId || null,
+              responsableNombre: meta.responsableNombre || null,
+            };
+          }
+          return prev;
+        });
+
+        if (Array.isArray(meta.historial) && meta.historial.length > 0) {
+          setHistorial(meta.historial);
+        }
+      } catch (err) {
+        console.warn('Silent sync detail error:', err);
+      }
+    };
+
+    const interval = setInterval(silentSync, 5000);
+    const onVisChange = () => {
+      if (document.visibilityState === 'visible') silentSync();
+    };
+    document.addEventListener('visibilitychange', onVisChange);
+    window.addEventListener('focus', silentSync);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisChange);
+      window.removeEventListener('focus', silentSync);
+    };
+  }, [resolvedParams?.id]);
+
+  const handleToggleAsignado = async (targetUser: any) => {
+    if (!gestion) return;
+    const currentAsignados: any[] = Array.isArray(gestion.asignados) ? [...gestion.asignados] : [];
+    const exists = currentAsignados.some(a => a.id === targetUser.id);
+    const newAsignados = exists
+      ? currentAsignados.filter(a => a.id !== targetUser.id)
+      : [...currentAsignados, { id: targetUser.id, name: targetUser.name, cargo: targetUser.cargo, image: targetUser.image }];
+
+    const now = new Date();
+    const accionTexto = newAsignados.length > 0
+      ? `actualizó las asignaciones a: ${newAsignados.map(a => a.name).join(', ')}.`
+      : 'removió todas las asignaciones de esta gestión.';
+
+    const nuevoEvento: EventoHistorial = {
+      id: `hist-${Date.now()}`,
+      fechaDisplay: formatFechaHistorial(now),
+      horaDisplay: formatHoraHistorial(now),
+      usuario: currentUserName,
+      accion: accionTexto,
+      tipo: 'asignacion',
+      createdAt: now.toISOString(),
+    };
+
+    setHistorial(prev => [nuevoEvento, ...prev]);
+    setGestion((prev: any) => ({
+      ...prev,
+      asignados: newAsignados,
+      responsableId: newAsignados[0]?.id || null,
+      responsableNombre: newAsignados.map(a => a.name).join(', ') || null,
+    }));
+
+    await updateGestionAsignadosAction(gestion.id, newAsignados, currentUserName);
+  };
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -709,23 +841,108 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-700">Asignado a:</span>
-              <div className="flex items-center gap-1.5">
-                <UserCheck className="h-4 w-4 text-blue-600 shrink-0" />
-                <select
-                  value={gestion.responsableId || ''}
-                  onChange={(e) => handleCambiarResponsable(e.target.value)}
-                  className="text-xs font-medium bg-slate-50 hover:bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 shadow-2xs transition-all max-w-[240px]"
-                >
-                  <option value="">Sin Asignar</option>
-                  {usuariosDespacho.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} {u.cargo ? `(${u.cargo})` : ''}
-                    </option>
-                  ))}
-                </select>
+            <div className="relative flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                <Users className="h-4 w-4 text-blue-600 shrink-0" />
+                <span>Asignado a:</span>
+              </span>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                {Array.isArray(gestion.asignados) && gestion.asignados.length > 0 ? (
+                  gestion.asignados.map((a: any) => (
+                    <span
+                      key={a.id}
+                      className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-900 border border-blue-200/80 px-2.5 py-1 rounded-xl text-xs font-medium shadow-2xs"
+                    >
+                      {a.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.image} alt="" className="w-4 h-4 rounded-full object-cover" />
+                      ) : (
+                        <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
+                          {a.name?.slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                      <span>{a.name}</span>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAsignado(a)}
+                          className="hover:text-red-600 transition-colors ml-0.5 text-slate-400 p-0.5"
+                          title={`Remover a ${a.name}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400 italic">Sin asignar</span>
+                )}
+
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => setMenuAsignarOpen(!menuAsignarOpen)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl border border-dashed border-slate-300 hover:border-blue-500 text-slate-600 hover:text-blue-600 bg-slate-50/70 hover:bg-blue-50/50 transition-all shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Asignar integrantes</span>
+                  </button>
+                )}
               </div>
+
+              {menuAsignarOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setMenuAsignarOpen(false)} 
+                  />
+                  <div className="absolute top-full left-0 mt-2 z-50 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 space-y-1 animate-in fade-in zoom-in-95">
+                    <div className="px-2 py-1 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+                      <span>Integrantes del Despacho</span>
+                      <button 
+                        onClick={() => setMenuAsignarOpen(false)}
+                        className="text-slate-400 hover:text-slate-700 p-0.5 rounded"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto space-y-1 pt-1.5">
+                      {usuariosDespacho.map((u) => {
+                        const isAssigned = Array.isArray(gestion.asignados) && gestion.asignados.some((a: any) => a.id === u.id);
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => handleToggleAsignado(u)}
+                            className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-colors ${
+                              isAssigned ? 'bg-blue-50 text-blue-950 font-semibold' : 'hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {u.image ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={u.image} alt="" className="w-6 h-6 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center">
+                                  {u.name?.slice(0, 2).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="truncate">{u.name}</p>
+                                <p className="text-[10px] text-slate-400 font-normal truncate">{u.cargo || 'Integrante'}</p>
+                              </div>
+                            </div>
+                            {isAssigned && (
+                              <Check className="w-4 h-4 text-blue-600 shrink-0 ml-1.5" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

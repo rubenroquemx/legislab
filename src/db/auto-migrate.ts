@@ -191,6 +191,7 @@ export async function ensureDatabaseTables(connectionString: string) {
     await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS documentos TEXT`;
     await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS oficios TEXT`;
     await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS notas TEXT`;
+    await sql`ALTER TABLE gestiones ADD COLUMN IF NOT EXISTS asignados TEXT`;
 
     // 5. Tareas
     await sql`

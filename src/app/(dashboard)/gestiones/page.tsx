@@ -118,9 +118,9 @@ export default function GestionesPage() {
   // Drag in Kanban
   const [draggedGestionId, setDraggedGestionId] = useState<string | null>(null);
 
-  const loadGestiones = async () => {
+  const loadGestiones = async (silent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await getGestiones();
       if (res.success && res.data && res.data.length > 0) {
         const mapped: GestionCiudadana[] = res.data.map((d: any) => {
@@ -226,13 +226,13 @@ export default function GestionesPage() {
         const existingTipos = mapped.map(m => m.tipo).filter(Boolean);
         const uniqueTipos = Array.from(new Set([...TIPOS_GESTION_BASE, ...existingTipos]));
         setTiposGestion(uniqueTipos);
-      } else {
+      } else if (!silent) {
         setGestiones([]);
       }
     } catch (err) {
       console.warn('Error loading gestiones:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -241,6 +241,28 @@ export default function GestionesPage() {
     getGoogleDriveStatusAction()
       .then(res => setDriveConnected(Boolean(res?.connected)))
       .catch(() => setDriveConnected(false));
+
+    // Polling silencioso en segundo plano tipo AJAX cada 6 segundos
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadGestiones(true);
+      }
+    }, 6000);
+
+    const onVisChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadGestiones(true);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisChange);
+    const onFocus = () => loadGestiones(true);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisChange);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   // Filter logic con Rango de Fechas estilo Airbnb

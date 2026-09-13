@@ -486,6 +486,108 @@ export async function uploadDocumentToGestionDriveAction(gestionId: string, form
 }
 
 /**
+ * Sube un archivo base64 (ej: credencial INE al registrar) a la carpeta de Google Drive de una gestión
+ */
+export async function uploadBase64DocumentToGestionDriveAction(
+  gestionId: string, 
+  base64: string, 
+  fileName: string, 
+  mimeType: string = 'image/jpeg', 
+  officeId?: string,
+  usuarioActual?: string
+) {
+  try {
+    const cleanBase64 = base64.replace(/^data:[^;]+;base64,/, '');
+    const buffer = Buffer.from(cleanBase64, 'base64');
+
+    const [gestion] = await db
+      .select()
+      .from(gestiones)
+      .where(eq(gestiones.id, gestionId))
+      .limit(1);
+
+    if (!gestion) {
+      return { success: false, error: 'Gestión no encontrada' };
+    }
+
+    const drive = await getValidDriveTokenForOffice(officeId || gestion.officeId);
+    if (!drive || !drive.rootFolderId) {
+      return { success: false, connected: false, error: 'Google Drive no está conectado al despacho' };
+    }
+
+    const ensured = await ensureGestionDriveFolderAction(gestionId, officeId);
+    if (!ensured.success || !ensured.folderId) {
+      return { success: false, error: ensured.error || 'No se pudo crear o localizar la carpeta de Drive' };
+    }
+
+    const uploaded = await uploadFileToDriveFolder(
+      drive.accessToken,
+      ensured.folderId,
+      fileName,
+      mimeType,
+      buffer
+    );
+
+    if (!uploaded) {
+      return { success: false, error: 'No se pudo subir el archivo a Google Drive' };
+    }
+
+    let currentDocs: any[] = [];
+    if (gestion.documentos) {
+      try {
+        currentDocs = typeof gestion.documentos === 'string' ? JSON.parse(gestion.documentos) : gestion.documentos;
+      } catch {}
+    }
+
+    // Si ya existe un documento con ese nombre o ID, filtrarlo para reemplazarlo
+    currentDocs = currentDocs.filter(d => d.nombre !== fileName && d.id !== uploaded.fileId);
+
+    const newDoc = {
+      id: uploaded.fileId,
+      nombre: fileName,
+      tipo: mimeType,
+      fecha: new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
+      tamano: `${(buffer.length / (1024 * 1024)).toFixed(2)} MB`,
+      urlDrive: uploaded.webViewLink,
+      webContentLink: uploaded.webContentLink,
+      source: 'google-drive',
+    };
+
+    currentDocs.unshift(newDoc);
+
+    const { metaStr: updatedMeta } = appendHistorialToMeta(gestion.notasInternas, {
+      usuario: usuarioActual || 'Sistema',
+      accion: `subió "${fileName}" al expediente digital de Google Drive.`,
+      tipo: 'documento',
+    });
+
+    await db
+      .update(gestiones)
+      .set({
+        documentos: JSON.stringify(currentDocs),
+        driveFolderUrl: ensured.folderUrl || gestion.driveFolderUrl,
+        notasInternas: updatedMeta,
+        updatedAt: new Date(),
+      })
+      .where(eq(gestiones.id, gestion.id));
+
+    revalidatePath(`/gestiones/${gestion.id}`);
+    revalidatePath('/gestiones');
+
+    return {
+      success: true,
+      connected: true,
+      file: newDoc,
+      folderUrl: ensured.folderUrl,
+    };
+  } catch (error: any) {
+    console.error('Error uploading base64 document to Drive:', error);
+    return { success: false, error: error?.message || 'Error al procesar subida a Drive' };
+  }
+}
+
+
+/**
  * Elimina un documento del expediente de una gestión tanto de Google Drive como de la base de datos
  */
 export async function deleteDocumentFromGestionDriveAction(

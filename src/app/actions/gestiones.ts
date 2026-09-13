@@ -5,7 +5,7 @@ import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getActiveOfficeId } from '@/lib/session-office';
 import { GoogleGenAI } from '@google/genai';
-import { createGestionDriveFolderAction } from './drive';
+import { createGestionDriveFolderAction, uploadBase64DocumentToGestionDriveAction } from './drive';
 import { formatFechaHistorial, formatHoraHistorial, appendHistorialToMeta, type EventoHistorial } from '@/lib/gestiones-utils';
 
 export async function getFirstOfficeId(): Promise<string> {
@@ -55,6 +55,9 @@ export async function createGestion(data: {
   folio?: string;
   responsableId?: string | null;
   responsableNombre?: string;
+  asignados?: any[] | string;
+  ineBase64?: string;
+  ineFileName?: string;
   creadorNombre?: string;
   creadorId?: string | null;
   officeId?: string;
@@ -85,8 +88,27 @@ export async function createGestion(data: {
     const creadorNombre = data.creadorNombre || 'Dip. Ruben Roque';
     meta.creadorNombre = creadorNombre;
     meta.creadorId = data.creadorId || null;
-    if (data.responsableNombre) {
-      meta.responsableNombre = data.responsableNombre;
+
+    let asignadosArr: any[] = [];
+    if (data.asignados) {
+      if (Array.isArray(data.asignados)) {
+        asignadosArr = data.asignados;
+      } else if (typeof data.asignados === 'string') {
+        try { asignadosArr = JSON.parse(data.asignados); } catch {}
+      }
+    }
+    meta.asignados = asignadosArr;
+
+    let responsableId = data.responsableId || null;
+    let responsableNombre = data.responsableNombre || '';
+    if (!responsableId && asignadosArr.length > 0) {
+      responsableId = asignadosArr[0].id || null;
+      if (!responsableNombre) {
+        responsableNombre = asignadosArr.map((a: any) => a.name || a.nombre).filter(Boolean).join(', ');
+      }
+    }
+    if (responsableNombre) {
+      meta.responsableNombre = responsableNombre;
     }
 
     const fechaNow = new Date();
@@ -120,7 +142,8 @@ export async function createGestion(data: {
       estatus: data.estatus || 'Recibida',
       dependenciaCanalizada: data.dependenciaCanalizada || null,
       driveFolderUrl,
-      responsableId: data.responsableId || null,
+      responsableId,
+      asignados: asignadosArr.length > 0 ? JSON.stringify(asignadosArr) : null,
       documentos: data.documentos ? JSON.stringify(data.documentos) : null,
       oficios: data.oficios ? JSON.stringify(data.oficios) : null,
       notas: data.notas ? JSON.stringify(data.notas) : null,
@@ -128,6 +151,22 @@ export async function createGestion(data: {
     };
 
     const inserted = await db.insert(gestiones).values(newEntry).returning();
+
+    // Si viene la imagen de la credencial INE capturada al inicio, subirla automáticamente al Drive de la gestión
+    if (data.ineBase64 && inserted[0]) {
+      try {
+        await uploadBase64DocumentToGestionDriveAction(
+          inserted[0].id,
+          data.ineBase64,
+          data.ineFileName || 'Credencial_Elector_INE.jpg',
+          'image/jpeg',
+          officeId,
+          creadorNombre
+        );
+      } catch (uploadErr) {
+        console.warn('Error subiendo imagen INE a Google Drive al crear gestión:', uploadErr);
+      }
+    }
 
     // Alta automática del contacto en el Directorio bajo la categoría "Ciudadano / Gestión"
     try {
@@ -280,6 +319,61 @@ export async function updateGestionResponsableAction(
   }
 }
 
+export async function updateGestionAsignadosAction(
+  gestionId: string,
+  asignados: any[],
+  usuarioActual?: string
+) {
+  try {
+    const [curr] = await db
+      .select()
+      .from(gestiones)
+      .where(eq(gestiones.id, gestionId))
+      .limit(1);
+
+    if (!curr) {
+      return { success: false, error: 'Gestión no encontrada' };
+    }
+
+    const asignadosNombres = Array.isArray(asignados)
+      ? asignados.map((a: any) => a.name || a.nombre).filter(Boolean).join(', ')
+      : '';
+
+    const accionTexto = asignadosNombres
+      ? `actualizó las asignaciones a: ${asignadosNombres}.`
+      : 'removió todas las asignaciones de esta gestión.';
+
+    const { meta } = appendHistorialToMeta(curr.notasInternas, {
+      usuario: usuarioActual || 'Usuario del Despacho',
+      accion: accionTexto,
+      tipo: 'asignacion',
+    });
+
+    meta.asignados = asignados;
+    meta.responsableNombre = asignadosNombres || null;
+    meta.responsableId = asignados[0]?.id || null;
+
+    const updated = await db
+      .update(gestiones)
+      .set({
+        asignados: JSON.stringify(asignados),
+        responsableId: asignados[0]?.id || null,
+        notasInternas: JSON.stringify(meta),
+        updatedAt: new Date(),
+      })
+      .where(eq(gestiones.id, gestionId))
+      .returning();
+
+    revalidatePath(`/gestiones/${gestionId}`);
+    revalidatePath('/gestiones');
+    revalidatePath('/dashboard');
+    return { success: true, data: updated[0] };
+  } catch (error) {
+    console.error('Error updating asignados de gestion:', error);
+    return { success: false, error: 'No se pudieron actualizar los usuarios asignados' };
+  }
+}
+
 export async function updateGestionDataAction(
   gestionId: string,
   data: {
@@ -299,6 +393,7 @@ export async function updateGestionDataAction(
     dependenciaCanalizada?: string;
     responsableId?: string | null;
     responsableNombre?: string;
+    asignados?: any[];
   },
   usuarioActual?: string
 ) {
@@ -314,6 +409,14 @@ export async function updateGestionDataAction(
       accion: 'actualizó los datos de la gestión.',
       tipo: 'edicion',
     });
+
+    if (data.asignados !== undefined) {
+      meta.asignados = data.asignados;
+      if (Array.isArray(data.asignados) && data.asignados.length > 0) {
+        data.responsableId = data.asignados[0].id;
+        data.responsableNombre = data.asignados.map((a: any) => a.name || a.nombre).filter(Boolean).join(', ');
+      }
+    }
 
     if (data.responsableNombre !== undefined) {
       meta.responsableNombre = data.responsableNombre || null;
@@ -340,6 +443,7 @@ export async function updateGestionDataAction(
     if (data.estatus !== undefined) updates.estatus = data.estatus;
     if (data.dependenciaCanalizada !== undefined) updates.dependenciaCanalizada = data.dependenciaCanalizada || null;
     if (data.responsableId !== undefined) updates.responsableId = data.responsableId || null;
+    if (data.asignados !== undefined) updates.asignados = JSON.stringify(data.asignados);
 
     const updated = await db
       .update(gestiones)
@@ -686,7 +790,10 @@ Instrucciones:
 1. Determina si la imagen corresponde a una credencial para votar mexicana (INE / IFE) auténtica y legible.
 2. Si NO es una credencial del INE o la imagen es ilegible/borrosa, pon "esCredencialIneValida": false y deja los demás campos vacíos.
 3. Si SÍ es una credencial del INE, pon "esCredencialIneValida": true y extrae con total exactitud todos los campos visibles.
-4. LOCALIZA LA FOTOGRAFÍA O RETRATO DEL CIUDADANO en la credencial y devuelve sus coordenadas de recuadro (bounding box) normalizadas de 0 a 1000 en el campo "fotoBoundingBox": [ymin, xmin, ymax, xmax] (donde ymin es el borde superior del rostro/foto, xmin el izquierdo, ymax el inferior y xmax el derecho).
+4. LOCALIZA CON MÁXIMA PRECISIÓN LA CABEZA Y ROSTRO HUMANO DEL CIUDADANO (ojos, nariz, boca, frente y mentón del titular en su fotografía oficial tamaño credencial / carnet).
+- REGLA CRÍTICA DE ORIENTACIÓN: No importa si la credencial fue fotografiada en posición vertical (girada 90°), horizontal o inclinada. Ubica exclusivamente dónde se encuentra la cabeza y cara real de la persona física.
+- ESTRICTAMENTE PROHIBIDO recortar o confundir con: firmas, textos ("CLAVE DE ELECTOR", "CURP", "FECHA DE NACIMIENTO", "REGISTRO", etc.), huellas dactilares, sellos oficiales o la microfoto fantasma/holográfica secundaria.
+- Devuelve las coordenadas de la caja que enmarca con precisión la cabeza/rostro de la persona en "fotoBoundingBox": [ymin, xmin, ymax, xmax] en escala entera de 0 a 1000 respecto a las dimensiones completas de la imagen recibida (donde ymin es el borde superior del rostro, xmin el izquierdo, ymax el inferior y xmax el derecho).
 5. Responde ÚNICAMENTE con un JSON válido sin markdown, sin backticks y sin texto adicional.
 
 Estructura JSON requerida:

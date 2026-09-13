@@ -12,7 +12,10 @@ import {
   CheckCircle2, 
   AlertCircle,
   AlertTriangle,
-  FolderOpen
+  FolderOpen,
+  Users,
+  Check,
+  UserCheck
 } from 'lucide-react';
 import { 
   createGestion, 
@@ -21,6 +24,7 @@ import {
   getGeminiApiKeyStatusAction
 } from '@/app/actions/gestiones';
 import { createGestionDriveFolderAction, getGoogleDriveStatusAction } from '@/app/actions/drive';
+import { getOfficeUsersAction } from '@/app/actions/usuarios';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 const TIPOS_GESTION_BASE = [
@@ -36,44 +40,100 @@ const TIPOS_GESTION_BASE = [
 
 
 /**
- * Recorta con HTML Canvas la fotografía / rostro del ciudadano detectada por IA en la credencial
+ * Recorta con HTML Canvas el rostro del ciudadano detectado por IA en la credencial
+ * Garantiza un encuadre cuadrado 1:1 perfectamente centrado en el rostro, sin deformaciones.
  */
 const cropCitizenPhoto = (base64: string, box?: [number, number, number, number] | null): Promise<string> => {
   return new Promise((resolve) => {
     if (typeof window === 'undefined') return resolve(base64);
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    img.onload = async () => {
       try {
         const naturalW = img.naturalWidth || img.width;
         const naturalH = img.naturalHeight || img.height;
 
-        // Bounding box por defecto para credencial INE mexicana (cuadrante izquierdo donde va la foto)
-        let ymin = 200, xmin = 40, ymax = 780, xmax = 350;
+        let cxPx = naturalW / 2;
+        let cyPx = naturalH / 2;
+        let sizePx = Math.min(naturalW, naturalH) * 0.45;
+        let foundFace = false;
+
+        // 1. Intentar con las coordenadas devueltas por Gemini Vision
         if (box && Array.isArray(box) && box.length === 4) {
-          const [bYmin, bXmin, bYmax, bXmax] = box;
-          if (bYmax > bYmin && bXmax > bXmin) {
-            // Añadir margen sutil para buen encuadre
-            ymin = Math.max(0, bYmin - 15);
-            xmin = Math.max(0, bXmin - 15);
-            ymax = Math.min(1000, bYmax + 15);
-            xmax = Math.min(1000, bXmax + 15);
+          const [ymin, xmin, ymax, xmax] = box;
+          if (ymax > ymin && xmax > xmin) {
+            const bwNorm = xmax - xmin;
+            const bhNorm = ymax - ymin;
+            const cxNorm = (xmin + xmax) / 2;
+            const cyNorm = (ymin + ymax) / 2;
+
+            cxPx = (cxNorm / 1000) * naturalW;
+            cyPx = (cyNorm / 1000) * naturalH;
+
+            // Enmarcar rostro con 50% de margen adicional para cabello y barbilla
+            const maxDimNorm = Math.max(bwNorm, bhNorm) * 1.5;
+            sizePx = Math.max((maxDimNorm / 1000) * Math.min(naturalW, naturalH), 80);
+            foundFace = true;
           }
         }
 
-        const sx = Math.max(0, (xmin / 1000) * naturalW);
-        const sy = Math.max(0, (ymin / 1000) * naturalH);
-        const sw = Math.min(naturalW - sx, ((xmax - xmin) / 1000) * naturalW);
-        const sh = Math.min(naturalH - sy, ((ymax - ymin) / 1000) * naturalH);
+        // 2. Si Gemini no detectó caja, probar FaceDetector nativo del navegador si está disponible
+        if (!foundFace && 'FaceDetector' in window) {
+          try {
+            const detector = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+            const faces = await detector.detect(img);
+            if (faces && faces.length > 0 && faces[0].boundingBox) {
+              const bb = faces[0].boundingBox;
+              cxPx = bb.x + bb.width / 2;
+              cyPx = bb.y + bb.height / 2;
+              sizePx = Math.max(bb.width, bb.height) * 1.5;
+              foundFace = true;
+            }
+          } catch (fdErr) {
+            console.warn('Native FaceDetector fallback error:', fdErr);
+          }
+        }
 
-        if (sw > 30 && sh > 30) {
+        // 3. Fallback inteligente según orientación de la credencial si no hubo detección
+        if (!foundFace) {
+          if (naturalW >= naturalH) {
+            // Credencial horizontal: cuadrante izquierdo (donde va la foto en modelo INE)
+            cxPx = naturalW * 0.22;
+            cyPx = naturalH * 0.48;
+            sizePx = naturalH * 0.60;
+          } else {
+            // Credencial fotografiada verticalmente
+            cxPx = naturalW * 0.50;
+            cyPx = naturalH * 0.25;
+            sizePx = naturalW * 0.60;
+          }
+        }
+
+        // 4. Calcular coordenadas de recorte 1:1 estricto
+        const halfSize = sizePx / 2;
+        let sx = cxPx - halfSize;
+        let sy = cyPx - halfSize;
+
+        // Ajustar a los límites de la imagen manteniendo aspecto 1:1
+        if (sx < 0) sx = 0;
+        if (sy < 0) sy = 0;
+        if (sx + sizePx > naturalW) sx = Math.max(0, naturalW - sizePx);
+        if (sy + sizePx > naturalH) sy = Math.max(0, naturalH - sizePx);
+
+        const cropW = Math.min(sizePx, naturalW - sx);
+        const cropH = Math.min(sizePx, naturalH - sy);
+        const finalSquare = Math.min(cropW, cropH);
+
+        if (finalSquare > 20) {
           const canvas = document.createElement('canvas');
           canvas.width = 320;
           canvas.height = 320;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 320, 320);
-            const cropped = canvas.toDataURL('image/jpeg', 0.88);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, sx, sy, finalSquare, finalSquare, 0, 0, 320, 320);
+            const cropped = canvas.toDataURL('image/jpeg', 0.90);
             resolve(cropped);
             return;
           }
@@ -121,6 +181,8 @@ export default function NuevaGestionPage() {
   const [savingKey, setSavingKey] = useState(false);
   const [pendingIneFile, setPendingIneFile] = useState<{ base64: string; type: string } | null>(null);
   const [driveConnected, setDriveConnected] = useState<boolean | null>(null);
+  const [usuariosDespacho, setUsuariosDespacho] = useState<any[]>([]);
+  const [asignados, setAsignados] = useState<any[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -130,7 +192,25 @@ export default function NuevaGestionPage() {
     getGoogleDriveStatusAction()
       .then(res => setDriveConnected(Boolean(res?.connected)))
       .catch(() => setDriveConnected(false));
+    getOfficeUsersAction()
+      .then(res => {
+        if (res.success && res.users) {
+          setUsuariosDespacho(res.users);
+        }
+      })
+      .catch(console.warn);
   }, []);
+
+  const toggleAsignado = (user: any) => {
+    setAsignados(prev => {
+      const exists = prev.some(u => u.id === user.id);
+      if (exists) {
+        return prev.filter(u => u.id !== user.id);
+      } else {
+        return [...prev, { id: user.id, name: user.name, email: user.email, cargo: user.cargo, image: user.image }];
+      }
+    });
+  };
 
   const processIneImage = async (base64: string, fileType: string) => {
     setIsOcrProcessing(true);
@@ -229,6 +309,7 @@ export default function NuevaGestionPage() {
     const folio = `GES-${year}-${randomFolioSuffix}`;
 
     try {
+      const ineFileName = `Credencial_INE_${nombre.trim().replace(/\s+/g, '_')}.jpg`;
       const res = await createGestion({
         folio,
         asunto: descripcion || `Solicitud de ${tipoFinal}`,
@@ -245,11 +326,14 @@ export default function NuevaGestionPage() {
         categoria: tipoFinal,
         estatus: 'Recibida',
         dependenciaCanalizada: dependenciaDestino.trim(),
-        documentos: fullIneBase64 || avatarUrl ? [
+        asignados,
+        ineBase64: fullIneBase64 || undefined,
+        ineFileName,
+        documentos: fullIneBase64 ? [
           {
             id: `doc-${Date.now()}`,
-            nombre: 'Credencial_Elector_INE.jpg',
-            tipo: 'INE / Identificación Oficial',
+            nombre: ineFileName,
+            tipo: 'image/jpeg',
             fecha: new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short', year: 'numeric' }),
             tamano: '1.2 MB',
             urlDrive: ''
@@ -262,7 +346,7 @@ export default function NuevaGestionPage() {
             hora: new Date().toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' }),
             createdAt: new Date().toISOString(),
             autor: 'Dip. Ruben Roque',
-            texto: `Gestión ciudadana dada de alta con éxito en el rubro ${tipoFinal}. Canalización inicial orientada a ${dependenciaDestino}.`,
+            texto: `Gestión ciudadana dada de alta con éxito en el rubro ${tipoFinal}. Canalización inicial orientada a ${dependenciaDestino}.${asignados.length > 0 ? ` Asignada a: ${asignados.map(a => a.name).join(', ')}.` : ''}`,
             esDiputado: true
           }
         ]
@@ -323,22 +407,12 @@ export default function NuevaGestionPage() {
         </div>
       )}
 
-      {driveConnected === true && (
-        <div className="px-4 py-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 text-emerald-800 font-medium">
-            <FolderOpen className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Google Drive Vinculado: Se creará automáticamente la carpeta oficial con el número de folio asignado.</span>
-          </div>
-          <span className="text-[11px] text-emerald-700 font-bold bg-white px-2 py-0.5 rounded border border-emerald-200 shrink-0">Expediente Cloud Activo</span>
-        </div>
-      )}
-
       {/* OCR Scanner Card */}
       <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
             <Sparkles className="h-4 w-4 text-blue-600" />
-            <span>Escaneo de Credencial INE con Visión Artificial (Gemini 2.5 Flash)</span>
+            <span>Capturar INE</span>
           </span>
 
           {geminiApiKeyStatus.configured ? (
@@ -648,6 +722,71 @@ export default function NuevaGestionPage() {
             placeholder="Describe los antecedentes del ciudadano, el apoyo solicitado o la intervención requerida..."
             className="w-full p-3 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 leading-relaxed font-medium"
           />
+        </div>
+
+        {/* Asignado a: (Selección múltiple de integrantes del despacho) */}
+        <div className="pt-3 border-t border-slate-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span>Asignado a:</span>
+                <span className="text-[11px] font-normal text-slate-500">
+                  (Puedes seleccionar más de un usuario a la vez)
+                </span>
+              </label>
+              <p className="text-[11px] text-slate-500">
+                Los integrantes asignados recibirán notificaciones y seguimiento directo de este expediente.
+              </p>
+            </div>
+            {asignados.length > 0 && (
+              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                {asignados.length} {asignados.length === 1 ? 'asignado' : 'asignados'}
+              </span>
+            )}
+          </div>
+
+          {usuariosDespacho.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">Cargando integrantes del despacho...</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+              {usuariosDespacho.map((u) => {
+                const isSelected = asignados.some((a) => a.id === u.id);
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => toggleAsignado(u)}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
+                      isSelected
+                        ? 'bg-blue-50/70 border-blue-500 text-blue-950 shadow-2xs ring-1 ring-blue-500/20'
+                        : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="relative shrink-0">
+                      {u.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.image} alt="" className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs border border-slate-200">
+                          {u.name?.slice(0, 2).toUpperCase() || 'US'}
+                        </div>
+                      )}
+                      {isSelected && (
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold truncate">{u.name}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{u.cargo || 'Integrante del Despacho'}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-100">
