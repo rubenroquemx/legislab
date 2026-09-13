@@ -243,6 +243,7 @@ export default function GestionesPage() {
 
   useEffect(() => {
     loadGestiones();
+    getGeminiApiKeyStatusAction().then(setGeminiApiKeyStatus).catch(console.warn);
   }, []);
   const [tiposGestion, setTiposGestion] = useState<string[]>(TIPOS_GESTION_BASE);
   const [plantillasOficios, setPlantillasOficios] = useState<PlantillaOficio[]>(PLANTILLAS_PREDETERMINADAS);
@@ -289,6 +290,8 @@ export default function GestionesPage() {
   // OCR state
   const [isOcrProcessing, setIsOcrProcessing] = useState(false);
   const [ocrSuccess, setOcrSuccess] = useState(false);
+  const [geminiApiKeyStatus, setGeminiApiKeyStatus] = useState<{ configured: boolean; source?: string }>({ configured: false });
+  const [lastExtractedCitizen, setLastExtractedCitizen] = useState<string | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [inputGeminiKey, setInputGeminiKey] = useState('');
@@ -380,31 +383,31 @@ export default function GestionesPage() {
     setIsOcrProcessing(true);
     setOcrError(null);
     setOcrSuccess(false);
+    setLastExtractedCitizen(null);
 
     try {
       const res = await extractIneDataAction(base64, fileType || 'image/jpeg');
       if (res.success && res.data) {
         const d = res.data;
-        if (d.nombreCompleto) {
-          setNombre(d.nombreCompleto);
-        } else if (d.nombre) {
-          setNombre(`${d.nombre} ${d.primerApellido || ''} ${d.segundoApellido || ''}`.trim());
-        }
+        const nombreFinal = d.nombreCompleto || `${d.nombre || ''} ${d.primerApellido || ''} ${d.segundoApellido || ''}`.trim();
+        setNombre(nombreFinal);
         if (d.curp) setCurp(d.curp);
         if (d.seccionElectoral) setSeccionElectoral(d.seccionElectoral);
         if (d.calle || d.direccionCompleta) setDireccion(d.calle || d.direccionCompleta);
         if (d.colonia) setColonia(d.colonia);
         if (d.municipio) setMunicipio(d.municipio);
+        setLastExtractedCitizen(nombreFinal || 'Ciudadano');
         setOcrSuccess(true);
+        setGeminiApiKeyStatus({ configured: true });
       } else if (res.error === 'NO_API_KEY') {
         setPendingIneFile({ base64, type: fileType });
         setShowKeyModal(true);
       } else {
-        setOcrError(res.message || 'No se pudieron extraer los datos con IA.');
+        setOcrError(res.message || 'La imagen no corresponde a una credencial INE válida o no es legible.');
       }
     } catch (err: any) {
       console.warn('Error processing INE file:', err);
-      setOcrError('Ocurrió un error al procesar la imagen con IA.');
+      setOcrError('Ocurrió un error al conectar con el motor de visión artificial.');
     } finally {
       setIsOcrProcessing(false);
     }
@@ -1180,19 +1183,34 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
               <button onClick={() => setIsModalCrearOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 font-bold">✕</button>
             </div>
 
-            <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 text-blue-600" />
-                  <span>Escaneo Inteligente de Credencial INE + Extracción de Fotografía con IA</span>
+            <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-800/80 dark:via-indigo-950/40 dark:to-slate-900/80 border border-blue-200 dark:border-blue-900/50 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span>Escaneo de Credencial INE con Visión Artificial (Gemini 2.5 Flash)</span>
                 </span>
-                <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Auto-Relleno & Avatar</span>
+                
+                {geminiApiKeyStatus.configured ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Gemini Vision Activo (Modo Real)
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyModal(true)}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-2.5 py-0.5 rounded-full border border-amber-300 transition-colors"
+                  >
+                    ⚠️ Configurar GEMINI_API_KEY
+                  </button>
+                )}
               </div>
-              <p className="text-[11px] text-blue-800 leading-relaxed">
-                Al subir o escanear la credencial de elector (INE), el sistema extrae automáticamente el <strong>Rostro del Ciudadano</strong> como avatar, además de Nombre, CURP, Dirección y Sección Electoral.
+
+              <p className="text-[11px] text-blue-900/80 dark:text-blue-300/80 leading-relaxed">
+                Toma una fotografía o sube el archivo de la credencial de elector. La inteligencia artificial extraerá y verificará automáticamente el <strong>Rostro</strong>, <strong>Nombre</strong>, <strong>CURP</strong>, <strong>Dirección</strong> y <strong>Sección Electoral</strong>.
               </p>
 
-              <div className="flex flex-wrap items-center gap-3 pt-1">
+              <div className="flex flex-wrap items-center gap-2.5 pt-1">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1204,32 +1222,67 @@ C.c.p. Archivo de Gestión y Enlace Parlamentario.`;
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isOcrProcessing}
-                  className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-800 dark:text-gray-100 text-xs font-bold px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 shadow-2xs transition-all"
+                  className="inline-flex items-center gap-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-100 text-xs font-bold px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 shadow-2xs transition-all active:scale-95"
                 >
-                  <Upload className="h-3.5 w-3.5 text-blue-600" />
-                  <span>Subir Archivo de INE</span>
+                  <Upload className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span>Subir Foto de INE</span>
+                </button>
+
+                <input
+                  type="file"
+                  ref={cameraInputRef}
+                  onChange={handleFileUploadRegistration}
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  disabled={isOcrProcessing}
+                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-blue-600/20 transition-all active:scale-95"
+                >
+                  <Camera className="h-4 w-4" />
+                  <span>📸 Tomar Foto con Cámara</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleSimulateOcrIne}
                   disabled={isOcrProcessing}
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition-all"
+                  className="text-[11px] font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline px-2 py-1"
                 >
-                  <Camera className="h-3.5 w-3.5" />
-                  <span>{isOcrProcessing ? 'Extrayendo rostro y datos con IA...' : '📸 Escanear INE con IA (Demo)'}</span>
+                  (Cargar datos de prueba)
                 </button>
-
-                {ocrSuccess && (
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1.5 rounded-lg animate-in fade-in">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>¡Rostro y datos extraídos exitosamente!</span>
-                  </span>
-                )}
               </div>
 
+              {/* Status feedback */}
+              {isOcrProcessing && (
+                <div className="flex items-center gap-2 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-950/60 p-2.5 rounded-xl animate-pulse">
+                  <div className="h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Analizando y verificando credencial INE con Google Gemini Vision...</span>
+                </div>
+              )}
+
+              {ocrSuccess && (
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 animate-in fade-in">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>¡Credencial de {lastExtractedCitizen || 'ciudadano'} leída y validada con éxito!</span>
+                </div>
+              )}
+
+              {ocrError && (
+                <div className="flex items-start gap-2 text-xs font-semibold text-rose-800 bg-rose-100 dark:bg-rose-950/60 dark:text-rose-300 p-2.5 rounded-xl border border-rose-200 dark:border-rose-800 animate-in fade-in">
+                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-bold">No se pudo completar la lectura:</p>
+                    <p className="text-[11px] opacity-90">{ocrError}</p>
+                  </div>
+                </div>
+              )}
+
               {avatarUrl && (
-                <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-blue-200 animate-in fade-in">
+                <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-blue-200 dark:border-slate-700 animate-in fade-in">
                   <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-blue-600 shrink-0 shadow-sm">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={avatarUrl} alt="Rostro extraído" className="h-full w-full object-cover" />

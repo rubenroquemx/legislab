@@ -365,16 +365,22 @@ export async function extractIneDataAction(fileBase64: string, mimeType: string 
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `Eres un sistema OCR de inteligencia artificial especializado en documentos oficiales de identificación de México (Credencial para Votar INE / IFE emitidas por el Instituto Nacional Electoral).
-Analiza detalladamente la fotografía o documento proporcionado.
-Extrae ÚNICAMENTE la información real y legible visible en el documento. Responde EXCLUSIVAMENTE con un JSON válido sin markdown, sin backticks y sin explicaciones.
+    const prompt = `Eres un sistema de visión artificial especializado en verificación y lectura de credenciales para votar (INE / IFE) de México.
+Examina detenidamente la imagen enviada.
 
-Estructura JSON:
+Instrucciones:
+1. Determina si la imagen corresponde a una credencial para votar mexicana (INE / IFE) auténtica y legible.
+2. Si NO es una credencial del INE o la imagen es ilegible/borrosa, pon "esCredencialIneValida": false y deja los demás campos vacíos.
+3. Si SÍ es una credencial del INE, pon "esCredencialIneValida": true y extrae con total exactitud todos los campos visibles.
+4. Responde ÚNICAMENTE con un JSON válido sin markdown, sin backticks y sin texto adicional.
+
+Estructura JSON requerida:
 {
+  "esCredencialIneValida": true,
   "nombre": "Nombres del ciudadano",
   "primerApellido": "Primer apellido / Paterno",
   "segundoApellido": "Segundo apellido / Materno",
-  "nombreCompleto": "Nombre completo en orden: Nombres PrimerApellido SegundoApellido",
+  "nombreCompleto": "Nombre completo en orden: Nombres ApellidoPaterno ApellidoMaterno",
   "curp": "CURP de 18 caracteres",
   "claveElector": "Clave de Elector de 18 caracteres",
   "seccionElectoral": "Sección electoral de 4 dígitos",
@@ -385,8 +391,7 @@ Estructura JSON:
   "codigoPostal": "Código postal de 5 dígitos",
   "direccionCompleta": "Dirección completa concatenada",
   "vigencia": "Año de vigencia"
-}
-Si un campo no es visible o no se puede leer con seguridad, deja una cadena vacía "".`;
+}`;
 
     const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
 
@@ -412,9 +417,25 @@ Si un campo no es visible o no se puede leer con seguridad, deja una cadena vac�
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      return { success: true, data: parsed };
+      if (parsed.esCredencialIneValida === false || (!parsed.curp && !parsed.claveElector && !parsed.nombre && !parsed.nombreCompleto)) {
+        return {
+          success: false,
+          error: 'INVALID_DOCUMENT',
+          message: 'La imagen subida no parece ser una credencial para votar (INE / IFE) legible. Asegúrate de capturar una foto clara y bien iluminada.',
+        };
+      }
+      return { 
+        success: true, 
+        data: parsed,
+        isRealAi: true,
+        model: 'Gemini 2.5 Flash Vision'
+      };
     } else {
-      return { success: false, error: 'PARSE_ERROR', message: 'No se pudieron extraer datos legibles de la imagen proporcionada.' };
+      return { 
+        success: false, 
+        error: 'PARSE_ERROR', 
+        message: 'No se pudieron extraer datos legibles de la imagen proporcionada.' 
+      };
     }
   } catch (err: any) {
     console.error('Error en Gemini Vision INE extraction:', err);
