@@ -98,10 +98,27 @@ export async function createGestion(data: {
 export async function updateGestionStatus(id: string, nuevoEstado: string) {
   try {
     const activeOfficeId = await getActiveOfficeId();
+
+    const [curr] = await db
+      .select({ notasInternas: gestiones.notasInternas })
+      .from(gestiones)
+      .where(eq(gestiones.id, id))
+      .limit(1);
+
+    let meta: any = {};
+    if (curr?.notasInternas) {
+      try { meta = JSON.parse(curr.notasInternas); } catch {}
+    }
+
+    if (nuevoEstado === 'Resuelta' && !meta.fechaResolucion) {
+      meta.fechaResolucion = new Date().toISOString();
+    }
+
     const updated = await db
       .update(gestiones)
       .set({
         estatus: nuevoEstado,
+        notasInternas: JSON.stringify(meta),
         updatedAt: new Date(),
       })
       .where(eq(gestiones.id, id))
@@ -113,6 +130,46 @@ export async function updateGestionStatus(id: string, nuevoEstado: string) {
   } catch (error) {
     console.error('Error updating gestion status:', error);
     return { success: false, error: 'No se pudo actualizar el estado de la gestión' };
+  }
+}
+
+export async function toggleArchiveGestionAction(id: string, archivada: boolean) {
+  try {
+    const activeOfficeId = await getActiveOfficeId();
+
+    const [curr] = await db
+      .select({ notasInternas: gestiones.notasInternas })
+      .from(gestiones)
+      .where(eq(gestiones.id, id))
+      .limit(1);
+
+    let meta: any = {};
+    if (curr?.notasInternas) {
+      try { meta = JSON.parse(curr.notasInternas); } catch {}
+    }
+
+    meta.archivada = archivada;
+    if (archivada) {
+      meta.fechaArchivado = new Date().toISOString();
+    } else {
+      delete meta.fechaArchivado;
+    }
+
+    const updated = await db
+      .update(gestiones)
+      .set({
+        notasInternas: JSON.stringify(meta),
+        updatedAt: new Date(),
+      })
+      .where(eq(gestiones.id, id))
+      .returning();
+
+    revalidatePath('/gestiones');
+    revalidatePath('/dashboard');
+    return { success: true, data: updated[0], archivada };
+  } catch (error) {
+    console.error('Error toggling archive gestion:', error);
+    return { success: false, error: 'No se pudo archivar la gestión' };
   }
 }
 
