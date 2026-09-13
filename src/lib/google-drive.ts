@@ -373,3 +373,25 @@ export async function uploadFileToDriveFolder(
   }
 }
 
+/**
+ * Elimina un archivo permanentemente de Google Drive mediante su ID
+ */
+export async function deleteFileFromDrive(accessToken: string, fileId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!res.ok && res.status !== 404) {
+      console.warn('Error deleting file from Drive:', await res.text());
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteFileFromDrive:', error);
+    return false;
+  }
+}
+

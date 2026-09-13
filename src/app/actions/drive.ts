@@ -9,9 +9,11 @@ import {
   getOrCreateRootDriveFolder,
   listFilesInDriveFolder,
   uploadFileToDriveFolder,
+  deleteFileFromDrive,
   extractDriveFolderId
 } from '@/lib/google-drive';
 import { getActiveOfficeId } from '@/lib/session-office';
+import { appendHistorialToMeta } from '@/lib/gestiones-utils';
 
 /**
  * Encuentra el despacho por ID o fallback al despacho activo
@@ -482,4 +484,77 @@ export async function uploadDocumentToGestionDriveAction(gestionId: string, form
     return { success: false, error: error?.message || 'Error al procesar subida de archivo a Drive' };
   }
 }
+
+/**
+ * Elimina un documento del expediente de una gestión tanto de Google Drive como de la base de datos
+ */
+export async function deleteDocumentFromGestionDriveAction(
+  gestionId: string,
+  fileId: string,
+  fileName?: string,
+  usuarioActual?: string,
+  officeId?: string
+) {
+  try {
+    const [gestion] = await db
+      .select()
+      .from(gestiones)
+      .where(eq(gestiones.id, gestionId))
+      .limit(1);
+
+    if (!gestion) {
+      return { success: false, error: 'Gestión no encontrada' };
+    }
+
+    // 1. Intentar eliminar de Google Drive si cuenta con token y fileId válido
+    try {
+      const drive = await getValidDriveTokenForOffice(officeId || gestion.officeId);
+      if (drive?.accessToken && fileId && fileId.length > 5) {
+        await deleteFileFromDrive(drive.accessToken, fileId);
+      }
+    } catch (dErr) {
+      console.warn('Could not delete file directly from Google Drive:', dErr);
+    }
+
+    // 2. Actualizar lista de documentos en la BD
+    let currentDocs: any[] = [];
+    if (gestion.documentos) {
+      try {
+        currentDocs = typeof gestion.documentos === 'string' ? JSON.parse(gestion.documentos) : gestion.documentos;
+        if (!Array.isArray(currentDocs)) currentDocs = [];
+      } catch {
+        currentDocs = [];
+      }
+    }
+
+    const updatedDocs = currentDocs.filter(
+      (d: any) => d.id !== fileId && d.nombre !== fileName
+    );
+
+    // 3. Registrar en el historial de actualización
+    const { meta } = appendHistorialToMeta(gestion.notasInternas, {
+      usuario: usuarioActual || 'Usuario del Despacho',
+      accion: `eliminó el archivo "${fileName || 'documento'}" del expediente.`,
+      tipo: 'documento',
+    });
+
+    await db
+      .update(gestiones)
+      .set({
+        documentos: JSON.stringify(updatedDocs),
+        notasInternas: JSON.stringify(meta),
+        updatedAt: new Date(),
+      })
+      .where(eq(gestiones.id, gestion.id));
+
+    revalidatePath(`/gestiones/${gestion.id}`);
+    revalidatePath('/gestiones');
+
+    return { success: true, message: 'Archivo eliminado correctamente' };
+  } catch (error: any) {
+    console.error('Error deleting document from gestion:', error);
+    return { success: false, error: error?.message || 'No se pudo eliminar el archivo' };
+  }
+}
+
 

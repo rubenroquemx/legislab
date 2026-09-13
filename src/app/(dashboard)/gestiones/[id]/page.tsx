@@ -37,7 +37,8 @@ import {
 import { getOfficeUsersAction } from '@/app/actions/usuarios';
 import { 
   getGestionDriveExpedienteAction,
-  uploadDocumentToGestionDriveAction 
+  uploadDocumentToGestionDriveAction,
+  deleteDocumentFromGestionDriveAction 
 } from '@/app/actions/drive';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { 
@@ -64,6 +65,8 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
   const [modalEliminarOpen, setModalEliminarOpen] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [archivoAEliminar, setArchivoAEliminar] = useState<any | null>(null);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
 
   // Formulario de edición
   const [formEdicion, setFormEdicion] = useState<{
@@ -379,6 +382,52 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
       console.error('Error saving edition:', err);
     } finally {
       setIsSavingEdit(false);
+    }
+  };
+
+    const handleConfirmarEliminarArchivo = async () => {
+    if (!archivoAEliminar || !gestion) return;
+    setIsDeletingFile(true);
+    try {
+      const res = await deleteDocumentFromGestionDriveAction(
+        gestion.id,
+        archivoAEliminar.id,
+        archivoAEliminar.nombre,
+        currentUserName
+      );
+
+      if (res.success) {
+        setDriveStatus(prev => ({
+          ...prev,
+          files: prev.files.filter((f: any) => f.id !== archivoAEliminar.id && f.nombre !== archivoAEliminar.nombre),
+        }));
+
+        setGestion((prev: any) => ({
+          ...prev,
+          documentos: (prev.documentos || []).filter((d: any) => d.id !== archivoAEliminar.id && d.nombre !== archivoAEliminar.nombre),
+        }));
+
+        const now = new Date();
+        const nuevoEvento: EventoHistorial = {
+          id: `hist-${Date.now()}`,
+          fechaDisplay: formatFechaHistorial(now),
+          horaDisplay: formatHoraHistorial(now),
+          usuario: currentUserName,
+          accion: `eliminó el archivo "${archivoAEliminar.nombre}" del expediente.`,
+          tipo: 'documento',
+          createdAt: now.toISOString(),
+        };
+        setHistorial((prev) => [nuevoEvento, ...prev]);
+
+        setArchivoAEliminar(null);
+      } else {
+        alert(res.error || 'No se pudo eliminar el archivo.');
+      }
+    } catch (err) {
+      console.error('Error deleting file:', err);
+      alert('Error de red al eliminar el archivo.');
+    } finally {
+      setIsDeletingFile(false);
     }
   };
 
@@ -981,6 +1030,14 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
                               <Download className="h-3.5 w-3.5" />
                             </a>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => setArchivoAEliminar(file)}
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="Eliminar archivo del expediente"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -1215,6 +1272,65 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+            {/* Modal: Advertencia / Confirmar Eliminar Archivo del Expediente */}
+      {archivoAEliminar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-rose-100 text-rose-700 rounded-xl shrink-0">
+                <AlertOctagon className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">¿Eliminar archivo del expediente?</h3>
+                <p className="text-xs text-slate-500 font-medium">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1">
+              <p className="font-semibold text-slate-900 truncate">
+                📄 {archivoAEliminar.nombre}
+              </p>
+              <p className="text-[10px] text-slate-400 font-mono">
+                {archivoAEliminar.tamano || 'Archivo'} • {archivoAEliminar.fecha || 'Reciente'}
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              El archivo será eliminado permanentemente del expediente digital y de la carpeta oficial de Google Drive del despacho.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setArchivoAEliminar(null)}
+                disabled={isDeletingFile}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarEliminarArchivo}
+                disabled={isDeletingFile}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
+              >
+                {isDeletingFile ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Sí, eliminar archivo</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
