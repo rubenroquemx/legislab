@@ -394,6 +394,7 @@ export async function updateGestionDataAction(
     responsableId?: string | null;
     responsableNombre?: string;
     asignados?: any[];
+    avatarUrl?: string | null;
   },
   usuarioActual?: string
 ) {
@@ -444,6 +445,7 @@ export async function updateGestionDataAction(
     if (data.dependenciaCanalizada !== undefined) updates.dependenciaCanalizada = data.dependenciaCanalizada || null;
     if (data.responsableId !== undefined) updates.responsableId = data.responsableId || null;
     if (data.asignados !== undefined) updates.asignados = JSON.stringify(data.asignados);
+    if (data.avatarUrl !== undefined) updates.avatarUrl = data.avatarUrl || null;
 
     const updated = await db
       .update(gestiones)
@@ -790,10 +792,10 @@ Instrucciones:
 1. Determina si la imagen corresponde a una credencial para votar mexicana (INE / IFE) auténtica y legible.
 2. Si NO es una credencial del INE o la imagen es ilegible/borrosa, pon "esCredencialIneValida": false y deja los demás campos vacíos.
 3. Si SÍ es una credencial del INE, pon "esCredencialIneValida": true y extrae con total exactitud todos los campos visibles.
-4. LOCALIZA CON MÁXIMA PRECISIÓN LA CABEZA Y ROSTRO HUMANO DEL CIUDADANO (ojos, nariz, boca, frente y mentón del titular en su fotografía oficial tamaño credencial / carnet).
-- REGLA CRÍTICA DE ORIENTACIÓN: No importa si la credencial fue fotografiada en posición vertical (girada 90°), horizontal o inclinada. Ubica exclusivamente dónde se encuentra la cabeza y cara real de la persona física.
-- ESTRICTAMENTE PROHIBIDO recortar o confundir con: firmas, textos ("CLAVE DE ELECTOR", "CURP", "FECHA DE NACIMIENTO", "REGISTRO", etc.), huellas dactilares, sellos oficiales o la microfoto fantasma/holográfica secundaria.
-- Devuelve las coordenadas de la caja que enmarca con precisión la cabeza/rostro de la persona en "fotoBoundingBox": [ymin, xmin, ymax, xmax] en escala entera de 0 a 1000 respecto a las dimensiones completas de la imagen recibida (donde ymin es el borde superior del rostro, xmin el izquierdo, ymax el inferior y xmax el derecho).
+4. LOCALIZACIÓN EXACTA DE LA FOTOGRAFÍA DEL CIUDADANO:
+- En las credenciales de elector mexicanas (INE/IFE), la fotografía principal del rostro del ciudadano siempre está ubicada en el LADO IZQUIERDO de la credencial (ocupando aproximadamente del 10% al 35% del ancho de la tarjeta).
+- ESTRICTAMENTE PROHIBIDO recortar o confundir con: la firma, la huella dactilar, o los bloques de texto ("CLAVE DE ELECTOR", "CURP", "REGISTRO", etc.) que se encuentran en la zona central y derecha.
+- Devuelve las coordenadas de la caja que enmarca la cabeza/rostro de la persona en "fotoBoundingBox": [ymin, xmin, ymax, xmax] en escala entera de 0 a 1000 respecto a la imagen completa recibida (donde ymin es el borde superior de la cabeza, xmin el borde izquierdo, ymax el borde inferior/mentón y xmax el borde derecho).
 5. Responde ÚNICAMENTE con un JSON válido sin markdown, sin backticks y sin texto adicional.
 
 Estructura JSON requerida:

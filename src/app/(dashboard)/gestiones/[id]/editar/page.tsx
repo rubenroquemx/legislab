@@ -175,6 +175,7 @@ export default function EditarGestionPage({ params }: { params: Promise<{ id: st
           estatus,
           dependenciaCanalizada: dependenciaDestino.trim(),
           asignados,
+          avatarUrl: avatarUrl || null,
         },
         currentUserName
       );

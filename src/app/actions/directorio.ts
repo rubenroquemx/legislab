@@ -128,9 +128,12 @@ export async function updateContacto(
 export async function deleteContacto(id: string, officeId?: string) {
   try {
     const activeOfficeId = await getActiveOfficeId(officeId);
-    await db
-      .delete(directorioContactos)
-      .where(and(eq(directorioContactos.id, id), eq(directorioContactos.officeId, activeOfficeId)));
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isUuid) {
+      await db
+        .delete(directorioContactos)
+        .where(and(eq(directorioContactos.id, id), eq(directorioContactos.officeId, activeOfficeId)));
+    }
 
     revalidatePath('/directorio');
     return { success: true };

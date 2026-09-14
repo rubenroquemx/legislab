@@ -53,31 +53,48 @@ const cropCitizenPhoto = (base64: string, box?: [number, number, number, number]
         const naturalW = img.naturalWidth || img.width;
         const naturalH = img.naturalHeight || img.height;
 
-        let cxPx = naturalW / 2;
-        let cyPx = naturalH / 2;
+        let cxPx = naturalW * 0.22;
+        let cyPx = naturalH * 0.50;
         let sizePx = Math.min(naturalW, naturalH) * 0.45;
         let foundFace = false;
 
-        // 1. Intentar con las coordenadas devueltas por Gemini Vision
+        // 1. Coordenadas devueltas por Gemini Vision con auto-detección de escala
         if (box && Array.isArray(box) && box.length === 4) {
-          const [ymin, xmin, ymax, xmax] = box;
-          if (ymax > ymin && xmax > xmin) {
-            const bwNorm = xmax - xmin;
-            const bhNorm = ymax - ymin;
-            const cxNorm = (xmin + xmax) / 2;
-            const cyNorm = (ymin + ymax) / 2;
+          const [yminRaw, xminRaw, ymaxRaw, xmaxRaw] = box.map(Number);
+          
+          if (!isNaN(yminRaw) && !isNaN(xminRaw) && !isNaN(ymaxRaw) && !isNaN(xmaxRaw)) {
+            // Detección automática de escala: floats (0..1), porcentajes (0..100) o enteros (0..1000)
+            const maxCoord = Math.max(yminRaw, xminRaw, ymaxRaw, xmaxRaw);
+            const scale = maxCoord <= 1.05 ? 1 : maxCoord <= 105 ? 100 : 1000;
 
-            cxPx = (cxNorm / 1000) * naturalW;
-            cyPx = (cyNorm / 1000) * naturalH;
+            const ymin = yminRaw / scale;
+            const xmin = xminRaw / scale;
+            const ymax = ymaxRaw / scale;
+            const xmax = xmaxRaw / scale;
 
-            // Enmarcar rostro con 50% de margen adicional para cabello y barbilla
-            const maxDimNorm = Math.max(bwNorm, bhNorm) * 1.5;
-            sizePx = Math.max((maxDimNorm / 1000) * Math.min(naturalW, naturalH), 80);
-            foundFace = true;
+            if (ymax > ymin && xmax > xmin) {
+              const bwNorm = xmax - xmin;
+              const bhNorm = ymax - ymin;
+
+              // Validar que sea una proporción plausible de rostro en credencial (entre 5% y 75% del ancho/alto)
+              if (bwNorm >= 0.05 && bwNorm <= 0.75 && bhNorm >= 0.05 && bhNorm <= 0.75) {
+                const cxNorm = (xmin + xmax) / 2;
+                const cyNorm = (ymin + ymax) / 2;
+
+                cxPx = cxNorm * naturalW;
+                cyPx = cyNorm * naturalH;
+
+                // Margen equilibrado del 35% alrededor del rostro para encuadre 1:1 natural
+                const faceW_px = bwNorm * naturalW;
+                const faceH_px = bhNorm * naturalH;
+                sizePx = Math.max(faceW_px, faceH_px) * 1.35;
+                foundFace = true;
+              }
+            }
           }
         }
 
-        // 2. Si Gemini no detectó caja, probar FaceDetector nativo del navegador si está disponible
+        // 2. Si Gemini no detectó caja válida, probar FaceDetector nativo del navegador si está disponible
         if (!foundFace && 'FaceDetector' in window) {
           try {
             const detector = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
@@ -86,7 +103,7 @@ const cropCitizenPhoto = (base64: string, box?: [number, number, number, number]
               const bb = faces[0].boundingBox;
               cxPx = bb.x + bb.width / 2;
               cyPx = bb.y + bb.height / 2;
-              sizePx = Math.max(bb.width, bb.height) * 1.5;
+              sizePx = Math.max(bb.width, bb.height) * 1.35;
               foundFace = true;
             }
           } catch (fdErr) {
@@ -94,18 +111,18 @@ const cropCitizenPhoto = (base64: string, box?: [number, number, number, number]
           }
         }
 
-        // 3. Fallback inteligente según orientación de la credencial si no hubo detección
+        // 3. Fallback inteligente según cuadrante de fotografía oficial en la credencial INE
         if (!foundFace) {
           if (naturalW >= naturalH) {
-            // Credencial horizontal: cuadrante izquierdo (donde va la foto en modelo INE)
+            // Credencial horizontal: cuadrante izquierdo (foto oficial INE)
             cxPx = naturalW * 0.22;
             cyPx = naturalH * 0.48;
-            sizePx = naturalH * 0.60;
+            sizePx = naturalH * 0.52;
           } else {
-            // Credencial fotografiada verticalmente
-            cxPx = naturalW * 0.50;
-            cyPx = naturalH * 0.25;
-            sizePx = naturalW * 0.60;
+            // Foto tomada en vertical: la foto del ciudadano está en el cuadrante izquierdo de la tarjeta
+            cxPx = naturalW * 0.28;
+            cyPx = naturalH * 0.50;
+            sizePx = naturalW * 0.40;
           }
         }
 
@@ -186,6 +203,19 @@ export default function NuevaGestionPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const profilePhotoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setAvatarUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     getGeminiApiKeyStatusAction().then(setGeminiApiKeyStatus).catch(console.warn);
@@ -520,29 +550,72 @@ export default function NuevaGestionPage() {
           </div>
         )}
 
-        {avatarUrl && (
+        {avatarUrl ? (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-xl border border-blue-200 shadow-2xs animate-in fade-in">
             <div className="flex items-center gap-3.5">
-              <div className="h-14 w-14 rounded-full overflow-hidden border-2 border-blue-600 shrink-0 shadow-sm ring-2 ring-blue-100">
+              <div className="h-14 w-14 rounded-full overflow-hidden border-2 border-blue-600 shrink-0 shadow-sm ring-2 ring-blue-100 bg-slate-100">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={avatarUrl} alt="Foto del ciudadano extraída" className="h-full w-full object-cover" />
               </div>
               <div>
                 <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                  <span>Fotografía del Ciudadano Mapeada por IA</span>
+                  <span>Fotografía del Expediente</span>
                 </span>
                 <span className="text-[11px] text-slate-600 block leading-relaxed">
-                  Rostro identificado e integrado automáticamente como foto del expediente y del contacto en el directorio.
+                  Rostro asignado al expediente y al contacto del directorio.
                 </span>
               </div>
             </div>
+            <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+              <input
+                type="file"
+                ref={profilePhotoInputRef}
+                onChange={handleProfilePhotoChange}
+                accept="image/*"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => profilePhotoInputRef.current?.click()}
+                className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 bg-white hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 shadow-2xs transition-colors cursor-pointer"
+              >
+                Subir Foto Personal
+              </button>
+              <button
+                type="button"
+                onClick={() => setAvatarUrl('')}
+                className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200 shadow-2xs transition-colors cursor-pointer"
+                title="Quitar foto y usar iniciales del ciudadano"
+              >
+                Quitar Foto
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-sm shrink-0">
+                {nombre.trim() ? nombre.trim().slice(0, 2).toUpperCase() : 'CI'}
+              </div>
+              <div>
+                <p className="font-semibold text-slate-800">Avatar del Ciudadano</p>
+                <p className="text-[11px] text-slate-500">Se usarán las iniciales oficiales o puedes subir una foto directa.</p>
+              </div>
+            </div>
+            <input
+              type="file"
+              ref={profilePhotoInputRef}
+              onChange={handleProfilePhotoChange}
+              accept="image/*"
+              className="hidden"
+            />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="self-start sm:self-center text-[11px] font-semibold text-blue-700 hover:text-blue-800 bg-white hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 shadow-2xs transition-colors shrink-0"
+              onClick={() => profilePhotoInputRef.current?.click()}
+              className="text-[11px] font-semibold text-slate-700 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs cursor-pointer"
             >
-              Cambiar Foto
+              + Subir Foto
             </button>
           </div>
         )}
