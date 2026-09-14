@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Contact, ChevronLeft, Phone, Mail, MapPin, Cake, Building, Upload } from 'lucide-react';
+import { Contact, ChevronLeft, Phone, Mail, MapPin, Cake, Building, Upload, AlertCircle } from 'lucide-react';
 import { createContacto } from '@/app/actions/directorio';
 
 const TIPOS_CONTACTO_LIST = [
@@ -20,6 +20,8 @@ export default function NuevoContactoDirectorioPage() {
   const router = useRouter();
 
   const [formNombre, setFormNombre] = useState('');
+  const [formCurp, setFormCurp] = useState('');
+  const [curpError, setCurpError] = useState<string | null>(null);
   const [formTelefono, setFormTelefono] = useState('');
   const [formTelefonoAlterno, setFormTelefonoAlterno] = useState('');
   const [formCargo, setFormCargo] = useState('');
@@ -51,12 +53,14 @@ export default function NuevoContactoDirectorioPage() {
     e.preventDefault();
     if (!formNombre.trim() || !formTelefono.trim()) return;
     setIsSubmitting(true);
+    setCurpError(null);
 
     try {
       const fullAddress = [formDomicilio.trim(), formColonia.trim(), formMunicipio.trim()].filter(Boolean).join(', ');
 
       const res = await createContacto({
         nombre: formNombre.trim(),
+        curp: formCurp.trim().toUpperCase() || undefined,
         telefono: formTelefono.trim(),
         cargo: formCargo.trim() || 'Ciudadano',
         organizacion: formOrganizacion.trim() || 'Sociedad Civil',
@@ -70,12 +74,12 @@ export default function NuevoContactoDirectorioPage() {
       if (res.success) {
         router.push('/directorio');
       } else {
-        alert(res.error || 'No se pudo guardar el contacto');
+        setCurpError(res.error || 'No se pudo guardar el contacto');
         setIsSubmitting(false);
       }
     } catch (err) {
       console.error(err);
-      alert('Error de conexión');
+      setCurpError('Error de conexión al guardar contacto');
       setIsSubmitting(false);
     }
   };
@@ -132,6 +136,30 @@ export default function NuevoContactoDirectorioPage() {
               <span>Subir Foto</span>
             </button>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+            <span>CURP (Clave Única de Registro de Población)</span>
+            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Identificador Principal</span>
+          </label>
+          <input
+            type="text"
+            value={formCurp}
+            onChange={(e) => {
+              setFormCurp(e.target.value.toUpperCase());
+              setCurpError(null);
+            }}
+            maxLength={18}
+            placeholder="Ej: ROAR800101HTGRRL01 (18 caracteres)"
+            className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono uppercase font-bold tracking-wide focus:bg-white focus:ring-2 focus:ring-blue-500"
+          />
+          {curpError && (
+            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 font-semibold text-xs flex items-center gap-2 animate-in fade-in">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+              <span>{curpError}</span>
+            </div>
+          )}
         </div>
 
         <div>

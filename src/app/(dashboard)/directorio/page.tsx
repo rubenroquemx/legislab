@@ -35,7 +35,8 @@ import {
   Calendar,
   Share2,
   PhoneCall,
-  ChevronLeft
+  ChevronLeft,
+  AlertCircle
 } from 'lucide-react';
 import { SectionHeader, InsetGroup, ListRow } from '@/components/ui/ios-inset-group';
 import { IosSwipeableRow } from '@/components/ui/ios-swipeable-row';
@@ -53,6 +54,7 @@ export interface ObservacionContacto {
 
 export interface ContactoDirectorio {
   id: string;
+  curp?: string;
   nombre: string;
   telefono: string;
   telefonoAlterno?: string;
@@ -120,49 +122,41 @@ function formatFechaCumpleanos(dateStr?: string | null): string {
   // Case 2: M/D/YY or M/D/YYYY or MM/DD/YYYY
   if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(str)) {
     const parts = str.split('/').map(Number);
-    let m = parts[0];
-    let d = parts[1];
+    const m = parts[0];
+    const d = parts[1];
     let y = parts[2];
-    if (y < 100) {
-      y = y > 30 ? 1900 + y : 2000 + y;
-    }
+    if (y < 100) y += 1900;
     if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
       return `${d} de ${meses[m - 1]} de ${y}`;
     }
   }
 
-  // Case 3: DD-MM-YYYY
-  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(str)) {
-    const [d, m, y] = str.split('-').map(Number);
-    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-      return `${d} de ${meses[m - 1]} de ${y}`;
-    }
-  }
-
+  // Case 3: DD de Mes or similar text string
   return str;
 }
 
 export default function DirectorioPage() {
-  const [contactos, setContactos] = useState<ContactoDirectorio[]>(INITIAL_CONTACTOS);
+  const [contactos, setContactos] = useState<ContactoDirectorio[]>([]);
   const [loading, setLoading] = useState(true);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
   const loadContactos = async () => {
     try {
+      setLoading(true);
       const res = await getContactos();
-      if (res.success && res.data && res.data.length > 0) {
+      if (res.success && res.data) {
         const mapped: ContactoDirectorio[] = res.data.map((d: any) => {
           let obs: ObservacionContacto[] = [];
           if (d.observaciones) {
             try {
               obs = typeof d.observaciones === 'string' ? JSON.parse(d.observaciones) : d.observaciones;
-              if (!Array.isArray(obs)) obs = [];
             } catch {
               obs = [];
             }
           }
           return {
             id: d.id,
+            curp: d.curp || '',
             nombre: d.nombre,
             telefono: d.telefono,
             cargo: d.cargo,
@@ -218,6 +212,8 @@ export default function DirectorioPage() {
 
   // Form states
   const [formNombre, setFormNombre] = useState('');
+  const [formCurp, setFormCurp] = useState('');
+  const [curpError, setCurpError] = useState<string | null>(null);
   const [formTelefono, setFormTelefono] = useState('');
   const [formTelefonoAlt, setFormTelefonoAlt] = useState('');
   const [formCargo, setFormCargo] = useState('');
@@ -258,6 +254,7 @@ export default function DirectorioPage() {
   const contactosFiltrados = contactosOrdenados.filter((c) => {
     const matchesSearch = 
       c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.curp && c.curp.toLowerCase().includes(searchTerm.toLowerCase())) ||
       c.telefono.includes(searchTerm) ||
       c.cargo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.organizacion.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -285,6 +282,8 @@ export default function DirectorioPage() {
   const handleOpenCrearModal = () => {
     setContactoEnEdicion(null);
     setFormNombre('');
+    setFormCurp('');
+    setCurpError(null);
     setFormTelefono('');
     setFormTelefonoAlt('');
     setFormCargo('');
@@ -304,6 +303,8 @@ export default function DirectorioPage() {
   const handleOpenEditarModal = (c: ContactoDirectorio) => {
     setContactoEnEdicion(c);
     setFormNombre(c.nombre);
+    setFormCurp(c.curp || '');
+    setCurpError(null);
     setFormTelefono(c.telefono);
     setFormTelefonoAlt(c.telefonoAlterno || '');
     setFormCargo(c.cargo);
@@ -337,42 +338,18 @@ export default function DirectorioPage() {
       alert('Por favor completa los campos obligatorios (Nombre y Teléfono).');
       return;
     }
+    setCurpError(null);
 
     const correosArray = [formCorreoPrincipal.trim(), formCorreoAlt.trim()].filter(Boolean);
     const avatar = formAvatarUrl.trim() || '';
-    
-    // Check if birthday matches today (03 Sep)
+    const cleanCurpVal = formCurp.trim().toUpperCase() || undefined;
     const isBirthdayToday = formCumpleanos.endsWith('09-03');
 
     if (contactoEnEdicion) {
-      const updated: ContactoDirectorio = {
-        ...contactoEnEdicion,
-        nombre: formNombre.trim(),
-        telefono: formTelefono.trim(),
-        telefonoAlterno: formTelefonoAlt.trim() || undefined,
-        cargo: formCargo.trim() || 'Contacto General',
-        organizacion: formOrganizacion.trim() || 'Particular',
-        correos: correosArray,
-        domicilio: formDomicilio.trim(),
-        colonia: formColonia.trim(),
-        municipio: formMunicipio.trim(),
-        fechaCumpleanos: formCumpleanos,
-        esCumpleanosHoy: isBirthdayToday,
-        tipoContacto: formTipoContacto,
-        folioGestion: formFolioGestion.trim() || undefined,
-        avatarUrl: avatar,
-      };
-
-      const actualizados = contactos.map((c) => (c.id === contactoEnEdicion.id ? updated : c));
-      setContactos(actualizados);
-      if (contactoSeleccionado?.id === contactoEnEdicion.id) {
-        setContactoSeleccionado(updated);
-      }
-      setIsModalCrearOpen(false);
-
       try {
-        await updateContacto(contactoEnEdicion.id, {
+        const res = await updateContacto(contactoEnEdicion.id, {
           nombre: formNombre.trim(),
+          curp: cleanCurpVal,
           cargo: formCargo.trim() || 'Contacto General',
           organizacion: formOrganizacion.trim() || 'Particular',
           categoria: formTipoContacto,
@@ -382,47 +359,55 @@ export default function DirectorioPage() {
           fechaNacimiento: formCumpleanos,
           direccion: `${formDomicilio.trim()}${formColonia.trim() ? ', ' + formColonia.trim() : ''}${formMunicipio.trim() ? ', ' + formMunicipio.trim() : ''}`,
         });
+
+        if (!res.success) {
+          setCurpError(res.error || 'Error al actualizar contacto.');
+          return;
+        }
+
+        const updated: ContactoDirectorio = {
+          ...contactoEnEdicion,
+          nombre: formNombre.trim(),
+          curp: cleanCurpVal || '',
+          telefono: formTelefono.trim(),
+          telefonoAlterno: formTelefonoAlt.trim() || undefined,
+          cargo: formCargo.trim() || 'Contacto General',
+          organizacion: formOrganizacion.trim() || 'Particular',
+          correos: correosArray,
+          domicilio: formDomicilio.trim(),
+          colonia: formColonia.trim(),
+          municipio: formMunicipio.trim(),
+          fechaCumpleanos: formCumpleanos,
+          esCumpleanosHoy: isBirthdayToday,
+          tipoContacto: formTipoContacto,
+          folioGestion: formFolioGestion.trim() || undefined,
+          avatarUrl: avatar,
+        };
+
+        const actualizados = contactos.map((c) => (c.id === contactoEnEdicion.id ? updated : c));
+        setContactos(actualizados);
+        if (contactoSeleccionado?.id === contactoEnEdicion.id) {
+          setContactoSeleccionado(updated);
+        }
+        setIsModalCrearOpen(false);
       } catch (err) {
         console.error('Error updating contacto:', err);
+        setCurpError('Error de conexión al actualizar contacto.');
       }
     } else {
-      const initialObs: ObservacionContacto = {
-        id: `obs-${Date.now()}`,
-        fecha: 'Hoy',
-        hora: getCurrentTimeMexicoCity(),
-        autor: usuarioActivo.nombre,
-        texto: 'Contacto registrado en el Directorio Oficial.',
-        esDiputado: true,
-      };
-
-      const tempId = `con-${Date.now()}`;
-      const nuevo: ContactoDirectorio = {
-        id: tempId,
-        nombre: formNombre.trim(),
-        telefono: formTelefono.trim(),
-        telefonoAlterno: formTelefonoAlt.trim() || undefined,
-        cargo: formCargo.trim() || 'Contacto General',
-        organizacion: formOrganizacion.trim() || 'Particular',
-        correos: correosArray,
-        domicilio: formDomicilio.trim(),
-        colonia: formColonia.trim(),
-        municipio: formMunicipio.trim(),
-        fechaCumpleanos: formCumpleanos,
-        esCumpleanosHoy: isBirthdayToday,
-        tipoContacto: formTipoContacto,
-        folioGestion: formFolioGestion.trim() || undefined,
-        avatarUrl: avatar,
-        observaciones: [initialObs],
-      };
-
-      setContactos([nuevo, ...contactos]);
-      setContactoSeleccionado(nuevo);
-      setMobileShowDetail(true);
-      setIsModalCrearOpen(false);
-
       try {
+        const initialObs: ObservacionContacto = {
+          id: `obs-${Date.now()}`,
+          fecha: 'Hoy',
+          hora: getCurrentTimeMexicoCity(),
+          autor: usuarioActivo.nombre,
+          texto: 'Contacto registrado en el Directorio Oficial.',
+          esDiputado: true,
+        };
+
         const res = await createContacto({
           nombre: formNombre.trim(),
+          curp: cleanCurpVal,
           cargo: formCargo.trim() || 'Contacto General',
           organizacion: formOrganizacion.trim() || 'Particular',
           categoria: formTipoContacto,
@@ -433,14 +418,39 @@ export default function DirectorioPage() {
           direccion: `${formDomicilio.trim()}${formColonia.trim() ? ', ' + formColonia.trim() : ''}${formMunicipio.trim() ? ', ' + formMunicipio.trim() : ''}`,
           observaciones: [initialObs],
         });
-        if (res.success && res.data) {
-          setContactos(prev => prev.map(c => c.id === tempId ? { ...c, id: res.data.id } : c));
-          if (contactoSeleccionado?.id === tempId) {
-            setContactoSeleccionado(prev => prev ? { ...prev, id: res.data.id } : null);
-          }
+
+        if (!res.success) {
+          setCurpError(res.error || 'No se pudo registrar este usuario.');
+          return;
         }
+
+        const nuevo: ContactoDirectorio = {
+          id: res.data?.id || `con-${Date.now()}`,
+          curp: cleanCurpVal || '',
+          nombre: formNombre.trim(),
+          telefono: formTelefono.trim(),
+          telefonoAlterno: formTelefonoAlt.trim() || undefined,
+          cargo: formCargo.trim() || 'Contacto General',
+          organizacion: formOrganizacion.trim() || 'Particular',
+          correos: correosArray,
+          domicilio: formDomicilio.trim(),
+          colonia: formColonia.trim(),
+          municipio: formMunicipio.trim(),
+          fechaCumpleanos: formCumpleanos,
+          esCumpleanosHoy: isBirthdayToday,
+          tipoContacto: formTipoContacto,
+          folioGestion: formFolioGestion.trim() || undefined,
+          avatarUrl: avatar,
+          observaciones: [initialObs],
+        };
+
+        setContactos([nuevo, ...contactos]);
+        setContactoSeleccionado(nuevo);
+        setMobileShowDetail(true);
+        setIsModalCrearOpen(false);
       } catch (err) {
         console.error('Error creating contacto in DB:', err);
+        setCurpError('Error de conexión al registrar contacto.');
       }
     }
   };
@@ -707,6 +717,11 @@ export default function DirectorioPage() {
                                   </div>
                                   <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{contacto.cargo}</p>
                                   <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{contacto.organizacion}</p>
+                                  {contacto.curp && (
+                                    <p className="text-[10px] font-mono font-semibold text-blue-600 dark:text-blue-400 truncate">
+                                      CURP: {contacto.curp}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
 
@@ -826,6 +841,14 @@ export default function DirectorioPage() {
                   </div>
                   <p className="text-sm font-semibold text-[#1B62E3]">{contactoSeleccionado.cargo}</p>
                   <p className="text-xs text-[#68768A]">{contactoSeleccionado.organizacion}</p>
+                  {contactoSeleccionado.curp && (
+                    <div className="pt-1 flex justify-center">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-850 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-mono font-bold tracking-wide border border-slate-200 dark:border-slate-700 shadow-2xs">
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400 font-sans font-extrabold uppercase">CURP:</span>
+                        <span>{contactoSeleccionado.curp}</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* iPhone Quick Action Buttons (Call, WhatsApp, Email, Wish Birthday) */}
@@ -1138,6 +1161,31 @@ export default function DirectorioPage() {
                     Subir Imagen
                   </button>
                 </div>
+              </div>
+
+              {/* CURP (Identificador Principal) & Validación */}
+              <div>
+                <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center justify-between">
+                  <span>CURP (Clave Única de Registro)</span>
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Identificador Principal</span>
+                </label>
+                <input
+                  type="text"
+                  value={formCurp}
+                  onChange={(e) => {
+                    setFormCurp(e.target.value.toUpperCase());
+                    setCurpError(null);
+                  }}
+                  maxLength={18}
+                  placeholder="Ej: ROAR800101HTGRRL01 (18 caracteres)"
+                  className="w-full p-2 bg-gray-50 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-100 font-mono uppercase font-bold tracking-wide focus:bg-white focus:ring-2 focus:ring-blue-500"
+                />
+                {curpError && (
+                  <div className="mt-2 p-2.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl text-red-600 dark:text-red-300 font-semibold text-xs flex items-center gap-2 animate-in fade-in">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                    <span>{curpError}</span>
+                  </div>
+                )}
               </div>
 
               {/* Nombre Completo & Cargo */}

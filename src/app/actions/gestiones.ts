@@ -168,35 +168,46 @@ export async function createGestion(data: {
       }
     }
 
-    // Alta automática del contacto en el Directorio bajo la categoría "Ciudadano / Gestión"
+    // Alta / Vinculación del ciudadano en el Directorio (CURP como Identificador Principal)
     try {
+      const cleanCurp = data.curp ? data.curp.trim().toUpperCase() : null;
       const cleanPhone = (data.telefono || '').replace(/\D/g, '');
       const existingContacts = await db
         .select()
         .from(directorioContactos)
         .where(eq(directorioContactos.officeId, officeId));
 
-      const found = existingContacts.find(c => {
-        const cPhone = (c.telefono || '').replace(/\D/g, '');
-        const matchPhone = cleanPhone && cPhone && cleanPhone.length >= 7 && cleanPhone === cPhone;
-        const matchName = c.nombre.trim().toLowerCase() === data.solicitante.trim().toLowerCase();
-        return matchPhone || matchName;
-      });
+      // 1. Búsqueda por CURP como Identificador Principal
+      let found = null;
+      if (cleanCurp) {
+        found = existingContacts.find(c => c.curp && c.curp.trim().toUpperCase() === cleanCurp);
+      }
+      // 2. Si no hubo CURP, intentar por teléfono o coincidencia exacta de nombre
+      if (!found) {
+        found = existingContacts.find(c => {
+          const cPhone = (c.telefono || '').replace(/\D/g, '');
+          const matchPhone = cleanPhone && cPhone && cleanPhone.length >= 7 && cleanPhone === cPhone;
+          const matchName = c.nombre.trim().toLowerCase() === data.solicitante.trim().toLowerCase();
+          return matchPhone || matchName;
+        });
+      }
 
-      const obsInicial = [
-        {
-          id: `obs-${Date.now()}`,
-          fecha: new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short' }),
-          hora: new Date().toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' }),
-          autor: creadorNombre,
-          texto: `Contacto registrado automáticamente por inicio de gestión con folio ${folio} (${data.asunto || 'Petición'}).`,
-          esDiputado: true,
-        }
-      ];
+      const obsItem = {
+        id: `obs-${Date.now()}`,
+        fecha: new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short' }),
+        hora: new Date().toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' }),
+        autor: creadorNombre,
+        texto: found
+          ? `Nueva gestión registrada con folio ${folio} (${data.asunto || 'Petición'}). El ciudadano ya contaba con expediente previo.`
+          : `Contacto registrado automáticamente por inicio de gestión con folio ${folio} (${data.asunto || 'Petición'}).`,
+        esDiputado: true,
+      };
 
       if (!found) {
+        // No existía el ciudadano: registrar usuario nuevo en el directorio
         await db.insert(directorioContactos).values({
           officeId,
+          curp: cleanCurp,
           nombre: data.solicitante.trim(),
           cargo: 'Ciudadano Solicitante',
           organizacion: data.colonia ? `${data.colonia}, ${data.municipio || 'Centro'}` : 'Atención Ciudadana',
@@ -205,17 +216,32 @@ export async function createGestion(data: {
           email: data.email?.trim() || null,
           foto: data.avatarUrl || null,
           direccion: data.direccion?.trim() || (data.colonia ? `${data.colonia}, ${data.municipio || ''}` : null),
-          observaciones: JSON.stringify(obsInicial),
+          observaciones: JSON.stringify([obsItem]),
         });
       } else {
+        // El ciudadano ya existe: vincular la nueva gestión SIN crear duplicados
         const updates: any = {};
+        if (cleanCurp && !found.curp) updates.curp = cleanCurp;
         if (!found.foto && data.avatarUrl) updates.foto = data.avatarUrl;
         if (!found.categoria || found.categoria === 'Gabinete Estatal') {
           updates.categoria = 'Ciudadano / Gestión';
         }
-        if (Object.keys(updates).length > 0) {
-          await db.update(directorioContactos).set(updates).where(eq(directorioContactos.id, found.id));
+        if ((!found.telefono || found.telefono === 'Sin teléfono') && data.telefono?.trim()) {
+          updates.telefono = data.telefono.trim();
         }
+        if (!found.direccion && data.direccion?.trim()) {
+          updates.direccion = data.direccion.trim();
+        }
+
+        let currentObs: any[] = [];
+        if (found.observaciones) {
+          try {
+            currentObs = typeof found.observaciones === 'string' ? JSON.parse(found.observaciones) : found.observaciones;
+          } catch {}
+        }
+        updates.observaciones = JSON.stringify([obsItem, ...(Array.isArray(currentObs) ? currentObs : [])]);
+
+        await db.update(directorioContactos).set(updates).where(eq(directorioContactos.id, found.id));
       }
       revalidatePath('/directorio');
     } catch (dirErr) {

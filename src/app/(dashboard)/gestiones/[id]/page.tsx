@@ -27,7 +27,8 @@ import {
   Check,
   Plus,
   X,
-  AlertOctagon
+  AlertOctagon,
+  FolderKanban
 } from 'lucide-react';
 import { 
   getGestiones, 
@@ -63,6 +64,7 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState(true);
   const [usuariosDespacho, setUsuariosDespacho] = useState<any[]>([]);
   const [historial, setHistorial] = useState<EventoHistorial[]>([]);
+  const [otrasGestiones, setOtrasGestiones] = useState<any[]>([]);
   const [menuAsignarOpen, setMenuAsignarOpen] = useState(false);
 
   // Modales
@@ -223,8 +225,18 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
               asignados: asigs,
               responsableId: found.responsableId || meta.responsableId || null,
               responsableNombre: meta.responsableNombre || null,
-              creadorNombre: meta.creadorNombre || null,
             });
+
+            // Encontrar otras gestiones del mismo ciudadano (Misma CURP)
+            if (found.curp && found.curp.trim()) {
+              const cleanCurp = found.curp.trim().toUpperCase();
+              const related = gestionesRes.data.filter(
+                (g: any) => g.id !== found.id && g.curp && g.curp.trim().toUpperCase() === cleanCurp
+              );
+              setOtrasGestiones(related);
+            } else {
+              setOtrasGestiones([]);
+            }
 
             // Cargar expediente de Google Drive
             await loadDriveExpediente(found.id);
@@ -716,11 +728,55 @@ export default function GestionDetallePage({ params }: { params: Promise<{ id: s
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 font-medium">
-            <span>CURP: <strong className="font-mono text-slate-900">{gestion.curp || 'No registrada'}</strong></span>
+            <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-900 px-2.5 py-0.5 rounded-lg border border-blue-200/80">
+              <span className="text-[10px] uppercase font-bold text-blue-600">CURP (ID):</span>
+              <strong className="font-mono text-slate-900">{gestion.curp || 'No registrada'}</strong>
+            </span>
             <span>Sección Electoral: <strong className="text-blue-700">{gestion.seccionElectoral || 'S/D'}</strong></span>
             <span>📍 {gestion.colonia || 'Centro'}, {gestion.municipio || 'Centro'}</span>
             <span>📞 {gestion.telefono || 'Sin teléfono'}</span>
           </div>
+
+          {/* Expedientes Previos / Multigestión del mismo ciudadano */}
+          {otrasGestiones.length > 0 && (
+            <div className="p-3 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-2xl border border-blue-200/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FolderKanban className="h-4 w-4 text-blue-600 shrink-0" />
+                  <span className="text-xs font-bold text-blue-950">
+                    Otras Gestiones de este Ciudadano ({otrasGestiones.length})
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-blue-700 font-bold bg-white px-2 py-0.5 rounded-md border border-blue-200 shadow-2xs">
+                  Misma CURP
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                {otrasGestiones.map((og: any) => (
+                  <Link
+                    key={og.id}
+                    href={`/gestiones/${og.id}`}
+                    className="p-2.5 bg-white rounded-xl border border-blue-100 hover:border-blue-400 hover:shadow-xs transition-all flex items-center justify-between text-xs group"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-[11px] text-blue-600 group-hover:underline">
+                          {og.folio}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          • {new Date(og.createdAt).toLocaleDateString('es-MX')}
+                        </span>
+                      </div>
+                      <p className="font-medium text-slate-800 truncate mt-0.5">
+                        {og.asunto}
+                      </p>
+                    </div>
+                    <StatusBadge status={og.estatus} size="sm" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Bloque de Estado y Asignado a: */}
           <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-slate-100">

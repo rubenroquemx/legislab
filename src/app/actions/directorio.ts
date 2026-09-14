@@ -1,7 +1,7 @@
 'use server';
 
-import { db, directorioContactos, type NewDirectorioContacto } from '@/db';
-import { eq, and, desc } from 'drizzle-orm';
+import { db, directorioContactos, gestiones, type NewDirectorioContacto } from '@/db';
+import { eq, and, desc, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getActiveOfficeId } from '@/lib/session-office';
 import { getCurrentTimeMexicoCity } from '@/lib/date-utils';
@@ -31,11 +31,66 @@ export async function getContactos(officeId?: string) {
   }
 }
 
+export async function buscarCiudadanoPorCurpAction(curp: string, officeId?: string) {
+  try {
+    if (!curp || !curp.trim()) {
+      return { success: false, found: false, message: 'CURP requerida' };
+    }
+    const activeOfficeId = await getActiveOfficeId(officeId);
+    const cleanCurp = curp.trim().toUpperCase();
+
+    // 1. Buscar en directorio_contactos
+    const contacts = await db
+      .select()
+      .from(directorioContactos)
+      .where(and(eq(directorioContactos.officeId, activeOfficeId), eq(directorioContactos.curp, cleanCurp)));
+
+    // 2. Buscar gestiones asociadas a esta CURP
+    const userGestiones = await db
+      .select({
+        id: gestiones.id,
+        folio: gestiones.folio,
+        asunto: gestiones.asunto,
+        estatus: gestiones.estatus,
+        prioridad: gestiones.prioridad,
+        solicitante: gestiones.solicitante,
+        telefono: gestiones.telefono,
+        direccion: gestiones.direccion,
+        colonia: gestiones.colonia,
+        municipio: gestiones.municipio,
+        avatarUrl: gestiones.avatarUrl,
+        createdAt: gestiones.createdAt,
+      })
+      .from(gestiones)
+      .where(and(eq(gestiones.officeId, activeOfficeId), eq(gestiones.curp, cleanCurp)))
+      .orderBy(desc(gestiones.createdAt));
+
+    if (contacts.length > 0 || userGestiones.length > 0) {
+      const contact = contacts[0] || null;
+      const latestGestion = userGestiones[0] || null;
+      return {
+        success: true,
+        found: true,
+        contacto: contact,
+        latestGestion,
+        gestionesPrevias: userGestiones,
+        totalGestiones: userGestiones.length,
+      };
+    }
+
+    return { success: true, found: false };
+  } catch (error) {
+    console.error('Error buscando ciudadano por CURP:', error);
+    return { success: false, found: false, error: 'Error al consultar CURP' };
+  }
+}
+
 export async function createContacto(data: {
   nombre: string;
   cargo: string;
   organizacion: string;
   categoria?: string;
+  curp?: string;
   telefono: string;
   email?: string;
   foto?: string;
@@ -46,6 +101,23 @@ export async function createContacto(data: {
 }) {
   try {
     const officeId = await getActiveOfficeId(data.officeId);
+    const cleanCurp = data.curp ? data.curp.trim().toUpperCase() : null;
+
+    // Validación de unicidad de CURP: No se puede registrar un usuario nuevo si se repite la CURP
+    if (cleanCurp) {
+      const existingWithCurp = await db
+        .select()
+        .from(directorioContactos)
+        .where(and(eq(directorioContactos.officeId, officeId), eq(directorioContactos.curp, cleanCurp)));
+
+      if (existingWithCurp.length > 0) {
+        return {
+          success: false,
+          error: `No se puede registrar este usuario: la CURP ${cleanCurp} ya se encuentra registrada a nombre de "${existingWithCurp[0].nombre}".`,
+          existingContact: existingWithCurp[0],
+        };
+      }
+    }
 
     const obsString = Array.isArray(data.observaciones)
       ? JSON.stringify(data.observaciones)
@@ -53,6 +125,7 @@ export async function createContacto(data: {
 
     const newEntry: NewDirectorioContacto = {
       officeId,
+      curp: cleanCurp,
       nombre: data.nombre,
       cargo: data.cargo,
       organizacion: data.organizacion,
@@ -83,6 +156,7 @@ export async function updateContacto(
     cargo?: string;
     organizacion?: string;
     categoria?: string;
+    curp?: string;
     telefono?: string;
     email?: string;
     foto?: string | null;
@@ -109,6 +183,28 @@ export async function updateContacto(
       updateFields.observaciones = Array.isArray(data.observaciones)
         ? JSON.stringify(data.observaciones)
         : data.observaciones;
+    }
+
+    if (data.curp !== undefined) {
+      const cleanCurp = data.curp ? data.curp.trim().toUpperCase() : null;
+      if (cleanCurp) {
+        const existingWithCurp = await db
+          .select()
+          .from(directorioContactos)
+          .where(and(
+            eq(directorioContactos.officeId, activeOfficeId),
+            eq(directorioContactos.curp, cleanCurp),
+            ne(directorioContactos.id, id)
+          ));
+
+        if (existingWithCurp.length > 0) {
+          return {
+            success: false,
+            error: `La CURP ${cleanCurp} ya está asignada a otro contacto ("${existingWithCurp[0].nombre}").`,
+          };
+        }
+      }
+      updateFields.curp = cleanCurp;
     }
 
     const updated = await db

@@ -32,6 +32,7 @@ import {
 } from '@/app/actions/gestiones';
 import { createGestionDriveFolderAction, getGoogleDriveStatusAction } from '@/app/actions/drive';
 import { getOfficeUsersAction } from '@/app/actions/usuarios';
+import { buscarCiudadanoPorCurpAction } from '@/app/actions/directorio';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 const TIPOS_GESTION_BASE = [
@@ -298,6 +299,31 @@ export default function NuevaGestionPage() {
   const [manualZoom, setManualZoom] = useState<number>(1.0);
   const [manualCoords, setManualCoords] = useState<{ x: number; y: number }>({ x: 0.45, y: 0.22 });
 
+  // Citizen identification by CURP (Identificador Principal)
+  const [existingCitizenData, setExistingCitizenData] = useState<any | null>(null);
+  const [isCheckingCurp, setIsCheckingCurp] = useState(false);
+
+  const checkExistingCitizen = async (curpVal: string) => {
+    const clean = (curpVal || '').trim().toUpperCase();
+    if (clean.length < 10) {
+      setExistingCitizenData(null);
+      return;
+    }
+    setIsCheckingCurp(true);
+    try {
+      const res = await buscarCiudadanoPorCurpAction(clean);
+      if (res.success && res.found) {
+        setExistingCitizenData(res);
+      } else {
+        setExistingCitizenData(null);
+      }
+    } catch (e) {
+      console.warn('Error checking curp:', e);
+    } finally {
+      setIsCheckingCurp(false);
+    }
+  };
+
   // Live Camera Scanner State
   const [isLiveCameraOpen, setIsLiveCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -505,7 +531,10 @@ export default function NuevaGestionPage() {
         const d = res.data;
         const nombreFinal = d.nombreCompleto || `${d.nombre || ''} ${d.primerApellido || ''} ${d.segundoApellido || ''}`.trim();
         setNombre(nombreFinal);
-        if (d.curp) setCurp(d.curp);
+        if (d.curp) {
+          setCurp(d.curp);
+          checkExistingCitizen(d.curp);
+        }
         if (d.seccionElectoral) setSeccionElectoral(d.seccionElectoral);
         if (d.calle || d.direccionCompleta) setDireccion(d.calle || d.direccionCompleta);
         if (d.colonia) setColonia(d.colonia);
@@ -908,6 +937,90 @@ export default function NuevaGestionPage() {
           Datos del Solicitante y Ubicación
         </h2>
 
+        {/* Identificador Principal: CURP */}
+        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-slate-800 flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+              <span>CURP del Ciudadano <span className="text-blue-600 font-extrabold">(Identificador Principal)</span></span>
+            </label>
+            <span className="text-[10px] font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+              Clave Única
+            </span>
+          </div>
+
+          <div className="relative">
+            <input
+              type="text"
+              value={curp}
+              onChange={(e) => {
+                const val = e.target.value.toUpperCase();
+                setCurp(val);
+                if (val.length >= 18) {
+                  checkExistingCitizen(val);
+                } else if (val.length < 10 && existingCitizenData) {
+                  setExistingCitizenData(null);
+                }
+              }}
+              onBlur={() => {
+                if (curp.trim().length >= 10) {
+                  checkExistingCitizen(curp);
+                }
+              }}
+              maxLength={18}
+              placeholder="Ej: ROAR800101HTGRRL01 (18 caracteres)"
+              className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-900 uppercase font-mono font-bold tracking-wider shadow-2xs"
+            />
+            {isCheckingCurp && (
+              <span className="absolute right-3 top-2.5 text-[11px] text-blue-600 font-semibold animate-pulse">
+                Buscando expediente previo...
+              </span>
+            )}
+          </div>
+
+          {/* Banner si el ciudadano ya existe en el sistema */}
+          {existingCitizenData && (
+            <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3 animate-in fade-in">
+              <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
+                <UserCheck className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-blue-950">
+                    Ciudadano Identificado: {existingCitizenData.contacto?.nombre || existingCitizenData.latestGestion?.solicitante}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-200 text-blue-900">
+                    {existingCitizenData.totalGestiones} {existingCitizenData.totalGestiones === 1 ? 'gestión registrada' : 'gestiones registradas'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-700 mt-1">
+                  Este ciudadano ya cuenta con expediente en el despacho. Esta nueva gestión se asociará a su misma CURP sin duplicar su registro en el Directorio.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const c = existingCitizenData.contacto;
+                    const g = existingCitizenData.latestGestion;
+                    if (c?.nombre || g?.solicitante) setNombre(c?.nombre || g?.solicitante);
+                    if (c?.telefono && c.telefono !== 'Sin teléfono') setTelefono(c.telefono);
+                    else if (g?.telefono) setTelefono(g.telefono);
+                    if (c?.foto) setAvatarUrl(c.foto);
+                    else if (g?.avatarUrl) setAvatarUrl(g.avatarUrl);
+                    if (c?.direccion) setDireccion(c.direccion);
+                    else if (g?.direccion) setDireccion(g.direccion);
+                    if (g?.colonia) setColonia(g.colonia);
+                    if (g?.municipio) setMunicipio(g.municipio);
+                  }}
+                  className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-all active:scale-95 shadow-2xs"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Autocompletar datos del expediente</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -937,17 +1050,7 @@ export default function NuevaGestionPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">CURP</label>
-            <input
-              type="text"
-              value={curp}
-              onChange={(e) => setCurp(e.target.value)}
-              placeholder="Ej: MOHJ820415HTBLRN09"
-              className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-slate-900 uppercase font-mono"
-            />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Clave de Elector</label>
             <input

@@ -267,6 +267,7 @@ export async function ensureDatabaseTables(connectionString: string) {
         organizacion TEXT NOT NULL,
         categoria TEXT DEFAULT 'Gabinete Estatal',
         telefono TEXT NOT NULL,
+        curp TEXT,
         email TEXT,
         foto TEXT,
         fecha_nacimiento TEXT,
@@ -276,6 +277,7 @@ export async function ensureDatabaseTables(connectionString: string) {
       )
     `;
 
+    await sql`ALTER TABLE directorio_contactos ADD COLUMN IF NOT EXISTS curp TEXT`;
     await sql`ALTER TABLE directorio_contactos ADD COLUMN IF NOT EXISTS observaciones TEXT`;
 
     // 8. Grupos

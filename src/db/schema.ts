@@ -288,6 +288,7 @@ export const directorioContactos = pgTable('directorio_contactos', {
   officeId: uuid('office_id')
     .notNull()
     .references(() => offices.id, { onDelete: 'cascade' }),
+  curp: text('curp'),
   nombre: text('nombre').notNull(),
   cargo: text('cargo').notNull(),
   organizacion: text('organizacion').notNull(),
