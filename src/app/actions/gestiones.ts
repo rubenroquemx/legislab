@@ -792,10 +792,11 @@ Instrucciones:
 1. Determina si la imagen corresponde a una credencial para votar mexicana (INE / IFE) auténtica y legible.
 2. Si NO es una credencial del INE o la imagen es ilegible/borrosa, pon "esCredencialIneValida": false y deja los demás campos vacíos.
 3. Si SÍ es una credencial del INE, pon "esCredencialIneValida": true y extrae con total exactitud todos los campos visibles.
-4. LOCALIZACIÓN EXACTA DE LA FOTOGRAFÍA DEL CIUDADANO:
-- En las credenciales de elector mexicanas (INE/IFE), la fotografía principal del rostro del ciudadano siempre está ubicada en el LADO IZQUIERDO de la credencial (ocupando aproximadamente del 10% al 35% del ancho de la tarjeta).
-- ESTRICTAMENTE PROHIBIDO recortar o confundir con: la firma, la huella dactilar, o los bloques de texto ("CLAVE DE ELECTOR", "CURP", "REGISTRO", etc.) que se encuentran en la zona central y derecha.
-- Devuelve las coordenadas de la caja que enmarca la cabeza/rostro de la persona en "fotoBoundingBox": [ymin, xmin, ymax, xmax] en escala entera de 0 a 1000 respecto a la imagen completa recibida (donde ymin es el borde superior de la cabeza, xmin el borde izquierdo, ymax el borde inferior/mentón y xmax el borde derecho).
+4. DETECCIÓN VISUAL DEL ROSTRO HUMANO PRINCIPAL ("fotoBoundingBox"):
+- Localiza la fotografía principal a color del rostro humano de la persona (ojos, nariz, boca, frente y mentón del ciudadano).
+- REGLA CRÍTICA DE ORIENTACIÓN: La credencial puede haber sido fotografiada en cualquier posición o rotación (vertical, horizontal, girada 90°, 180° o 270°). NO asumas que está en ningún lado predeterminado. Localiza visualmente dónde se encuentra la cabeza y cara real de la persona física dentro de la imagen enviada.
+- ESTRICTAMENTE PROHIBIDO seleccionar la firma manuscrita, los bloques de texto ("CLAVE DE ELECTOR", "CURP", "REGISTRO", etc.), o la microfoto holográfica fantasma secundaria pequeña.
+- Devuelve las coordenadas de la caja que enmarca exclusivamente la cabeza y rostro de la persona en "fotoBoundingBox": [ymin, xmin, ymax, xmax] en escala entera de 0 a 1000 respecto a los límites de la imagen enviada (donde ymin=0 es el borde superior de la imagen, ymax=1000 el inferior, xmin=0 el izquierdo y xmax=1000 el derecho).
 5. Responde ÚNICAMENTE con un JSON válido sin markdown, sin backticks y sin texto adicional.
 
 Estructura JSON requerida:

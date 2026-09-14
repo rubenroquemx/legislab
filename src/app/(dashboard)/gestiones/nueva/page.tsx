@@ -15,7 +15,8 @@ import {
   FolderOpen,
   Users,
   Check,
-  UserCheck
+  UserCheck,
+  Crop
 } from 'lucide-react';
 import { 
   createGestion, 
@@ -43,125 +44,211 @@ const TIPOS_GESTION_BASE = [
  * Recorta con HTML Canvas el rostro del ciudadano detectado por IA en la credencial
  * Garantiza un encuadre cuadrado 1:1 perfectamente centrado en el rostro, sin deformaciones.
  */
+const cropFromCoordinates = async (
+  base64: string,
+  cxNorm: number,
+  cyNorm: number,
+  zoomFactor: number = 1.0
+): Promise<string> => {
+  return new Promise(async (resolve) => {
+    try {
+      let naturalW = 0;
+      let naturalH = 0;
+      let source: any = null;
+
+      if (typeof window !== 'undefined' && 'createImageBitmap' in window) {
+        try {
+          const res = await fetch(base64);
+          const blob = await res.blob();
+          source = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+          naturalW = source.width;
+          naturalH = source.height;
+        } catch {}
+      }
+
+      if (!source) {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise((res, rej) => {
+          img.onload = res;
+          img.onerror = rej;
+          img.src = base64;
+        });
+        source = img;
+        naturalW = img.naturalWidth || img.width;
+        naturalH = img.naturalHeight || img.height;
+      }
+
+      const cxPx = cxNorm * naturalW;
+      const cyPx = cyNorm * naturalH;
+
+      const baseSize = Math.min(naturalW, naturalH) * 0.35;
+      const sizePx = Math.max(baseSize * zoomFactor, 60);
+
+      const halfSize = sizePx / 2;
+      let sx = cxPx - halfSize;
+      let sy = cyPx - halfSize;
+
+      if (sx < 0) sx = 0;
+      if (sy < 0) sy = 0;
+      if (sx + sizePx > naturalW) sx = Math.max(0, naturalW - sizePx);
+      if (sy + sizePx > naturalH) sy = Math.max(0, naturalH - sizePx);
+
+      const cropW = Math.min(sizePx, naturalW - sx);
+      const cropH = Math.min(sizePx, naturalH - sy);
+      const finalSquare = Math.min(cropW, cropH);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 320;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(source, sx, sy, finalSquare, finalSquare, 0, 0, 320, 320);
+        return resolve(canvas.toDataURL('image/jpeg', 0.92));
+      }
+    } catch (err) {
+      console.warn('Error in manual crop:', err);
+    }
+    resolve(base64);
+  });
+};
+
 const cropCitizenPhoto = (base64: string, box?: [number, number, number, number] | null): Promise<string> => {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     if (typeof window === 'undefined') return resolve(base64);
-    const img = new window.Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = async () => {
-      try {
-        const naturalW = img.naturalWidth || img.width;
-        const naturalH = img.naturalHeight || img.height;
+    try {
+      let naturalW = 0;
+      let naturalH = 0;
+      let source: any = null;
 
-        let cxPx = naturalW * 0.22;
-        let cyPx = naturalH * 0.50;
-        let sizePx = Math.min(naturalW, naturalH) * 0.45;
-        let foundFace = false;
+      // Normalizar orientación EXIF del celular
+      if ('createImageBitmap' in window) {
+        try {
+          const res = await fetch(base64);
+          const blob = await res.blob();
+          source = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+          naturalW = source.width;
+          naturalH = source.height;
+        } catch {}
+      }
 
-        // 1. Coordenadas devueltas por Gemini Vision con auto-detección de escala
-        if (box && Array.isArray(box) && box.length === 4) {
-          const [yminRaw, xminRaw, ymaxRaw, xmaxRaw] = box.map(Number);
-          
-          if (!isNaN(yminRaw) && !isNaN(xminRaw) && !isNaN(ymaxRaw) && !isNaN(xmaxRaw)) {
-            // Detección automática de escala: floats (0..1), porcentajes (0..100) o enteros (0..1000)
-            const maxCoord = Math.max(yminRaw, xminRaw, ymaxRaw, xmaxRaw);
-            const scale = maxCoord <= 1.05 ? 1 : maxCoord <= 105 ? 100 : 1000;
+      if (!source) {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise((res, rej) => {
+          img.onload = res;
+          img.onerror = rej;
+          img.src = base64;
+        });
+        source = img;
+        naturalW = img.naturalWidth || img.width;
+        naturalH = img.naturalHeight || img.height;
+      }
 
-            const ymin = yminRaw / scale;
-            const xmin = xminRaw / scale;
-            const ymax = ymaxRaw / scale;
-            const xmax = xmaxRaw / scale;
+      let cxPx = naturalW / 2;
+      let cyPx = naturalH / 2;
+      let sizePx = Math.min(naturalW, naturalH) * 0.40;
+      let foundFace = false;
 
-            if (ymax > ymin && xmax > xmin) {
-              const bwNorm = xmax - xmin;
-              const bhNorm = ymax - ymin;
+      // 1. Coordenadas de Gemini Vision
+      if (box && Array.isArray(box) && box.length === 4) {
+        const [yminRaw, xminRaw, ymaxRaw, xmaxRaw] = box.map(Number);
+        
+        if (!isNaN(yminRaw) && !isNaN(xminRaw) && !isNaN(ymaxRaw) && !isNaN(xmaxRaw)) {
+          const maxCoord = Math.max(yminRaw, xminRaw, ymaxRaw, xmaxRaw);
+          const scale = maxCoord <= 1.05 ? 1 : maxCoord <= 105 ? 100 : 1000;
 
-              // Validar que sea una proporción plausible de rostro en credencial (entre 5% y 75% del ancho/alto)
-              if (bwNorm >= 0.05 && bwNorm <= 0.75 && bhNorm >= 0.05 && bhNorm <= 0.75) {
-                const cxNorm = (xmin + xmax) / 2;
-                const cyNorm = (ymin + ymax) / 2;
+          const ymin = yminRaw / scale;
+          const xmin = xminRaw / scale;
+          const ymax = ymaxRaw / scale;
+          const xmax = xmaxRaw / scale;
 
-                cxPx = cxNorm * naturalW;
-                cyPx = cyNorm * naturalH;
+          if (ymax > ymin && xmax > xmin) {
+            const bwNorm = xmax - xmin;
+            const bhNorm = ymax - ymin;
 
-                // Margen equilibrado del 35% alrededor del rostro para encuadre 1:1 natural
-                const faceW_px = bwNorm * naturalW;
-                const faceH_px = bhNorm * naturalH;
-                sizePx = Math.max(faceW_px, faceH_px) * 1.35;
-                foundFace = true;
-              }
-            }
-          }
-        }
+            if (bwNorm >= 0.05 && bwNorm <= 0.80 && bhNorm >= 0.05 && bhNorm <= 0.80) {
+              const cxNorm = (xmin + xmax) / 2;
+              const cyNorm = (ymin + ymax) / 2;
 
-        // 2. Si Gemini no detectó caja válida, probar FaceDetector nativo del navegador si está disponible
-        if (!foundFace && 'FaceDetector' in window) {
-          try {
-            const detector = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
-            const faces = await detector.detect(img);
-            if (faces && faces.length > 0 && faces[0].boundingBox) {
-              const bb = faces[0].boundingBox;
-              cxPx = bb.x + bb.width / 2;
-              cyPx = bb.y + bb.height / 2;
-              sizePx = Math.max(bb.width, bb.height) * 1.35;
+              cxPx = cxNorm * naturalW;
+              cyPx = cyNorm * naturalH;
+
+              const faceW_px = bwNorm * naturalW;
+              const faceH_px = bhNorm * naturalH;
+              sizePx = Math.max(faceW_px, faceH_px) * 1.35;
               foundFace = true;
             }
-          } catch (fdErr) {
-            console.warn('Native FaceDetector fallback error:', fdErr);
           }
         }
-
-        // 3. Fallback inteligente según cuadrante de fotografía oficial en la credencial INE
-        if (!foundFace) {
-          if (naturalW >= naturalH) {
-            // Credencial horizontal: cuadrante izquierdo (foto oficial INE)
-            cxPx = naturalW * 0.22;
-            cyPx = naturalH * 0.48;
-            sizePx = naturalH * 0.52;
-          } else {
-            // Foto tomada en vertical: la foto del ciudadano está en el cuadrante izquierdo de la tarjeta
-            cxPx = naturalW * 0.28;
-            cyPx = naturalH * 0.50;
-            sizePx = naturalW * 0.40;
-          }
-        }
-
-        // 4. Calcular coordenadas de recorte 1:1 estricto
-        const halfSize = sizePx / 2;
-        let sx = cxPx - halfSize;
-        let sy = cyPx - halfSize;
-
-        // Ajustar a los límites de la imagen manteniendo aspecto 1:1
-        if (sx < 0) sx = 0;
-        if (sy < 0) sy = 0;
-        if (sx + sizePx > naturalW) sx = Math.max(0, naturalW - sizePx);
-        if (sy + sizePx > naturalH) sy = Math.max(0, naturalH - sizePx);
-
-        const cropW = Math.min(sizePx, naturalW - sx);
-        const cropH = Math.min(sizePx, naturalH - sy);
-        const finalSquare = Math.min(cropW, cropH);
-
-        if (finalSquare > 20) {
-          const canvas = document.createElement('canvas');
-          canvas.width = 320;
-          canvas.height = 320;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, sx, sy, finalSquare, finalSquare, 0, 0, 320, 320);
-            const cropped = canvas.toDataURL('image/jpeg', 0.90);
-            resolve(cropped);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn('Error cropping citizen photo with canvas:', err);
       }
-      resolve(base64);
-    };
-    img.onerror = () => resolve(base64);
-    img.src = base64;
+
+      // 2. FaceDetector nativo del navegador si está disponible
+      if (!foundFace && 'FaceDetector' in window) {
+        try {
+          const detector = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+          const faces = await detector.detect(source);
+          if (faces && faces.length > 0 && faces[0].boundingBox) {
+            const bb = faces[0].boundingBox;
+            cxPx = bb.x + bb.width / 2;
+            cyPx = bb.y + bb.height / 2;
+            sizePx = Math.max(bb.width, bb.height) * 1.35;
+            foundFace = true;
+          }
+        } catch (fdErr) {
+          console.warn('Native FaceDetector fallback error:', fdErr);
+        }
+      }
+
+      // 3. Fallback inteligente según orientación general de la imagen
+      if (!foundFace) {
+        if (naturalH > naturalW) {
+          // Imagen vertical: foto en la zona superior
+          cxPx = naturalW * 0.45;
+          cyPx = naturalH * 0.22;
+          sizePx = naturalW * 0.45;
+        } else {
+          // Imagen horizontal: foto en el cuadrante izquierdo
+          cxPx = naturalW * 0.22;
+          cyPx = naturalH * 0.48;
+          sizePx = naturalH * 0.52;
+        }
+      }
+
+      // 4. Recorte 1:1
+      const halfSize = sizePx / 2;
+      let sx = cxPx - halfSize;
+      let sy = cyPx - halfSize;
+
+      if (sx < 0) sx = 0;
+      if (sy < 0) sy = 0;
+      if (sx + sizePx > naturalW) sx = Math.max(0, naturalW - sizePx);
+      if (sy + sizePx > naturalH) sy = Math.max(0, naturalH - sizePx);
+
+      const cropW = Math.min(sizePx, naturalW - sx);
+      const cropH = Math.min(sizePx, naturalH - sy);
+      const finalSquare = Math.min(cropW, cropH);
+
+      if (finalSquare > 20) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 320;
+        canvas.height = 320;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(source, sx, sy, finalSquare, finalSquare, 0, 0, 320, 320);
+          const cropped = canvas.toDataURL('image/jpeg', 0.90);
+          resolve(cropped);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Error cropping citizen photo:', err);
+    }
+    resolve(base64);
   });
 };
 
@@ -200,6 +287,18 @@ export default function NuevaGestionPage() {
   const [driveConnected, setDriveConnected] = useState<boolean | null>(null);
   const [usuariosDespacho, setUsuariosDespacho] = useState<any[]>([]);
   const [asignados, setAsignados] = useState<any[]>([]);
+  const [modalEncuadreOpen, setModalEncuadreOpen] = useState(false);
+
+  const handleInteractiveCropClick = async (e: React.MouseEvent<HTMLImageElement>) => {
+    if (!fullIneBase64) return;
+    const img = e.currentTarget;
+    const rect = img.getBoundingClientRect();
+    const clickX = (e.clientX - rect.left) / rect.width;
+    const clickY = (e.clientY - rect.top) / rect.height;
+
+    const cropped = await cropFromCoordinates(fullIneBase64, clickX, clickY, 1.0);
+    setAvatarUrl(cropped);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -551,23 +650,30 @@ export default function NuevaGestionPage() {
         )}
 
         {avatarUrl ? (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-xl border border-blue-200 shadow-2xs animate-in fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-2xl border border-blue-200 shadow-2xs animate-in fade-in">
             <div className="flex items-center gap-3.5">
-              <div className="h-14 w-14 rounded-full overflow-hidden border-2 border-blue-600 shrink-0 shadow-sm ring-2 ring-blue-100 bg-slate-100">
+              <div 
+                onClick={() => fullIneBase64 && setModalEncuadreOpen(true)}
+                className="h-16 w-16 rounded-full overflow-hidden border-2 border-blue-600 shrink-0 shadow-sm ring-4 ring-blue-100/80 bg-slate-100 relative group cursor-pointer"
+                title="Toca para ajustar o reubicar el encuadre"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={avatarUrl} alt="Foto del ciudadano extraída" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                  <Crop className="h-4 w-4" />
+                </div>
               </div>
               <div>
                 <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-blue-600" />
                   <span>Fotografía del Expediente</span>
                 </span>
-                <span className="text-[11px] text-slate-600 block leading-relaxed">
-                  Rostro asignado al expediente y al contacto del directorio.
+                <span className="text-[11px] text-slate-600 block leading-relaxed mt-0.5">
+                  Rostro asignado al expediente. Puedes tocar el círculo o usar "Ajustar Encuadre" para centrarlo al 100%.
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0">
               <input
                 type="file"
                 ref={profilePhotoInputRef}
@@ -575,17 +681,27 @@ export default function NuevaGestionPage() {
                 accept="image/*"
                 className="hidden"
               />
+              {fullIneBase64 && (
+                <button
+                  type="button"
+                  onClick={() => setModalEncuadreOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 hover:text-blue-800 bg-white hover:bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 shadow-2xs transition-all cursor-pointer active:scale-95"
+                >
+                  <Crop className="h-3.5 w-3.5" />
+                  <span>Ajustar Encuadre</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => profilePhotoInputRef.current?.click()}
-                className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 bg-white hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 shadow-2xs transition-colors cursor-pointer"
+                className="text-[11px] font-semibold text-slate-700 hover:text-slate-800 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs transition-colors cursor-pointer"
               >
                 Subir Foto Personal
               </button>
               <button
                 type="button"
                 onClick={() => setAvatarUrl('')}
-                className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200 shadow-2xs transition-colors cursor-pointer"
+                className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 px-2.5 py-1.5 rounded-xl border border-rose-200 shadow-2xs transition-colors cursor-pointer"
                 title="Quitar foto y usar iniciales del ciudadano"
               >
                 Quitar Foto
@@ -593,9 +709,9 @@ export default function NuevaGestionPage() {
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+          <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-sm shrink-0">
+              <div className="h-11 w-11 rounded-full bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-sm shrink-0">
                 {nombre.trim() ? nombre.trim().slice(0, 2).toUpperCase() : 'CI'}
               </div>
               <div>
@@ -610,13 +726,25 @@ export default function NuevaGestionPage() {
               accept="image/*"
               className="hidden"
             />
-            <button
-              type="button"
-              onClick={() => profilePhotoInputRef.current?.click()}
-              className="text-[11px] font-semibold text-slate-700 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs cursor-pointer"
-            >
-              + Subir Foto
-            </button>
+            <div className="flex items-center gap-2">
+              {fullIneBase64 && (
+                <button
+                  type="button"
+                  onClick={() => setModalEncuadreOpen(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-white hover:bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 shadow-2xs cursor-pointer"
+                >
+                  <Crop className="h-3.5 w-3.5" />
+                  <span>Encuadrar de INE</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => profilePhotoInputRef.current?.click()}
+                className="text-[11px] font-semibold text-slate-700 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs cursor-pointer"
+              >
+                + Subir Foto
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -878,6 +1006,71 @@ export default function NuevaGestionPage() {
           </button>
         </div>
       </form>
+    
+      {/* MODAL: AJUSTAR ENCUADRE DE LA FOTOGRAFÍA (TOUCH / TAP-TO-FOCUS) */}
+      {modalEncuadreOpen && fullIneBase64 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#121824] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Crop className="h-4 w-4 text-blue-600" />
+                  <span>Centrar Rostro en el Círculo</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Toca con tu dedo o haz clic directamente sobre la cara del ciudadano en la credencial:
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalEncuadreOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Credencial interactiva para tocar */}
+            <div className="relative border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[50vh] p-1 shadow-inner">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={fullIneBase64}
+                alt="Credencial completa"
+                onClick={handleInteractiveCropClick}
+                className="max-h-[48vh] w-auto object-contain cursor-crosshair select-none active:scale-[0.99] transition-transform rounded-xl"
+              />
+            </div>
+
+            {/* Barra de resultado y confirmación */}
+            <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="h-14 w-14 rounded-full overflow-hidden border-2 border-blue-600 shadow-md ring-2 ring-blue-100 shrink-0 bg-white">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt="Vista previa del recorte" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-xs text-slate-400">Toca foto</div>
+                  )}
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block">Vista previa del círculo</span>
+                  <span className="text-[11px] text-slate-500 block">El encuadre se actualiza al tocar la imagen</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setModalEncuadreOpen(false)}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs cursor-pointer transition-all active:scale-95"
+              >
+                <Check className="h-3.5 w-3.5" />
+                <span>Confirmar Encuadre</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
