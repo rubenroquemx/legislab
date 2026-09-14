@@ -16,7 +16,13 @@ import {
   Users,
   Check,
   UserCheck,
-  Crop
+  Crop,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  RefreshCw,
+  Sliders,
+  X
 } from 'lucide-react';
 import { 
   createGestion, 
@@ -82,8 +88,9 @@ const cropFromCoordinates = async (
       const cxPx = cxNorm * naturalW;
       const cyPx = cyNorm * naturalH;
 
-      const baseSize = Math.min(naturalW, naturalH) * 0.35;
-      const sizePx = Math.max(baseSize * zoomFactor, 60);
+      // Base: ~34% of the shortest dimension. Higher zoomFactor = tighter crop (closer face)
+      const baseSize = Math.min(naturalW, naturalH) * 0.34;
+      const sizePx = Math.max(baseSize / Math.max(zoomFactor, 0.4), 50);
 
       const halfSize = sizePx / 2;
       let sx = cxPx - halfSize;
@@ -288,6 +295,92 @@ export default function NuevaGestionPage() {
   const [usuariosDespacho, setUsuariosDespacho] = useState<any[]>([]);
   const [asignados, setAsignados] = useState<any[]>([]);
   const [modalEncuadreOpen, setModalEncuadreOpen] = useState(false);
+  const [manualZoom, setManualZoom] = useState<number>(1.0);
+  const [manualCoords, setManualCoords] = useState<{ x: number; y: number }>({ x: 0.45, y: 0.22 });
+
+  // Live Camera Scanner State
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const startLiveCamera = async (facing: 'environment' | 'user' = 'environment') => {
+    setIsLiveCameraOpen(true);
+    setCameraError(null);
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('La cámara en vivo no está soportada directamente en este navegador. Puedes usar la cámara nativa del sistema.');
+      }
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: facing,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      });
+      setCameraStream(stream);
+      setCameraFacing(facing);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch (err: any) {
+      console.warn('Live camera error:', err);
+      setCameraError(err.message || 'No se pudo acceder a la cámara.');
+    }
+  };
+
+  const stopLiveCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      setCameraStream(null);
+    }
+    setIsLiveCameraOpen(false);
+  };
+
+  const switchCameraFacing = () => {
+    const next = cameraFacing === 'environment' ? 'user' : 'environment';
+    startLiveCamera(next);
+  };
+
+  const captureLivePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const base64 = canvas.toDataURL('image/jpeg', 0.95);
+      stopLiveCamera();
+      setFullIneBase64(base64);
+      setAvatarUrl(base64);
+      processIneImage(base64, 'image/jpeg');
+    }
+  };
+
+  // Attach video stream whenever live camera opens
+  useEffect(() => {
+    if (isLiveCameraOpen && cameraStream && videoRef.current) {
+      videoRef.current.srcObject = cameraStream;
+      videoRef.current.play().catch(console.warn);
+    }
+  }, [isLiveCameraOpen, cameraStream]);
+
+  // Cleanup camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [cameraStream]);
 
   const handleInteractiveCropClick = async (e: React.MouseEvent<HTMLImageElement>) => {
     if (!fullIneBase64) return;
@@ -296,9 +389,20 @@ export default function NuevaGestionPage() {
     const clickX = (e.clientX - rect.left) / rect.width;
     const clickY = (e.clientY - rect.top) / rect.height;
 
-    const cropped = await cropFromCoordinates(fullIneBase64, clickX, clickY, 1.0);
+    setManualCoords({ x: clickX, y: clickY });
+    const cropped = await cropFromCoordinates(fullIneBase64, clickX, clickY, manualZoom);
     setAvatarUrl(cropped);
   };
+
+  const handleZoomChange = async (newZoom: number) => {
+    const clamped = Math.max(0.5, Math.min(2.5, newZoom));
+    setManualZoom(clamped);
+    if (fullIneBase64) {
+      const cropped = await cropFromCoordinates(fullIneBase64, manualCoords.x, manualCoords.y, clamped);
+      setAvatarUrl(cropped);
+    }
+  };
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -615,12 +719,13 @@ export default function NuevaGestionPage() {
           />
           <button
             type="button"
-            onClick={() => cameraInputRef.current?.click()}
+            onClick={() => startLiveCamera('environment')}
             disabled={isOcrProcessing}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+            title="Abrir cámara con marco guía inteligente para credencial INE"
           >
             <Camera className="h-4 w-4" />
-            <span>📸 Tomar Foto con Cámara</span>
+            <span>📸 Tomar Foto con Guía INE</span>
           </button>
         </div>
 
@@ -1007,54 +1112,109 @@ export default function NuevaGestionPage() {
         </div>
       </form>
     
-      {/* MODAL: AJUSTAR ENCUADRE DE LA FOTOGRAFÍA (TOUCH / TAP-TO-FOCUS) */}
+      {/* MODAL: AJUSTAR ENCUADRE CON CONTROL DE ZOOM Y TAP-TO-FOCUS */}
       {modalEncuadreOpen && fullIneBase64 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/85 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="bg-white dark:bg-[#121824] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Crop className="h-4 w-4 text-blue-600" />
-                  <span>Centrar Rostro en el Círculo</span>
+                  <span>Ajustar Encuadre y Zoom del Rostro</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Toca con tu dedo o haz clic directamente sobre la cara del ciudadano en la credencial:
+                  1. Toca sobre la cara en la credencial. 2. Usa el zoom para acercar o alejar.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setModalEncuadreOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 font-bold text-sm cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 font-bold text-sm cursor-pointer rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Credencial interactiva para tocar */}
-            <div className="relative border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[50vh] p-1 shadow-inner">
+            <div className="relative border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[46vh] p-1 shadow-inner">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={fullIneBase64}
                 alt="Credencial completa"
                 onClick={handleInteractiveCropClick}
-                className="max-h-[48vh] w-auto object-contain cursor-crosshair select-none active:scale-[0.99] transition-transform rounded-xl"
+                className="max-h-[44vh] w-auto object-contain cursor-crosshair select-none active:scale-[0.99] transition-transform rounded-xl"
               />
+              <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-xs text-white text-[10px] px-2.5 py-1 rounded-full pointer-events-none">
+                📍 Toca cualquier punto de la credencial
+              </div>
+            </div>
+
+            {/* Barra de Control de Zoom */}
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Sliders className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Tamaño y Zoom del Rostro:</span>
+                </span>
+                <span className="font-mono font-bold text-blue-600 text-[11px] bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-200/60">
+                  {Math.round(manualZoom * 100)}%
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleZoomChange(manualZoom - 0.15)}
+                  className="p-1.5 bg-white dark:bg-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 shadow-2xs cursor-pointer active:scale-95"
+                  title="Alejar (zoom out)"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </button>
+
+                <input
+                  type="range"
+                  min="0.5"
+                  max="2.5"
+                  step="0.05"
+                  value={manualZoom}
+                  onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
+                  className="flex-1 accent-blue-600 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => handleZoomChange(manualZoom + 0.15)}
+                  className="p-1.5 bg-white dark:bg-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 shadow-2xs cursor-pointer active:scale-95"
+                  title="Acercar (zoom in)"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleZoomChange(1.0)}
+                  className="text-[10px] font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 bg-white dark:bg-slate-700 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 shadow-2xs cursor-pointer"
+                  title="Restablecer zoom a 100%"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
 
             {/* Barra de resultado y confirmación */}
-            <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700">
+            <div className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
               <div className="flex items-center gap-3">
-                <div className="h-14 w-14 rounded-full overflow-hidden border-2 border-blue-600 shadow-md ring-2 ring-blue-100 shrink-0 bg-white">
+                <div className="h-14 w-14 rounded-full overflow-hidden border-2 border-blue-600 shadow-md ring-4 ring-blue-100 shrink-0 bg-slate-100">
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={avatarUrl} alt="Vista previa del recorte" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="h-full w-full flex items-center justify-center text-xs text-slate-400">Toca foto</div>
+                    <div className="h-full w-full flex items-center justify-center text-xs text-slate-400">Sin foto</div>
                   )}
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block">Vista previa del círculo</span>
-                  <span className="text-[11px] text-slate-500 block">El encuadre se actualiza al tocar la imagen</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block">Avatar del Expediente</span>
+                  <span className="text-[11px] text-slate-500 block">Recorte circular centrado de alta resolución</span>
                 </div>
               </div>
 
@@ -1064,9 +1224,145 @@ export default function NuevaGestionPage() {
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs cursor-pointer transition-all active:scale-95"
               >
                 <Check className="h-3.5 w-3.5" />
-                <span>Confirmar Encuadre</span>
+                <span>Guardar Encuadre</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+    
+      {/* MODAL: CÁMARA EN VIVO CON MARCO GUÍA OVERLAY PARA CREDENCIAL INE */}
+      {isLiveCameraOpen && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-between select-none animate-in fade-in duration-200 overflow-hidden">
+          {/* Top Bar con Instrucciones */}
+          <div className="w-full z-20 flex items-center justify-between px-5 py-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Alinear Credencial INE</span>
+              </h2>
+              <p className="text-[11px] text-emerald-200/80">Centra la tarjeta dentro del marco iluminado</p>
+            </div>
+            <button
+              type="button"
+              onClick={stopLiveCamera}
+              className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 px-3.5 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md transition-colors cursor-pointer"
+            >
+              ✕ Cerrar
+            </button>
+          </div>
+
+          {/* Viewfinder con Video y Card Cutout Overlay */}
+          <div className="relative w-full flex-1 flex items-center justify-center overflow-hidden">
+            {cameraError ? (
+              <div className="p-6 max-w-sm mx-auto text-center space-y-4 bg-slate-900/90 rounded-2xl border border-slate-700 text-white m-4">
+                <AlertCircle className="h-10 w-10 text-rose-500 mx-auto" />
+                <div>
+                  <h3 className="text-sm font-bold">Cámara no disponible directamente</h3>
+                  <p className="text-xs text-slate-300 mt-1">{cameraError}</p>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => { stopLiveCamera(); cameraInputRef.current?.click(); }}
+                    className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer"
+                  >
+                    Usar Cámara Estándar del Celular
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopLiveCamera}
+                    className="w-full py-2 px-4 bg-white/10 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+
+                {/* Card Frame Overlay (85.6mm x 53.98mm = aspect 1.586) */}
+                <div className="relative z-10 w-[90vw] max-w-[440px] aspect-[1.586/1] rounded-2xl border-2 border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] flex flex-col justify-between p-3 pointer-events-none">
+                  {/* Glowing Corner Brackets */}
+                  <div className="absolute -top-1.5 -left-1.5 w-6 h-6 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl shadow-sm"></div>
+                  <div className="absolute -top-1.5 -right-1.5 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl shadow-sm"></div>
+                  <div className="absolute -bottom-1.5 -left-1.5 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl shadow-sm"></div>
+                  <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-xl shadow-sm"></div>
+
+                  {/* Header badge inside frame */}
+                  <div className="self-center bg-emerald-500/20 backdrop-blur-md text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    Frente de Credencial INE
+                  </div>
+
+                  {/* Visual guides inside cutout */}
+                  <div className="grid grid-cols-3 gap-2 h-full items-center my-1 opacity-60">
+                    {/* Left 1/3: Photo guide */}
+                    <div className="h-full border border-dashed border-emerald-400/60 rounded-xl flex flex-col items-center justify-center text-emerald-300 space-y-1">
+                      <div className="h-10 w-8 rounded-full border-2 border-emerald-400/80 flex items-center justify-center text-[10px]">
+                        👤
+                      </div>
+                      <span className="text-[9px] font-bold tracking-wider">FOTO</span>
+                    </div>
+
+                    {/* Right 2/3: Text / Data lines guide */}
+                    <div className="col-span-2 h-full border border-dashed border-emerald-400/40 rounded-xl p-2.5 flex flex-col justify-around text-emerald-300/80">
+                      <div className="h-2 w-3/4 bg-emerald-400/30 rounded"></div>
+                      <div className="h-2 w-full bg-emerald-400/20 rounded"></div>
+                      <div className="h-2 w-5/6 bg-emerald-400/20 rounded"></div>
+                      <div className="h-2 w-1/2 bg-emerald-400/30 rounded"></div>
+                    </div>
+                  </div>
+
+                  <div className="self-center text-center text-white/90 text-[11px] font-semibold drop-shadow-md">
+                    Mantén la credencial horizontal dentro del marco
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Bottom Bar con Shutter y Controles */}
+          <div className="w-full z-20 flex items-center justify-around px-6 py-6 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+            {/* Botón cambiar cámara (frontal/trasera) */}
+            <button
+              type="button"
+              onClick={switchCameraFacing}
+              className="p-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-full backdrop-blur-md transition-all cursor-pointer"
+              title="Girar cámara"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+
+            {/* Shutter Button estilo iPhone */}
+            <button
+              type="button"
+              onClick={captureLivePhoto}
+              disabled={Boolean(cameraError)}
+              className="h-20 w-20 rounded-full border-4 border-emerald-400 bg-white hover:bg-emerald-50 active:scale-90 shadow-2xl flex items-center justify-center transition-all cursor-pointer group"
+              title="Tomar fotografía"
+            >
+              <div className="h-14 w-14 rounded-full bg-emerald-500 group-hover:bg-emerald-600 transition-colors flex items-center justify-center text-white">
+                <Camera className="h-6 w-6" />
+              </div>
+            </button>
+
+            {/* Fallback a cámara nativa */}
+            <button
+              type="button"
+              onClick={() => { stopLiveCamera(); cameraInputRef.current?.click(); }}
+              className="p-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 hover:text-white rounded-full backdrop-blur-md transition-all cursor-pointer text-xs font-semibold"
+              title="Usar cámara del sistema"
+            >
+              <Upload className="h-5 w-5" />
+            </button>
           </div>
         </div>
       )}
