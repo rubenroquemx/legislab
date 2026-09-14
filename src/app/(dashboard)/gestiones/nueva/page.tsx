@@ -310,28 +310,42 @@ export default function NuevaGestionPage() {
     setCameraError(null);
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('La cámara en vivo no está soportada directamente en este navegador. Puedes usar la cámara nativa del sistema.');
+        throw new Error('La cámara en vivo no está soportada directamente en este navegador. Puedes usar la cámara nativa del celular.');
       }
       if (cameraStream) {
         cameraStream.getTracks().forEach(t => t.stop());
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
+
+      let stream: MediaStream;
+      const constraints = {
         video: {
-          facingMode: facing,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          facingMode: facing ? { ideal: facing } : { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         },
         audio: false
-      });
+      };
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (firstErr) {
+        // Fallback para dispositivos móviles con restricciones estrictas de resolución
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: facing ? { facingMode: facing } : true,
+          audio: false
+        });
+      }
+
       setCameraStream(stream);
       setCameraFacing(facing);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      setCameraError(null);
     } catch (err: any) {
       console.warn('Live camera error:', err);
-      setCameraError(err.message || 'No se pudo acceder a la cámara.');
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError('Permiso denegado para la cámara. Por favor autoriza el uso de la cámara en los permisos de Safari / iOS.');
+      } else {
+        setCameraError(err.message || 'No se pudo inicializar la cámara en este dispositivo.');
+      }
     }
   };
 
@@ -340,7 +354,11 @@ export default function NuevaGestionPage() {
       cameraStream.getTracks().forEach(t => t.stop());
       setCameraStream(null);
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setIsLiveCameraOpen(false);
+    setCameraError(null);
   };
 
   const switchCameraFacing = () => {
@@ -352,8 +370,8 @@ export default function NuevaGestionPage() {
     if (!videoRef.current) return;
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 1920;
-    canvas.height = video.videoHeight || 1080;
+    canvas.width = video.videoWidth > 0 ? video.videoWidth : 1280;
+    canvas.height = video.videoHeight > 0 ? video.videoHeight : 720;
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -365,12 +383,42 @@ export default function NuevaGestionPage() {
     }
   };
 
-  // Attach video stream whenever live camera opens
+  // Attach video stream whenever live camera opens (iOS Safari WebKit compliant)
   useEffect(() => {
+    let isCancelled = false;
+
     if (isLiveCameraOpen && cameraStream && videoRef.current) {
-      videoRef.current.srcObject = cameraStream;
-      videoRef.current.play().catch(console.warn);
+      const video = videoRef.current;
+      video.srcObject = cameraStream;
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+      video.muted = true;
+
+      const attemptPlay = () => {
+        if (isCancelled) return;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            // Ignorar AbortError provocado por la inicialización concurrente en WebKit
+            if (err.name !== 'AbortError') {
+              console.warn('Live video play warning:', err);
+            }
+          });
+        }
+      };
+
+      if (video.readyState >= 1) {
+        attemptPlay();
+      } else {
+        video.onloadedmetadata = () => {
+          attemptPlay();
+        };
+      }
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isLiveCameraOpen, cameraStream]);
 
   // Cleanup camera stream on unmount
@@ -1265,6 +1313,13 @@ export default function NuevaGestionPage() {
                 <div className="space-y-2 pt-2">
                   <button
                     type="button"
+                    onClick={() => startLiveCamera(cameraFacing)}
+                    className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-sm"
+                  >
+                    Reintentar Cámara en Vivo
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => { stopLiveCamera(); cameraInputRef.current?.click(); }}
                     className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer"
                   >
@@ -1286,6 +1341,9 @@ export default function NuevaGestionPage() {
                   autoPlay
                   playsInline
                   muted
+                  onLoadedMetadata={(e) => {
+                    (e.target as HTMLVideoElement).play().catch(() => {});
+                  }}
                   className="absolute inset-0 w-full h-full object-cover"
                 />
 
